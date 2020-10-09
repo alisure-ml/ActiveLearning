@@ -9,3 +9,8 @@
 Pytorch implementation of `Cost-Effective Active Learning for Deep Image Classification`.
 
 
+## `ceal_keras_cifar10.py`
+
+No implementation of `Cost-Effective Active Learning for Deep Image Classification`.
+
+

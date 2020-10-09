@@ -1,13 +1,12 @@
-import argparse
 import os
-
+import argparse
 import numpy as np
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
+from keras.utils import np_utils
 from keras.datasets import cifar10
 from keras.models import load_model
-from keras.utils import np_utils
-from keras_contrib.applications.resnet import ResNet18
 from sklearn.model_selection import train_test_split
+from keras_contrib.applications.resnet import ResNet18
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
 
 
 def initialize_dataset():
@@ -29,8 +28,8 @@ def initialize_dataset():
     x_test /= 128.
 
     initial_train_size = int(x_train.shape[0] * args.initial_annotated_perc)
-    x_pool, x_initial, y_pool, y_initial = train_test_split(x_train, y_train, test_size=initial_train_size,
-                                                            random_state=1, stratify=y_train)
+    x_pool, x_initial, y_pool, y_initial = train_test_split(
+        x_train, y_train, test_size=initial_train_size, random_state=1, stratify=y_train)
 
     return x_pool, y_pool, x_initial, y_initial, x_test, y_test, n_classes
 
@@ -60,9 +59,7 @@ def least_confidence(y_pred_prob, n_samples):
     max_prob = np.max(y_pred_prob, axis=1)
     pred_label = np.argmax(y_pred_prob, axis=1)
 
-    lci = np.column_stack((origin_index,
-                           max_prob,
-                           pred_label))
+    lci = np.column_stack((origin_index, max_prob, pred_label))
     lci = lci[lci[:, 1].argsort()]
     return lci[:n_samples], lci[:, 0].astype(int)[:n_samples]
 
@@ -72,9 +69,7 @@ def margin_sampling(y_pred_prob, n_samples):
     origin_index = np.arange(0, len(y_pred_prob))
     margim_sampling = np.diff(-np.sort(y_pred_prob)[:, ::-1][:, :2])
     pred_label = np.argmax(y_pred_prob, axis=1)
-    msi = np.column_stack((origin_index,
-                           margim_sampling,
-                           pred_label))
+    msi = np.column_stack((origin_index, margim_sampling, pred_label))
     msi = msi[msi[:, 1].argsort()]
     return msi[:n_samples], msi[:, 0].astype(int)[:n_samples]
 
@@ -86,9 +81,7 @@ def entropy(y_pred_prob, n_samples):
     origin_index = np.arange(0, len(y_pred_prob))
     entropy = -np.nansum(np.multiply(y_pred_prob, np.log(y_pred_prob)), axis=1)
     pred_label = np.argmax(y_pred_prob, axis=1)
-    eni = np.column_stack((origin_index,
-                           entropy,
-                           pred_label))
+    eni = np.column_stack((origin_index, entropy, pred_label))
 
     eni = eni[(-eni[:, 1]).argsort()]
     return eni[:n_samples], eni[:, 0].astype(int)[:n_samples]
@@ -110,8 +103,8 @@ def get_uncertain_samples(y_pred_prob, n_samples, criteria):
     elif criteria == 'rs':
         return None, random_sampling(y_pred_prob, n_samples)
     else:
-        raise ValueError(
-            'Unknown criteria value \'%s\', use one of [\'rs\',\'lc\',\'ms\',\'en\']' % criteria)
+        raise ValueError('Unknown criteria value \'%s\', use one of [\'rs\',\'lc\',\'ms\',\'en\']' % criteria)
+    pass
 
 
 def run_ceal(args):
@@ -131,7 +124,6 @@ def run_ceal(args):
     DH = np.empty((0, w, h, c)), np.empty((0, n_classes))
 
     for i in range(args.maximum_iterations):
-
         y_pred_prob = model.predict(DU[0], verbose=args.verbose)
 
         _, un_idx = get_uncertain_samples(y_pred_prob, args.uncertain_samples_size, criteria=args.uncertain_criteria)
@@ -144,6 +136,8 @@ def run_ceal(args):
             hc = np.array([[i, l] for i, l in zip(hc_idx, hc_labels) if i not in un_idx])
             if hc.size != 0:
                 DH = np.take(DU[0], hc[:, 0], axis=0), np_utils.to_categorical(hc[:, 1], n_classes)
+                pass
+            pass
 
         if i % args.fine_tunning_interval == 0:
             dtrain_x = np.concatenate((DL[0], DH[0])) if DH[0].size != 0 else DL[0]
@@ -152,14 +146,17 @@ def run_ceal(args):
             model.fit(dtrain_x, dtrain_y, validation_data=(x_test, y_test), batch_size=args.batch_size,
                       shuffle=True, epochs=args.epochs, verbose=args.verbose, callbacks=[earlystop])
             args.delta -= (args.threshold_decay * args.fine_tunning_interval)
+            pass
 
         DU = np.delete(DU[0], un_idx, axis=0), np.delete(DU[1], un_idx, axis=0)
         DH = np.empty((0, w, h, c)), np.empty((0, n_classes))
 
         _, acc = model.evaluate(x_test, y_test, batch_size=args.batch_size, verbose=args.verbose)
-        print(
-            'Iteration: %d; High Confidence Samples: %d; Uncertain Samples: %d; Delta: %.5f; Labeled Dataset Size: %d; Accuracy: %.2f'
-            % (i, len(DH[0]), len(DL[0]), args.delta, len(DL[0]), acc))
+        print('Iteration: %d; High Confidence Samples: %d; Uncertain Samples: %d; Delta: %.5f; '
+              'Labeled Dataset Size: %d; Accuracy: %.2f'%(i, len(DH[0]), len(DL[0]), args.delta, len(DL[0]), acc))
+        pass
+
+    pass
 
 
 if __name__ == '__main__':
@@ -184,7 +181,8 @@ if __name__ == '__main__':
     parser.add_argument('-K', '--uncertain_samples_size', default=1000, type=int,
                         help="Uncertain samples selection size. default: 1000")
     parser.add_argument('-uc', '--uncertain_criteria', default='lc',
-                        help="Uncertain selection Criteria: \'rs\'(Random Sampling), \'lc\'(Least Confidence), \'ms\'(Margin Sampling), \'en\'(Entropy). default: lc")
+                        help="Uncertain selection Criteria: \'rs\'(Random Sampling), "
+                             "\'lc\'(Least Confidence), \'ms\'(Margin Sampling), \'en\'(Entropy). default: lc")
     parser.add_argument('-ce', '--cost_effective', default=True,
                         help="whether to use Cost Effective high confidence sample pseudo-labeling. default: True")
     args = parser.parse_args()

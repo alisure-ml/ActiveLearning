@@ -394,7 +394,7 @@ class AlexNet(object):
             train_loss += loss.item()
             data_size += label.size(0)
 
-            if batch_idx % print_freq == 0:
+            if batch_idx % print_freq == print_freq - 1:
                 Tools.print('Train Epoch: {} [{}/{}] Loss:{:.5f}'.format(
                     epoch, batch_idx, len(train_loader), loss.item()))
                 pass
@@ -424,14 +424,14 @@ class AlexNet(object):
         total = 0
         with torch.no_grad():
             for batch_idx, sample_batched in enumerate(test_loader):
-                data, labels = sample_batched['image'], sample_batched['label']
+                data, label = sample_batched['image'], sample_batched['label']
                 data = data.to(self.device)
                 data = data.float()
-                labels = labels.to(self.device)
+                label = label.to(self.device)
                 outputs = self.model(data)
                 _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+                total += label.size(0)
+                correct += (predicted == label).sum().item()
                 pass
             pass
         return 100 * correct / total
@@ -463,7 +463,7 @@ def ceal_learning_algorithm(du, dl, d_test, k=1000, delta_0=0.005,
     # Initialize the model
     Tools.print('Init dl={} du={} d_test={}'.format(
         len(dl.sampler.indices), len(du.sampler.indices), len(d_test.dataset)))
-    model.train(epochs=epochs, train_loader=dl, valid_loader=d_test)
+    model.train(epochs=epochs, train_loader=dl)
     acc = model.evaluate(test_loader=d_test)
     Tools.print('====> Initial accuracy: {} '.format(acc))
 
@@ -474,7 +474,7 @@ def ceal_learning_algorithm(du, dl, d_test, k=1000, delta_0=0.005,
         # get k uncertain samples
         uncert_samp_idx, _ = Criteria.get_uncertain_samples(pred_prob=pred_prob, k=k, criteria=criteria)
         uncert_samp_idx = [du.sampler.indices[idx] for idx in uncert_samp_idx]
-        dl.sampler.indices.extend([du.sampler.indices[idx] for idx in uncert_samp_idx])
+        dl.sampler.indices.extend(uncert_samp_idx)
         Tools.print('Update size of dl and du by adding uncertain {} samples. `dl` dl:{}, du:{}'.format(
             len(uncert_samp_idx), len(dl.sampler.indices),len(du.sampler.indices)))
 
@@ -484,11 +484,9 @@ def ceal_learning_algorithm(du, dl, d_test, k=1000, delta_0=0.005,
         hcs_idx = [x for x in hcs_idx if x not in list(set(uncert_samp_idx) & set(hcs_idx))]
 
         # add high confidence samples to the labeled set 'dl'
-        # (1) update the indices
-        dl.sampler.indices.extend(hcs_idx)
-        # (2) update the original labels with the pseudo labels.
+        dl.sampler.indices.extend(hcs_idx)  # (1) update the indices
         for idx in range(len(hcs_idx)):
-            dl.dataset.labels[hcs_idx[idx]] = hcs_labels[idx]
+            dl.dataset.label[hcs_idx[idx]] = hcs_labels[idx]  # (2) update the original labels with the pseudo labels.
         Tools.print('Update size of dl and du by adding {} hcs samples. dl:{}, du:{}'.format(
             len(hcs_idx), len(dl.sampler.indices), len(du.sampler.indices)))
 
@@ -503,7 +501,7 @@ def ceal_learning_algorithm(du, dl, d_test, k=1000, delta_0=0.005,
             du.sampler.indices.remove(val)
 
         acc = model.evaluate(test_loader=d_test)
-        print("Iteration: {}, len(dl): {}, len(du): {}, len(dh) {}, acc: {} ".format(
+        Tools.print("Iteration: {}, len(dl): {}, len(du): {}, len(dh) {}, acc: {} ".format(
             iteration, len(dl.sampler.indices), len(du.sampler.indices), len(hcs_idx), acc))
         pass
 
@@ -534,7 +532,7 @@ class Config(object):
     # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     if "Linux" in platform.platform():
-        batch_size = 256
+        batch_size = 16
         data_root = "/mnt/4T/Data/data/Caltech256/256_ObjectCategories"
     else:
         batch_size = 16
