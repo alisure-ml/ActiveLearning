@@ -352,7 +352,7 @@ class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
     model_name = "1"
-    train_epoch = 1000
+    train_epoch = 300
     learning_rate = 0.001
     num_workers = 8
 
@@ -374,23 +374,15 @@ class Config(object):
     pass
 
 
-"""
-# 0.7015 / 0.5001
-# 0.7038 / 0.5209
-# 0.6790 / 0.5189
-# 0.6919 / 0.5198  # small net, fsl+ic-s+ic-b+fsl-ic(cross)
-# 0.7100 / 0.5278  # large net, fsl+ic-s+ic-b
-"""
-
 if __name__ == '__main__':
     runner = Runner()
     runner.load_model()
 
-    # runner.feature_encoder.eval()
-    # runner.relation_network.eval()
-    # runner.val_fsl(epoch=0, loader=runner.task_test_train_loader, name="First Train")
-    # runner.val_fsl(epoch=0, loader=runner.task_test_val_loader, name="First Val")
-    # runner.val_fsl(epoch=0, loader=runner.task_test_test_loader, name="First Test")
+    runner.feature_encoder.eval()
+    runner.relation_network.eval()
+    runner.val_fsl(epoch=0, loader=runner.task_test_train_loader, name="First Train")
+    runner.val_fsl(epoch=0, loader=runner.task_test_val_loader, name="First Val")
+    runner.val_fsl(epoch=0, loader=runner.task_test_test_loader, name="First Test")
 
     runner.train()
 
