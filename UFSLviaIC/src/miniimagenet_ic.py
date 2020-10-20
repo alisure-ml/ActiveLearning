@@ -30,7 +30,7 @@ class MiniImageNetIC(Dataset):
         self.train_label = [one[1] for one in self.data_list]
 
         self.transform_train = transforms.Compose([
-            transforms.RandomCrop(84, padding=8),
+            transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4),
             transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(),

@@ -38,9 +38,10 @@ class MiniImageNetDataset(object):
             pass
 
         normalize = transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL)
-        self.transform_train = transforms.Compose([transforms.RandomCrop(84, padding=8),
-                                                   transforms.RandomHorizontalFlip(),
-                                                   transforms.ToTensor(), normalize])
+        self.transform_train = transforms.Compose([
+            transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
+            # transforms.RandomCrop(84, padding=8),
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
         self.transform = self.transform_train if self.is_train else self.transform_test
         pass
