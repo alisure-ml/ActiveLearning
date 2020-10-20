@@ -208,9 +208,9 @@ class Runner(object):
 
         # optim
         self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
-        self.feature_encoder_scheduler = StepLR(self.feature_encoder_optim, Config.train_epoch//3, gamma=0.5)
+        self.feature_encoder_scheduler = StepLR(self.feature_encoder_optim, Config.train_epoch//2, gamma=0.1)
         self.relation_network_optim = torch.optim.Adam(self.relation_network.parameters(), lr=Config.learning_rate)
-        self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_epoch//3, gamma=0.5)
+        self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_epoch//2, gamma=0.1)
         pass
 
     def load_model(self):
@@ -236,28 +236,18 @@ class Runner(object):
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
                 task_data, task_labels = cuda(task_data), cuda(task_labels)
 
-                ###########################################################################
-                # 2 calculate features
+                # 1 calculate features
                 relations, query_features = self.compare_fsl(task_data)
-                ###########################################################################
 
-                ###########################################################################
-                # 3 loss
-                loss = self.fsl_loss(relations, task_labels) * 1.0
-
+                # 2 loss
+                loss = self.fsl_loss(relations, task_labels)
                 all_loss += loss.item()
-                ###########################################################################
 
-                ###########################################################################
-                # 4 backward
+                # 3 backward
                 self.feature_encoder.zero_grad()
                 self.relation_network.zero_grad()
-
                 loss.backward()
-
-                torch.nn.utils.clip_grad_norm_(self.feature_encoder.parameters(), 0.5)
                 self.feature_encoder_optim.step()
-                torch.nn.utils.clip_grad_norm_(self.relation_network.parameters(), 0.5)
                 self.relation_network_optim.step()
                 ###########################################################################
                 pass
@@ -273,18 +263,20 @@ class Runner(object):
 
             ###########################################################################
             # Val
-            self.feature_encoder.eval()
-            self.relation_network.eval()
+            if epoch % Config.val_freq == 0:
+                self.feature_encoder.eval()
+                self.relation_network.eval()
 
-            Tools.print()
-            Tools.print("Test {} .......".format(epoch))
-            self.val_fsl(epoch, self.task_test_train_loader, name="Train")
-            val_accuracy = self.val_fsl(epoch, self.task_test_val_loader, name="Val")
-            if val_accuracy > self.best_accuracy:
-                self.best_accuracy = val_accuracy
-                torch.save(self.feature_encoder.state_dict(), Config.fe_dir)
-                torch.save(self.relation_network.state_dict(), Config.rn_dir)
-                Tools.print("Save networks for epoch: {}".format(epoch))
+                Tools.print()
+                Tools.print("Test {} .......".format(epoch))
+                self.val_fsl(epoch, self.task_test_train_loader, name="Train")
+                val_accuracy = self.val_fsl(epoch, self.task_test_val_loader, name="Val")
+                if val_accuracy > self.best_accuracy:
+                    self.best_accuracy = val_accuracy
+                    torch.save(self.feature_encoder.state_dict(), Config.fe_dir)
+                    torch.save(self.relation_network.state_dict(), Config.rn_dir)
+                    Tools.print("Save networks for epoch: {}".format(epoch))
+                    pass
                 pass
             ###########################################################################
             pass
@@ -347,19 +339,34 @@ class Runner(object):
 
 ##############################################################################################################
 
+"""
+2020-10-20 03:53:35 Test 136 .......
+2020-10-20 03:54:06 Val 136 Train Accuracy: 0.7207780321325078
+2020-10-20 03:54:14 Val 136 Val Accuracy: 0.5846663433584107
+2020-10-20 03:54:14 Save networks for epoch: 136
+
+2020-10-20 22:07:32 Val 0 Train Accuracy: 0.462905070020458
+2020-10-20 22:08:04 Val 0 Val Accuracy: 0.415394183126455
+2020-10-20 22:11:04 Val 0 Train Accuracy: 0.3972173911328897
+2020-10-20 22:11:12 Val 0 Val Accuracy: 0.3183236666976281
+"""
+
 
 class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
-    model_name = "1"
-    train_epoch = 300
+    train_epoch = 600
     learning_rate = 0.001
     num_workers = 8
+
+    val_freq = 10
 
     num_way = 5
     num_shot = 1
     batch_size = 64
     test_avg_num = 2
+
+    model_name = "1_{}_{}_{}".format(batch_size, num_way, num_shot)
 
     MEAN_PIXEL = [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
     STD_PIXEL = [x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]
@@ -376,7 +383,7 @@ class Config(object):
 
 if __name__ == '__main__':
     runner = Runner()
-    runner.load_model()
+    # runner.load_model()
 
     runner.feature_encoder.eval()
     runner.relation_network.eval()
