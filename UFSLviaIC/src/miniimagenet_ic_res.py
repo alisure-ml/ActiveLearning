@@ -106,33 +106,6 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
-class CNNEncoder(nn.Module):
-
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out3 = self.layer3(out2)
-        out4 = self.layer4(out3)
-        return out4
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
 class Normalize(nn.Module):
 
     def __init__(self, power=2):
@@ -151,26 +124,70 @@ class Normalize(nn.Module):
     pass
 
 
-class ICModel(nn.Module):
+class BasicBlock(nn.Module):
+    expansion = 1
 
-    def __init__(self, in_dim, out_dim):
+    def __init__(self, in_planes, planes, stride=1):
         super().__init__()
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-        self.layer1 = nn.Sequential(nn.Conv2d(in_dim, in_dim, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(in_dim, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(in_dim, in_dim, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(in_dim, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.linear = nn.Linear(in_dim, out_dim, bias=False)
-        self.l2norm = Normalize(2)
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != self.expansion * planes:
+            self.shortcut = nn.Sequential(nn.Conv2d(in_planes, self.expansion * planes,
+                                                    kernel_size=1, stride=stride, bias=False),
+                                          nn.BatchNorm2d(self.expansion * planes))
+            pass
         pass
 
     def forward(self, x):
-        out = self.layer1(x)
-        out = self.layer2(out)
-        out = F.adaptive_avg_pool2d(out, 1)
-        out = out.view(out.size(0), -1)
-        out_logits = self.linear(out)
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
+    pass
+
+
+class ICResNet(nn.Module):
+
+    def __init__(self, block, num_blocks, low_dim=512):
+        super().__init__()
+        self.in_planes = 64
+
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
+        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
+        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
+        self.linear = nn.Linear(512 * block.expansion, low_dim, bias=False)
+        self.l2norm = Normalize(2)
+        pass
+
+    def _make_layer(self, block, planes, num_blocks, stride):
+        strides = [stride] + [1] * (num_blocks - 1)
+        layers = []
+        for stride in strides:
+            layers.append(block(self.in_planes, planes, stride))
+            self.in_planes = planes * block.expansion
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        conv_b1 = self.maxpool(F.relu(self.bn1(self.conv1(x))))
+        conv_b2 = self.layer1(conv_b1)
+        conv_b3 = self.layer2(conv_b2)
+        conv_b4 = self.layer3(conv_b3)
+        conv_b5 = self.layer4(conv_b4)
+        avg_pool = F.adaptive_avg_pool2d(conv_b5, 1)
+        avg_pool = avg_pool.view(avg_pool.size(0), -1)
+
+        out_logits = self.linear(avg_pool)
         out_l2norm = self.l2norm(out_logits)
         return out_logits, out_l2norm
 
@@ -259,7 +276,7 @@ class KNN(object):
         return top1, top5
 
     @classmethod
-    def knn(cls, feature_encoder, ic_model, low_dim, train_loader, k, t=0.1):
+    def knn(cls, ic_model, low_dim, train_loader, k, t=0.1):
 
         with torch.no_grad():
             n_sample = train_loader.dataset.__len__()
@@ -269,8 +286,7 @@ class KNN(object):
 
             out_list = []
             for batch_idx, (inputs, labels, indexes) in enumerate(train_loader):
-                features = feature_encoder(cuda(inputs))  # 5x64*19*19
-                _, out_l2norm = ic_model(features)
+                _, out_l2norm = ic_model(cuda(inputs))
                 out_list.append([out_l2norm, cuda(labels)])
                 out_memory[:, batch_idx * inputs.size(0):(batch_idx + 1) * inputs.size(0)] = out_l2norm.data.t()
                 pass
@@ -312,10 +328,8 @@ class Runner(object):
                                               Config.batch_size, shuffle=False, num_workers=Config.num_workers)
 
         # model
-        self.feature_encoder = cuda(CNNEncoder())
-        self.ic_model = cuda(ICModel(in_dim=Config.ic_in_dim, out_dim=Config.ic_out_dim))
+        self.ic_model = cuda(ICResNet(BasicBlock, [2, 2, 2, 2], Config.ic_out_dim))
         self.ic_loss = cuda(nn.CrossEntropyLoss())
-        self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
         self.ic_model_optim = torch.optim.Adam(self.ic_model.parameters(), lr=Config.learning_rate)
 
         # IC
@@ -326,10 +340,6 @@ class Runner(object):
         pass
 
     def load_model(self):
-        if os.path.exists(Config.fe_dir):
-            self.feature_encoder.load_state_dict(torch.load(Config.fe_dir))
-            Tools.print("load feature encoder success from {}".format(Config.fe_dir))
-
         if os.path.exists(Config.ic_dir):
             self.ic_model.load_state_dict(torch.load(Config.ic_dir))
             Tools.print("load ic model success from {}".format(Config.ic_dir))
@@ -340,7 +350,6 @@ class Runner(object):
         Tools.print("Training...")
 
         for epoch in range(Config.train_epoch):
-            self.feature_encoder.train()
             self.ic_model.train()
 
             Tools.print()
@@ -351,21 +360,19 @@ class Runner(object):
 
                 ###########################################################################
                 # 1 calculate features
-                features = self.feature_encoder(image)  # 5x64*19*19
-                ic_out_logits, ic_out_l2norm = self.ic_model(features)
+                ic_out_logits, ic_out_l2norm = self.ic_model(image)
 
+                # 2 calculate labels
                 self.produce_class1.cal_label(ic_out_l2norm, idx)
                 ic_targets = self.produce_class2.get_label(idx)
 
-                # 2 loss
+                # 3 loss
                 loss = self.ic_loss(ic_out_logits, ic_targets)
                 all_loss += loss.item()
 
-                # 3 backward
-                self.feature_encoder.zero_grad()
+                # 4 backward
                 self.ic_model.zero_grad()
                 loss.backward()
-                self.feature_encoder_optim.step()
                 self.ic_model_optim.step()
                 ###########################################################################
                 pass
@@ -387,7 +394,6 @@ class Runner(object):
             ###########################################################################
             # Val
             if epoch % Config.val_freq == 0:
-                self.feature_encoder.eval()
                 self.ic_model.eval()
                 Tools.print()
                 Tools.print("Test {} .......".format(epoch))
@@ -396,7 +402,6 @@ class Runner(object):
                 self.val_ic(epoch, ic_loader=self.ic_test_test_loader, name="Test")
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
-                    torch.save(self.feature_encoder.state_dict(), Config.fe_dir)
                     torch.save(self.ic_model.state_dict(), Config.ic_dir)
                     Tools.print("Save networks for epoch: {}".format(epoch))
                     pass
@@ -407,7 +412,7 @@ class Runner(object):
         pass
 
     def val_ic(self, epoch, ic_loader, name="Test"):
-        acc_1, acc_2 = KNN.knn(self.feature_encoder, self.ic_model, Config.ic_out_dim, ic_loader, 100)
+        acc_1, acc_2 = KNN.knn(self.ic_model, Config.ic_out_dim, ic_loader, 100)
         Tools.print("Epoch: [{}] {} {:.4f}/{:.4f}".format(epoch, name, acc_1, acc_2))
         return acc_1
 
@@ -415,19 +420,18 @@ class Runner(object):
 
 
 ##############################################################################################################
-
 """
-1_64_200_0.001
-2020-10-20 20:39:30 Test 650 .......
-2020-10-20 20:39:38 Epoch: [650] Train 0.3158/0.6327
-2020-10-20 20:39:40 Epoch: [650] Val 0.4698/0.8634
-2020-10-20 20:39:42 Epoch: [650] Test 0.4555/0.8421
-2020-10-20 20:39:42 Save networks for epoch: 650
+2_64_200_1_0.001
+2020-10-20 21:02:27 Test 237 .......
+2020-10-20 21:02:42 Epoch: [237] Train 0.3524/0.6671
+2020-10-20 21:02:46 Epoch: [237] Val 0.4882/0.8697
+2020-10-20 21:02:51 Epoch: [237] Test 0.4667/0.8555
+2020-10-20 21:02:51 Save networks for epoch: 237
 """
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     train_epoch = 1000
     learning_rate = 0.001
@@ -438,11 +442,10 @@ class Config(object):
     val_freq = 10
 
     # ic
-    ic_in_dim = 64
     ic_out_dim = 128
     ic_ratio = 2
 
-    model_name = "1_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, learning_rate)
+    model_name = "2_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, learning_rate)
 
     MEAN_PIXEL = [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
     STD_PIXEL = [x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]
@@ -452,7 +455,6 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    fe_dir = Tools.new_dir("../models/ic/{}_fe.pkl".format(model_name))
     ic_dir = Tools.new_dir("../models/ic/{}_ic.pkl".format(model_name))
     pass
 
@@ -461,7 +463,6 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    runner.feature_encoder.eval()
     runner.ic_model.eval()
     runner.val_ic(0, ic_loader=runner.ic_test_train_loader, name="Train")
     runner.val_ic(0, ic_loader=runner.ic_test_val_loader, name="Val")
@@ -470,7 +471,6 @@ if __name__ == '__main__':
     runner.train()
 
     runner.load_model()
-    runner.feature_encoder.eval()
     runner.ic_model.eval()
     runner.val_ic(epoch=Config.train_epoch, ic_loader=runner.ic_test_train_loader, name="Final Train")
     runner.val_ic(epoch=Config.train_epoch, ic_loader=runner.ic_test_val_loader, name="Final Val")
