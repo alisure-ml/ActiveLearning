@@ -10,7 +10,6 @@ from PIL import Image
 import torch.nn.functional as F
 import torchvision.utils as vutils
 from alisuretool.Tools import Tools
-from tensorboardX import SummaryWriter
 from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
@@ -59,13 +58,14 @@ class MiniImageNetDataset(object):
             pass
 
         normalize = transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL)
-        self.transform_train = transforms.Compose([
+        self.transform_train_ic = transforms.Compose([
             transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
-            # transforms.RandomCrop(84, padding=8),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        self.transform_train_fsl = transforms.Compose([
+            transforms.RandomCrop(84, padding=8),
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.CenterCrop(size=84), transforms.ToTensor(), normalize])
-        self.transform = self.transform_train if self.is_train else self.transform_test
         pass
 
     def __len__(self):
@@ -133,7 +133,17 @@ class MiniImageNetDataset(object):
         random.shuffle(c_way_k_shot_tuple_list)
 
         task_list = c_way_k_shot_tuple_list + [now_label_image_tuple]
-        task_data = torch.cat([torch.unsqueeze(self.read_image(one[2], self.transform), dim=0) for one in task_list])
+
+        task_data = []
+        for one in task_list:
+            transform = self.transform_test
+            if self.is_train:
+                transform = self.transform_train_ic if one[2] == now_image_filename else self.transform_train_fsl
+                pass
+            task_data.append(torch.unsqueeze(self.read_image(one[2], transform), dim=0))
+            pass
+        task_data = torch.cat(task_data)
+
         task_label = torch.Tensor([int(one_tuple[1] == now_label) for one_tuple in c_way_k_shot_tuple_list])
         task_index = torch.Tensor([one[0] for one in task_list]).long()
         return task_data, task_label, task_index
@@ -373,10 +383,13 @@ class Runner(object):
 
         # all data
         self.data_train, self.data_val, self.data_test = MiniImageNetDataset.get_data_all(Config.data_root)
+
         self.task_train = MiniImageNetDataset(self.data_train, True, Config.num_way, Config.num_shot)
         self.task_val = MiniImageNetDataset(self.data_val, False, Config.num_way, Config.num_shot)
         self.task_test = MiniImageNetDataset(self.data_test, False, Config.num_way, Config.num_shot)
+
         self.task_train_loader = DataLoader(self.task_train, Config.batch_size, shuffle=True, num_workers=Config.num_workers)
+
         self.task_test_train_loader = DataLoader(self.task_train, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
         self.task_test_val_loader = DataLoader(self.task_val, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
         self.task_test_test_loader = DataLoader(self.task_test, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
@@ -496,6 +509,7 @@ class Runner(object):
                 # val fsl
                 self.val_fsl(epoch, self.task_test_train_loader, name="Train")
                 val_accuracy = self.val_fsl(epoch, self.task_test_val_loader, name="Val")
+                self.val_fsl(epoch, loader=self.task_test_test_loader, name="Test")
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
                     torch.save(self.feature_encoder.state_dict(), Config.fe_dir)
@@ -572,7 +586,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     train_epoch = 1000
     learning_rate = 0.001
@@ -589,7 +603,7 @@ class Config(object):
 
     # ic
     ic_in_dim = 64
-    ic_out_dim = 128
+    ic_out_dim = 512
     ic_ratio = 2
 
     MEAN_PIXEL = [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
@@ -597,6 +611,8 @@ class Config(object):
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
+        if not os.path.isdir(data_root):
+            data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
     else:
         data_root = "F:\\data\\miniImagenet"
 
