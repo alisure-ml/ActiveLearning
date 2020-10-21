@@ -75,7 +75,7 @@ class MiniImageNetDatasetTrain(object):
     def __getitem__(self, item):
         # 当前样本
         now_label_image_tuple = self.data_list[item]
-        # now_index, now_label, now_image_filename = now_label_image_tuple
+        now_index, _, now_image_filename = now_label_image_tuple
         _now_label = self.classes[item]
         now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
 
