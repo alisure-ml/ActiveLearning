@@ -628,12 +628,12 @@ class Runner(object):
     def val_val(self, episode):
         acc, h = self._val(self.folders_val, sampler_test=False, all_episode=Config.test_episode)
         Tools.print("Val {} Val Accuracy: {}, H: {}".format(episode, acc, h))
-        return val_accuracy, h
+        return acc, h
 
     def val_test(self, episode):
         acc, h = self._val(self.folders_test, sampler_test=False, all_episode=Config.test_episode)
         Tools.print("Val {} Test Accuracy: {}, H: {}".format(episode, acc, h))
-        return val_accuracy, h
+        return acc, h
 
     def test(self):
         Tools.print()
@@ -657,7 +657,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
     train_episode = 300000
     learning_rate = 0.001
@@ -672,7 +672,7 @@ class Config(object):
     val_freq = 5000  # 5000
     print_freq = 1000
 
-    model_name = "1"
+    model_name = "2"
     _path = "train_one_shot_alisure_new"
     fe_dir = Tools.new_dir("../models/{}/{}_fe_{}way_{}shot.pkl".format(_path, model_name, num_way, num_shot))
     rn_dir = Tools.new_dir("../models/{}/{}_rn_{}way_{}shot.pkl".format(_path, model_name, num_way, num_shot))
@@ -685,10 +685,10 @@ class Config(object):
         data_root = "F:\\data\\miniImagenet"
 
     # 0.7547 / 0.4884  - 0.5855 / 0.4600
-    feature_encoder, relation_network, compare_fsl_fn = CNNEncoder(), RelationNetwork(), Runner.compare_fsl_1
+    # feature_encoder, relation_network, compare_fsl_fn = CNNEncoder(), RelationNetwork(), Runner.compare_fsl_1
 
     # 0.8125 / 0.5215 / 0.5177 - 0.648 / 0.470
-    # feature_encoder, relation_network, compare_fsl_fn = CNNEncoder1(), RelationNetwork1(), Runner.compare_fsl_1
+    feature_encoder, relation_network, compare_fsl_fn = CNNEncoder1(), RelationNetwork1(), Runner.compare_fsl_1
 
     # 0.6432 / 0.4975
     # feature_encoder, relation_network, compare_fsl_fn = CNNEncoder2(), RelationNetwork2(9 * 9), Runner.compare_fsl_2

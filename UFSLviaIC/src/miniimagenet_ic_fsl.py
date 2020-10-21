@@ -585,6 +585,20 @@ class Runner(object):
 ##############################################################################################################
 
 
+"""
+020-10-21 23:02:50 Train: [999] 19471/1854
+2020-10-21 23:02:50 load feature encoder success from ../models/ic_fsl/2_64_5_1_fe_5way_1shot.pkl
+2020-10-21 23:02:50 load relation network success from ../models/ic_fsl/2_64_5_1_rn_5way_1shot.pkl
+2020-10-21 23:02:50 load ic model success from ../models/ic_fsl/2_64_5_1_ic_5way_1shot.pkl
+2020-10-21 23:02:58 Epoch: [1000] Final Train 0.3397/0.6713
+2020-10-21 23:03:00 Epoch: [1000] Final Val 0.4889/0.8769
+2020-10-21 23:03:02 Epoch: [1000] Final Test 0.4594/0.8553
+2020-10-21 23:04:09 Val 1000 Final Train Accuracy: 0.5360503222390252
+2020-10-21 23:04:16 Val 1000 Final Val   Accuracy: 0.5810896711451617
+2020-10-21 23:04:26 Val 1000 Final Test  Accuracy: 0.4569410663324587
+"""
+
+
 class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
