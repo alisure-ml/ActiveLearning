@@ -1,5 +1,4 @@
 import os
-import time
 import math
 import torch
 import random
@@ -11,7 +10,6 @@ from PIL import Image
 import torch.nn.functional as F
 import torchvision.utils as vutils
 from alisuretool.Tools import Tools
-from tensorboardX import SummaryWriter
 from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
@@ -61,10 +59,12 @@ class MiniImageNetDatasetTrain(object):
             pass
 
         normalize = transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL)
-        self.transform = transforms.Compose([
+        self.transform_ic = transforms.Compose([
             transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
-            # transforms.RandomCrop(84, padding=8),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        self.transform_fsl = transforms.Compose([
+            transforms.RandomCrop(84, padding=8),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         pass
 
@@ -91,7 +91,14 @@ class MiniImageNetDatasetTrain(object):
             return self._getitem_train(random.sample(list(range(0, len(self.data_list))), 1)[0])
 
         task_list = [self.data_list[index] for index in c_way_k_shot_index_list] + [now_label_image_tuple]
-        task_data = torch.cat([torch.unsqueeze(self.read_image(one[2], self.transform), dim=0) for one in task_list])
+
+        task_data = []
+        for one in task_list:
+            transform = self.transform_ic if one[2] == now_image_filename else self.transform_fsl
+            task_data.append(torch.unsqueeze(self.read_image(one[2], transform), dim=0))
+            pass
+        task_data = torch.cat(task_data)
+
         task_label = torch.Tensor([int(index in now_label_k_shot_index) for index in c_way_k_shot_index_list])
         task_index = torch.Tensor([one[0] for one in task_list]).long()
         return task_data, task_label, task_index
@@ -555,6 +562,7 @@ class Runner(object):
                 # val fsl
                 self.val_fsl(epoch, self.task_test_train_loader, name="Train")
                 val_accuracy = self.val_fsl(epoch, self.task_test_val_loader, name="Val")
+                self.val_fsl(epoch, loader=self.task_test_test_loader, name="Test")
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
                     torch.save(self.feature_encoder.state_dict(), Config.fe_dir)
@@ -631,7 +639,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     train_epoch = 1000
     learning_rate = 0.001
@@ -648,7 +656,7 @@ class Config(object):
 
     # ic
     ic_in_dim = 64
-    ic_out_dim = 128
+    ic_out_dim = 512
     ic_ratio = 2
 
     MEAN_PIXEL = [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
@@ -656,9 +664,10 @@ class Config(object):
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
+        if not os.path.isdir(data_root):
+            data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
     else:
-        # data_root = "F:\\data\\miniImagenet"
-        data_root = "D:\\Data\\miniImagenet"
+        data_root = "F:\\data\\miniImagenet"
 
     fe_dir = Tools.new_dir("../models/ic_ufsl/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     rn_dir = Tools.new_dir("../models/ic_ufsl/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
