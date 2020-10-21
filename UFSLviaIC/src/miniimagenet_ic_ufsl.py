@@ -122,7 +122,7 @@ class MiniImageNetDataset(object):
 
     def _get_samples_by_clustering_label(self, label, is_same_label=False, num=1):
         if is_same_label:
-            return random.sample(list(np.squeeze(np.argwhere(self.classes == label))), num)
+            return random.sample(list(np.squeeze(np.argwhere(self.classes == label), axis=1)), num)
         else:
             return random.sample(list(np.squeeze(np.argwhere(self.classes != label))), num)
         pass
