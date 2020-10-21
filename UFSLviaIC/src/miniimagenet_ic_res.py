@@ -400,7 +400,7 @@ class Config(object):
     val_freq = 10
 
     # ic
-    ic_out_dim = 128
+    ic_out_dim = 512
     ic_ratio = 2
 
     model_name = "2_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, learning_rate)
@@ -424,7 +424,7 @@ if __name__ == '__main__':
     # runner.load_model()
 
     runner.ic_model.eval()
-    runner.val_ic(0, ic_loader=runneric_test_train_loader, name="Train")
+    runner.val_ic(0, ic_loader=runner.ic_test_train_loader, name="Train")
     runner.val_ic(0, ic_loader=runner.ic_test_val_loader, name="Val")
     runner.val_ic(0, ic_loader=runner.ic_test_test_loader, name="Test")
 
