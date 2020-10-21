@@ -11,6 +11,7 @@ import torch.nn.functional as F
 import torchvision.utils as vutils
 from alisuretool.Tools import Tools
 from torch.optim import lr_scheduler
+from torchvision.models import resnet18
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
 from torch.utils.data import DataLoader, Dataset
@@ -124,70 +125,16 @@ class Normalize(nn.Module):
     pass
 
 
-class BasicBlock(nn.Module):
-    expansion = 1
-
-    def __init__(self, in_planes, planes, stride=1):
-        super().__init__()
-        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(planes)
-
-        self.shortcut = nn.Sequential()
-        if stride != 1 or in_planes != self.expansion * planes:
-            self.shortcut = nn.Sequential(nn.Conv2d(in_planes, self.expansion * planes,
-                                                    kernel_size=1, stride=stride, bias=False),
-                                          nn.BatchNorm2d(self.expansion * planes))
-            pass
-        pass
-
-    def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
-        out = self.bn2(self.conv2(out))
-        out += self.shortcut(x)
-        out = F.relu(out)
-        return out
-
-    pass
-
-
 class ICResNet(nn.Module):
 
-    def __init__(self, block, num_blocks, low_dim=512):
+    def __init__(self, low_dim=512):
         super().__init__()
-        self.in_planes = 64
-
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-
-        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
-        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
-        self.linear = nn.Linear(512 * block.expansion, low_dim, bias=False)
+        self.resnet = resnet18(num_classes=low_dim)
         self.l2norm = Normalize(2)
         pass
 
-    def _make_layer(self, block, planes, num_blocks, stride):
-        strides = [stride] + [1] * (num_blocks - 1)
-        layers = []
-        for stride in strides:
-            layers.append(block(self.in_planes, planes, stride))
-            self.in_planes = planes * block.expansion
-        return nn.Sequential(*layers)
-
     def forward(self, x):
-        conv_b1 = self.maxpool(F.relu(self.bn1(self.conv1(x))))
-        conv_b2 = self.layer1(conv_b1)
-        conv_b3 = self.layer2(conv_b2)
-        conv_b4 = self.layer3(conv_b3)
-        conv_b5 = self.layer4(conv_b4)
-        avg_pool = F.adaptive_avg_pool2d(conv_b5, 1)
-        avg_pool = avg_pool.view(avg_pool.size(0), -1)
-
-        out_logits = self.linear(avg_pool)
+        out_logits = self.resnet(x)
         out_l2norm = self.l2norm(out_logits)
         return out_logits, out_l2norm
 
@@ -328,7 +275,7 @@ class Runner(object):
                                               Config.batch_size, shuffle=False, num_workers=Config.num_workers)
 
         # model
-        self.ic_model = cuda(ICResNet(BasicBlock, [2, 2, 2, 2], Config.ic_out_dim))
+        self.ic_model = cuda(ICResNet(Config.ic_out_dim))
         self.ic_loss = cuda(nn.CrossEntropyLoss())
         self.ic_model_optim = torch.optim.Adam(self.ic_model.parameters(), lr=Config.learning_rate)
 
@@ -442,7 +389,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
     train_epoch = 1000
     learning_rate = 0.001
@@ -463,6 +410,8 @@ class Config(object):
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
+        if not os.path.isdir(data_root):
+            data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
     else:
         data_root = "F:\\data\\miniImagenet"
 
@@ -475,7 +424,7 @@ if __name__ == '__main__':
     # runner.load_model()
 
     runner.ic_model.eval()
-    runner.val_ic(0, ic_loader=runner.ic_test_train_loader, name="Train")
+    runner.val_ic(0, ic_loader=runneric_test_train_loader, name="Train")
     runner.val_ic(0, ic_loader=runner.ic_test_val_loader, name="Val")
     runner.val_ic(0, ic_loader=runner.ic_test_test_loader, name="Test")
 
