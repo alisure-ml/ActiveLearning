@@ -39,8 +39,8 @@ class MiniImageNetDataset(object):
 
         normalize = transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL)
         self.transform_train = transforms.Compose([
-            transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
-            # transforms.RandomCrop(84, padding=8),
+            # transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
+            transforms.RandomCrop(84, padding=8),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
         self.transform = self.transform_train if self.is_train else self.transform_test
@@ -350,6 +350,16 @@ class Runner(object):
 2020-10-20 22:08:04 Val 0 Val Accuracy: 0.415394183126455
 2020-10-20 22:11:04 Val 0 Train Accuracy: 0.3972173911328897
 2020-10-20 22:11:12 Val 0 Val Accuracy: 0.3183236666976281
+
+2020-10-21 11:23:43 load feature encoder success from ../models/fsl/1_64_5_1_fe_5way_1shot.pkl
+2020-10-21 11:23:43 load relation network success from ../models/fsl/1_64_5_1_rn_5way_1shot.pkl
+2020-10-21 11:24:20 Val 600 Final Train Accuracy: 0.6681735586720496
+2020-10-21 11:24:28 Val 600 Final Val Accuracy: 0.5544866524223822
+
+2020-10-21 11:24:28 Testing...
+2020-10-21 11:24:38 Val 600 Test 0 Accuracy: 0.46301855827246446
+2020-10-21 11:24:48 Val 600 Test 1 Accuracy: 0.45085185641926545
+2020-10-21 11:24:48 Final Test accuracy: 0.45693520734586496
 """
 
 

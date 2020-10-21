@@ -1,4 +1,5 @@
 import os
+import time
 import math
 import torch
 import random
@@ -45,10 +46,10 @@ class MiniImageNetIC(Dataset):
     pass
 
 
-class MiniImageNetDataset(object):
+class MiniImageNetDatasetTrain(object):
 
-    def __init__(self, data_list, is_train, num_way, num_shot):
-        self.data_list, self.is_train = data_list, is_train
+    def __init__(self, data_list, num_way, num_shot):
+        self.data_list = data_list
         self.num_way, self.num_shot = num_way, num_shot
         self.classes = None
 
@@ -60,21 +61,57 @@ class MiniImageNetDataset(object):
             pass
 
         normalize = transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL)
-        self.transform_train = transforms.Compose([
+        self.transform = transforms.Compose([
             transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
             # transforms.RandomCrop(84, padding=8),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.CenterCrop(size=84), transforms.ToTensor(), normalize])
-        self.transform = self.transform_train if self.is_train else self.transform_test
+        pass
+
+    def set_samples_class(self, classes):
+        self.classes = classes
+        pass
+
+    def __getitem__(self, item):
+        # 当前样本
+        now_label_image_tuple = self.data_list[item]
+        # now_index, now_label, now_image_filename = now_label_image_tuple
+        _now_label = self.classes[item]
+        now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
+
+        # 其他样本
+        other_label_k_shot_index_list = self._get_samples_by_clustering_label(_now_label, False,
+                                                                              num=self.num_shot * (self.num_way - 1))
+
+        # c_way_k_shot
+        c_way_k_shot_index_list = now_label_k_shot_index + other_label_k_shot_index_list
+        random.shuffle(c_way_k_shot_index_list)
+
+        if len(c_way_k_shot_index_list) != self.num_shot * self.num_way:
+            return self._getitem_train(random.sample(list(range(0, len(self.data_list))), 1)[0])
+
+        task_list = [self.data_list[index] for index in c_way_k_shot_index_list] + [now_label_image_tuple]
+        task_data = torch.cat([torch.unsqueeze(self.read_image(one[2], self.transform), dim=0) for one in task_list])
+        task_label = torch.Tensor([int(index in now_label_k_shot_index) for index in c_way_k_shot_index_list])
+        task_index = torch.Tensor([one[0] for one in task_list]).long()
+        return task_data, task_label, task_index
+
+    def _get_samples_by_clustering_label(self, label, is_same_label=False, num=1):
+        if is_same_label:
+            return random.sample(list(np.squeeze(np.argwhere(self.classes == label), axis=1)), num)
+        else:
+            return random.sample(list(np.squeeze(np.argwhere(self.classes != label))), num)
         pass
 
     def __len__(self):
         return len(self.data_list)
 
-    def set_samples_class(self, classes):
-        self.classes = classes
-        pass
+    @staticmethod
+    def read_image(image_path, transform=None):
+        image = Image.open(image_path).convert('RGB')
+        if transform is not None:
+            image = transform(image)
+        return image
 
     @staticmethod
     def get_data_all(data_root):
@@ -117,41 +154,30 @@ class MiniImageNetDataset(object):
 
         return data_train_list, data_val_list, data_test_list
 
-    def __getitem__(self, item):
-        return self._getitem_train(item) if self.is_train else self._getitem_test(item)
+    pass
 
-    def _get_samples_by_clustering_label(self, label, is_same_label=False, num=1):
-        if is_same_label:
-            return random.sample(list(np.squeeze(np.argwhere(self.classes == label), axis=1)), num)
-        else:
-            return random.sample(list(np.squeeze(np.argwhere(self.classes != label))), num)
+
+class MiniImageNetDatasetVal(object):
+
+    def __init__(self, data_list, num_way, num_shot):
+        self.data_list = data_list
+        self.num_way, self.num_shot = num_way, num_shot
+
+        self.data_dict = {}
+        for index, label, image_filename in self.data_list:
+            if label not in self.data_dict:
+                self.data_dict[label] = []
+            self.data_dict[label].append((index, label, image_filename))
+            pass
+
+        normalize = transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL)
+        self.transform = transforms.Compose([transforms.CenterCrop(size=84), transforms.ToTensor(), normalize])
         pass
 
-    def _getitem_train(self, item):
-        # 当前样本
-        now_label_image_tuple = self.data_list[item]
-        # now_index, now_label, now_image_filename = now_label_image_tuple
-        _now_label = self.classes[item]
-        now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
+    def __len__(self):
+        return len(self.data_list)
 
-        # 其他样本
-        other_label_k_shot_index_list = self._get_samples_by_clustering_label(_now_label, False,
-                                                                              num=self.num_shot * (self.num_way - 1))
-
-        # c_way_k_shot
-        c_way_k_shot_index_list = now_label_k_shot_index + other_label_k_shot_index_list
-        random.shuffle(c_way_k_shot_index_list)
-
-        if len(c_way_k_shot_index_list) != self.num_shot * self.num_way:
-            return self._getitem_train(random.sample(list(range(0, len(self.data_list))), 1)[0])
-
-        task_list = [self.data_list[index] for index in c_way_k_shot_index_list] + [now_label_image_tuple]
-        task_data = torch.cat([torch.unsqueeze(self.read_image(one[2], self.transform), dim=0) for one in task_list])
-        task_label = torch.Tensor([int(index in now_label_k_shot_index) for index in c_way_k_shot_index_list])
-        task_index = torch.Tensor([one[0] for one in task_list]).long()
-        return task_data, task_label, task_index
-
-    def _getitem_test(self, item):
+    def __getitem__(self, item):
         # 当前样本
         now_label_image_tuple = self.data_list[item]
         now_index, now_label, now_image_filename = now_label_image_tuple
@@ -410,21 +436,23 @@ class Runner(object):
         self.best_accuracy = 0.0
 
         # all data
-        self.data_train, self.data_val, self.data_test = MiniImageNetDataset.get_data_all(Config.data_root)
+        self.data_train, self.data_val, self.data_test = MiniImageNetDatasetTrain.get_data_all(Config.data_root)
 
         self.produce_class = ProduceClass(len(self.data_train), Config.ic_out_dim, Config.ic_ratio)
-        self.produce_class.init()
-
-        self.task_train = MiniImageNetDataset(self.data_train, True, Config.num_way, Config.num_shot)
-        self.task_train.set_samples_class(self.produce_class.classes)
+        self.task_train = MiniImageNetDatasetTrain(self.data_train, Config.num_way, Config.num_shot)
         self.task_train_loader = DataLoader(self.task_train, Config.batch_size, shuffle=True, num_workers=Config.num_workers)
+        self.produce_class.init()
+        self.task_train.set_samples_class(np.asarray(self.produce_class.classes))
 
         # 用于测试
-        self.task_val = MiniImageNetDataset(self.data_val, False, Config.num_way, Config.num_shot)
-        self.task_test = MiniImageNetDataset(self.data_test, False, Config.num_way, Config.num_shot)
-        self.task_test_train_loader = DataLoader(self.task_train, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
-        self.task_test_val_loader = DataLoader(self.task_val, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
-        self.task_test_test_loader = DataLoader(self.task_test, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
+        self.task_test_train = MiniImageNetDatasetVal(self.data_train, Config.num_way, Config.num_shot)
+        self.task_test_val = MiniImageNetDatasetVal(self.data_val, Config.num_way, Config.num_shot)
+        self.task_test_test = MiniImageNetDatasetVal(self.data_test, Config.num_way, Config.num_shot)
+
+        self.task_test_train_loader = DataLoader(self.task_test_train, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
+        self.task_test_val_loader = DataLoader(self.task_test_val, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
+        self.task_test_test_loader = DataLoader(self.task_test_test, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
+
         self.ic_test_train_loader = DataLoader(MiniImageNetIC(self.data_train), Config.batch_size, shuffle=False, num_workers=Config.num_workers)
         self.ic_test_val_loader = DataLoader(MiniImageNetIC(self.data_val), Config.batch_size, shuffle=False, num_workers=Config.num_workers)
         self.ic_test_test_loader = DataLoader(MiniImageNetIC(self.data_test), Config.batch_size, shuffle=False, num_workers=Config.num_workers)
@@ -548,7 +576,7 @@ class Runner(object):
     def val_fsl(self, epoch, loader, name=None):
         accuracies = []
         total_rewards, counter = 0, 0
-        for task_data, task_labels, _ in loader:
+        for task_data, task_labels, _ in tqdm(loader):
             task_data, task_labels = cuda(task_data), cuda(task_labels)
             batch_size = task_labels.shape[0]
 
@@ -603,11 +631,11 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     train_epoch = 1000
     learning_rate = 0.001
-    num_workers = 1
+    num_workers = 8
 
     val_freq = 10
 
@@ -642,15 +670,15 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    # runner.feature_encoder.eval()
-    # runner.relation_network.eval()
-    # runner.ic_model.eval()
-    # runner.val_ic(0, ic_loader=runner.ic_test_train_loader, name="Train")
-    # runner.val_ic(0, ic_loader=runner.ic_test_val_loader, name="Val")
-    # runner.val_ic(0, ic_loader=runner.ic_test_test_loader, name="Test")
-    # runner.val_fsl(epoch=0, loader=runner.task_test_train_loader, name="First Train")
-    # runner.val_fsl(epoch=0, loader=runner.task_test_val_loader, name="First Val")
-    # runner.val_fsl(epoch=0, loader=runner.task_test_test_loader, name="First Test")
+    runner.feature_encoder.eval()
+    runner.relation_network.eval()
+    runner.ic_model.eval()
+    runner.val_ic(0, ic_loader=runner.ic_test_train_loader, name="Train")
+    runner.val_ic(0, ic_loader=runner.ic_test_val_loader, name="Val")
+    runner.val_ic(0, ic_loader=runner.ic_test_test_loader, name="Test")
+    runner.val_fsl(epoch=0, loader=runner.task_test_train_loader, name="First Train")
+    runner.val_fsl(epoch=0, loader=runner.task_test_val_loader, name="First Val")
+    runner.val_fsl(epoch=0, loader=runner.task_test_test_loader, name="First Test")
 
     runner.train()
 

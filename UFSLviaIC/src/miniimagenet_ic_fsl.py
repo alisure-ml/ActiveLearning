@@ -517,7 +517,7 @@ class Runner(object):
     def val_fsl(self, epoch, loader, name=None):
         accuracies = []
         total_rewards, counter = 0, 0
-        for task_data, task_labels, _ in loader:
+        for task_data, task_labels, _ in tqdm(loader):
             task_data, task_labels = cuda(task_data), cuda(task_labels)
             batch_size = task_labels.shape[0]
 

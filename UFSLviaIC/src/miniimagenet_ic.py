@@ -423,6 +423,14 @@ class Runner(object):
 2020-10-20 20:39:40 Epoch: [650] Val 0.4698/0.8634
 2020-10-20 20:39:42 Epoch: [650] Test 0.4555/0.8421
 2020-10-20 20:39:42 Save networks for epoch: 650
+
+1_64_128_2_0.001
+2020-10-21 02:30:40 Train: [999] 19944/2065
+2020-10-21 02:30:40 load feature encoder success from ../models/ic/1_64_128_2_0.001_fe.pkl
+2020-10-21 02:30:40 load ic model success from ../models/ic/1_64_128_2_0.001_ic.pkl
+2020-10-21 02:30:48 Epoch: [1000] Final Train 0.2982/0.6135
+2020-10-21 02:30:50 Epoch: [1000] Final Val 0.4645/0.8533
+2020-10-21 02:30:53 Epoch: [1000] Final Test 0.4329/0.8311
 """
 
 
