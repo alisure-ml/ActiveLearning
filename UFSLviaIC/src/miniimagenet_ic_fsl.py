@@ -385,15 +385,15 @@ class Runner(object):
         self.data_train, self.data_val, self.data_test = MiniImageNetDataset.get_data_all(Config.data_root)
 
         self.task_train = MiniImageNetDataset(self.data_train, True, Config.num_way, Config.num_shot)
-        self.task_val = MiniImageNetDataset(self.data_val, False, Config.num_way, Config.num_shot)
-        self.task_test = MiniImageNetDataset(self.data_test, False, Config.num_way, Config.num_shot)
-
         self.task_train_loader = DataLoader(self.task_train, Config.batch_size, shuffle=True, num_workers=Config.num_workers)
 
-        self.task_test_train_loader = DataLoader(self.task_train, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
-        self.task_test_val_loader = DataLoader(self.task_val, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
-        self.task_test_test_loader = DataLoader(self.task_test, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
-        # 用于测试IC的性能
+        self.task_test_train = MiniImageNetDataset(self.data_train, False, Config.num_way, Config.num_shot)
+        self.task_test_val = MiniImageNetDataset(self.data_val, False, Config.num_way, Config.num_shot)
+        self.task_test_test = MiniImageNetDataset(self.data_test, False, Config.num_way, Config.num_shot)
+        self.task_test_train_loader = DataLoader(self.task_test_train, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
+        self.task_test_val_loader = DataLoader(self.task_test_val, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
+        self.task_test_test_loader = DataLoader(self.task_test_test, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
+
         self.ic_test_train_loader = DataLoader(MiniImageNetIC(self.data_train), Config.batch_size, shuffle=False, num_workers=Config.num_workers)
         self.ic_test_val_loader = DataLoader(MiniImageNetIC(self.data_val), Config.batch_size, shuffle=False, num_workers=Config.num_workers)
         self.ic_test_test_loader = DataLoader(MiniImageNetIC(self.data_test), Config.batch_size, shuffle=False, num_workers=Config.num_workers)

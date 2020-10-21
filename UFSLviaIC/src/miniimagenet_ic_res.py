@@ -267,6 +267,7 @@ class Runner(object):
         self.data_train, self.data_val, self.data_test = MiniImageNetDataset.get_data_all(Config.data_root)
         self.ic_train_train_loader = DataLoader(MiniImageNetIC(self.data_train, is_train=True),
                                                 Config.batch_size, shuffle=True, num_workers=Config.num_workers)
+
         self.ic_test_train_loader = DataLoader(MiniImageNetIC(self.data_train, is_train=False),
                                                Config.batch_size, shuffle=False, num_workers=Config.num_workers)
         self.ic_test_val_loader = DataLoader(MiniImageNetIC(self.data_val, is_train=False),
