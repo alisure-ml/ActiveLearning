@@ -3,20 +3,17 @@ import math
 import torch
 import random
 import platform
+import scipy as sp
+import scipy.stats
 import numpy as np
 import torch.nn as nn
 from PIL import Image
 import torchvision.utils as vutils
 from alisuretool.Tools import Tools
-from tensorboardX import SummaryWriter
 from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
 from torch.utils.data import DataLoader, Dataset
-
-
-def cuda(x):
-    return x.cuda() if torch.cuda.is_available() else x
 
 
 ##############################################################################################################
@@ -139,7 +136,6 @@ class MiniImageNet(Dataset):
         image = Image.open(self.image_roots[idx]).convert('RGB')
         if self.transform is not None:
             image = self.transform(image)
-
         label = self.labels[idx]
         if self.target_transform is not None:
             label = self.target_transform(label)
@@ -196,6 +192,7 @@ class MiniImageNet(Dataset):
 ##############################################################################################################
 
 
+# Original 1
 class CNNEncoder(nn.Module):
 
     def __init__(self):
@@ -216,9 +213,6 @@ class CNNEncoder(nn.Module):
         out3 = self.layer3(out2)
         out4 = self.layer4(out3)
         return out4
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
 
     pass
 
@@ -243,8 +237,99 @@ class RelationNetwork(nn.Module):
         out = torch.sigmoid(self.fc2(out))
         return out
 
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
+    pass
+
+
+# Original 1 --> MaxPool, FC input
+class CNNEncoder1(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
+        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
+        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        pass
+
+    def forward(self, x):
+        out1 = self.layer1(x)
+        out2 = self.layer2(out1)
+        out3 = self.layer3(out2)
+        out4 = self.layer4(out3)
+        return out4
+
+    pass
+
+
+class RelationNetwork1(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        self.fc1 = nn.Linear(64 * 5 * 5, 64)  # 64
+        self.fc2 = nn.Linear(64, 1)  # 64
+        pass
+
+    def forward(self, x):
+        out1 = self.layer1(x)
+        out2 = self.layer2(out1)
+        out = out2.view(out2.size(0), -1)
+        out = torch.relu(self.fc1(out))
+        out = torch.sigmoid(self.fc2(out))
+        return out
+
+    pass
+
+
+# Original 2
+class CNNEncoder2(nn.Module):
+
+    def __init__(self, avg_pool_stripe=5):
+        super().__init__()
+        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=0),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
+        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0), nn.BatchNorm2d(
+            64, momentum=1, affine=True), nn.ReLU(), nn.AvgPool2d(avg_pool_stripe))
+        pass
+
+    def forward(self, x):
+        out1 = self.layer1(x)
+        out2 = self.layer2(out1)
+        out3 = self.layer3(out2)
+        out4 = self.layer4(out3)
+        return out4
+
+    pass
+
+
+class RelationNetwork2(nn.Module):
+
+    def __init__(self, input_size):
+        super().__init__()
+        self.fc1 = nn.Linear(input_size, 256)
+        self.fc2 = nn.Linear(256, 256)
+        self.fc3 = nn.Linear(256, 64)
+        self.fc4 = nn.Linear(64, 1)
+        pass
+
+    def forward(self, x):
+        out = x.view(x.size(0), -1)
+        out = torch.relu(self.fc1(out))
+        out = torch.relu(self.fc2(out))
+        out = torch.relu(self.fc3(out))
+        out = self.fc4(out)
+        return out
 
     pass
 
@@ -252,23 +337,47 @@ class RelationNetwork(nn.Module):
 ##############################################################################################################
 
 
+##############################################################################################################
+
+
 class Runner(object):
 
-    def __init__(self):
+    def __init__(self, feature_encoder, relation_network, compare_fsl_fn):
         self.best_accuracy = 0.0
-        self.feature_encoder = cuda(CNNEncoder())
-        self.relation_network = cuda(RelationNetwork())
+
+        self.feature_encoder = feature_encoder
+        self.relation_network = relation_network
+        self.compare_fsl_fn = compare_fsl_fn
 
         # data
         self.folders_train, self.folders_val, self.folders_test = MiniImageNet.folders(Config.data_root)
 
         # model
+        self.feature_encoder.apply(self._weights_init).cuda()
+        self.relation_network.apply(self._weights_init).cuda()
         self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
         self.feature_encoder_scheduler = StepLR(self.feature_encoder_optim, Config.train_episode//3, gamma=0.5)
         self.relation_network_optim = torch.optim.Adam(self.relation_network.parameters(), lr=Config.learning_rate)
         self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_episode//3, gamma=0.5)
 
-        self.loss = cuda(nn.MSELoss())
+        self.loss = nn.MSELoss().cuda()
+        pass
+
+    @staticmethod
+    def _weights_init(m):
+        class_name = m.__class__.__name__
+        if class_name.find('Conv') != -1:
+            n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+            m.weight.data.normal_(0, math.sqrt(2. / n))
+            if m.bias is not None:
+                m.bias.data.zero_()
+        elif class_name.find('BatchNorm') != -1:
+            m.weight.data.fill_(1)
+            m.bias.data.zero_()
+        elif class_name.find('Linear') != -1:
+            m.weight.data.normal_(0, 0.01)
+            m.bias.data = torch.ones(m.bias.data.size())
+            pass
         pass
 
     def load_model(self):
@@ -281,22 +390,130 @@ class Runner(object):
             Tools.print("load relation network success from {}".format(Config.rn_dir))
         pass
 
-    def compare_fsl(self, samples, batches):
+    # Original 1
+    def compare_fsl_1(self, samples, batches):
         # calculate features
-        sample_features = self.feature_encoder(samples)  # 5x64*19*19
-        batch_features = self.feature_encoder(batches)  # 75x64*19*19
+        sample_features = self.feature_encoder(samples.cuda())  # 5x64*19*19
+        batch_features = self.feature_encoder(batches.cuda())  # 75x64*19*19
+
         batch_size, feature_dim, feature_width, feature_height = batch_features.shape
 
         # calculate relations
         sample_features_ext = sample_features.unsqueeze(0).repeat(batch_size, 1, 1, 1, 1)
-        batch_features_ext = batch_features.unsqueeze(0).repeat(
-            Config.num_shot * Config.num_way, 1, 1, 1, 1)
+        batch_features_ext = batch_features.unsqueeze(0).repeat(Config.num_shot * Config.num_way, 1, 1, 1, 1)
         batch_features_ext = torch.transpose(batch_features_ext, 0, 1)
-        relation_pairs = torch.cat((sample_features_ext,
-                                    batch_features_ext),2).view(-1, feature_dim * 2, feature_width, feature_height)
+        relation_pairs = torch.cat((sample_features_ext, batch_features_ext),
+                                   2).view(-1, feature_dim * 2, feature_width, feature_height)
 
         relations = self.relation_network(relation_pairs)
         relations = relations.view(-1, Config.num_way * Config.num_shot)
+
+        return relations
+
+    # Original 2
+    def compare_fsl_2(self, samples, batches):
+        # features
+        sample_features = self.feature_encoder(samples.cuda())  # 5x64*19*19
+        batch_features = self.feature_encoder(batches.cuda())  # 75x64*19*19
+
+        # size
+        sample_batch_size, feature_channel, feature_width, feature_height = sample_features.shape
+        batch_batch_size = batch_features.shape[0]
+        wxh = feature_width * feature_height
+
+        # 配对
+        sample_features_ext = sample_features.unsqueeze(0).repeat(batch_batch_size, 1, 1, 1, 1)
+        batch_features_ext = batch_features.unsqueeze(0).repeat(Config.num_shot * Config.num_way, 1, 1, 1, 1)
+        batch_features_ext = torch.transpose(batch_features_ext, 0, 1)
+
+        # 变换形状
+        sample_features_ext = sample_features_ext.view(batch_batch_size, sample_batch_size, feature_channel, -1)
+        sample_features_ext = sample_features_ext.view(-1, feature_channel, sample_features_ext.shape[-1])
+        batch_features_ext = batch_features_ext.view(batch_batch_size, sample_batch_size, feature_channel, -1)
+        batch_features_ext = batch_features_ext.reshape(-1, feature_channel, batch_features_ext.shape[-1])
+
+        # 准备两两特征
+        sample_features_ext = sample_features_ext.unsqueeze(2).repeat(1, 1, wxh, 1)
+        batch_features_ext = torch.transpose(batch_features_ext.unsqueeze(2).repeat(1, 1, wxh, 1), 2, 3)
+
+        # 求余弦相似度
+        relation_pairs = torch.cosine_similarity(sample_features_ext, batch_features_ext, dim=1)
+        relation_pairs = relation_pairs.view(-1, wxh * wxh)
+
+        # 计算关系得分
+        relations = self.relation_network(relation_pairs)
+        relations = relations.view(-1, Config.num_way * Config.num_shot)
+
+        return relations
+
+    # Original 2
+    def compare_fsl_3(self, samples, batches):
+        # features
+        sample_features = self.feature_encoder(samples.cuda())  # 5x64*19*19
+        batch_features = self.feature_encoder(batches.cuda())  # 75x64*19*19
+
+        # size
+        sample_batch_size, feature_channel, feature_width, feature_height = sample_features.shape
+        batch_batch_size = batch_features.shape[0]
+        wxh = feature_width * feature_height
+
+        sample_features = sample_features.view(sample_batch_size, feature_channel, -1)
+        batch_features = batch_features.view(batch_batch_size, feature_channel, -1)
+
+        # 配对
+        sample_features_ext = sample_features.unsqueeze(0).repeat(batch_batch_size, 1, 1, 1)
+        batch_features_ext = batch_features.unsqueeze(0).repeat(Config.num_shot * Config.num_way, 1, 1, 1)
+        batch_features_ext = torch.transpose(batch_features_ext, 0, 1)
+
+        # 变换形状
+        sample_features_ext = sample_features_ext.view(-1, feature_channel, wxh)
+        batch_features_ext = batch_features_ext.reshape(-1, feature_channel, wxh)
+        batch_features_ext = torch.transpose(batch_features_ext, 1, 2)
+
+        # 求余弦相似度
+        relation_pairs = torch.matmul(batch_features_ext, sample_features_ext)
+        relation_pairs = relation_pairs.view(-1, wxh * wxh)
+
+        # 计算关系得分
+        relations = self.relation_network(relation_pairs)
+        relations = relations.view(-1, Config.num_way * Config.num_shot)
+
+        return relations
+
+    # dilation
+    def compare_fsl_4(self, samples, batches):
+        # features
+        sample_features_all = self.feature_encoder(samples.cuda())  # 5x64*19*19
+        batch_features_all = self.feature_encoder(batches.cuda())  # 75x64*19*19
+
+        batch_size, feature_dim, feature_width, feature_height = batch_features_all[0].shape
+
+        sample_features_all_ext = []
+        batch_features_all_ext = []
+        sample_features_all = [sample_features_all[0], sample_features_all[0], sample_features_all[0],
+                               sample_features_all[1], sample_features_all[1], sample_features_all[1],
+                               sample_features_all[2], sample_features_all[2], sample_features_all[2]]
+        batch_features_all = [batch_features_all[0], batch_features_all[1], batch_features_all[2],
+                              batch_features_all[0], batch_features_all[1], batch_features_all[2],
+                              batch_features_all[0], batch_features_all[1], batch_features_all[2]]
+        for sample_features, batch_features in zip(sample_features_all, batch_features_all):
+            # calculate relations
+            sample_features_ext = sample_features.unsqueeze(0).repeat(batch_size, 1, 1, 1, 1)
+            batch_features_ext = batch_features.unsqueeze(0).repeat(
+                Config.num_shot * Config.num_way, 1, 1, 1, 1)
+            batch_features_ext = torch.transpose(batch_features_ext, 0, 1)
+            sample_features_all_ext.append(sample_features_ext)
+            batch_features_all_ext.append(batch_features_ext)
+            pass
+
+        sample_features_all_ext = torch.cat(sample_features_all_ext, 2)
+        batch_features_all_ext = torch.cat(batch_features_all_ext, 2)
+        relation_pairs = torch.cat((sample_features_all_ext, batch_features_all_ext),
+                                   2).view(-1, feature_dim * 2 * 3 * 3, feature_width, feature_height)
+
+        relations = self.relation_network(relation_pairs)
+        relations = relations.view(-1, Config.num_way * Config.num_shot)
+
         return relations
 
     def train(self):
@@ -311,15 +528,14 @@ class Runner(object):
             batch_data_loader = MiniImageNet.get_data_loader(task, Config.task_batch_size, split="val", shuffle=True)
             samples, sample_labels = sample_data_loader.__iter__().next()
             batches, batch_labels = batch_data_loader.__iter__().next()
-            samples, batches =  cuda(samples), cuda(batches)
 
             ###########################################################################
             # calculate features
-            relations = self.compare_fsl(samples, batches)
+            relations = self.compare_fsl_fn(self, samples, batches)
             ###########################################################################
 
-            one_hot_labels = cuda(torch.zeros(Config.task_batch_size * Config.num_way,
-                                              Config.num_way).scatter_(1, batch_labels.long().view(-1, 1), 1))
+            one_hot_labels = torch.zeros(Config.task_batch_size * Config.num_way,Config.num_way
+                                         ).scatter_(1, batch_labels.view(-1, 1), 1).cuda()
             loss = self.loss(relations, one_hot_labels)
 
             self.feature_encoder.zero_grad()
@@ -338,16 +554,17 @@ class Runner(object):
             all_loss += loss.item()
             if (episode + 1) % Config.print_freq == 0:
                 Tools.print("Episode: {} avg loss: {} loss: {} lr: {}".format(
-                    episode + 1, all_loss / (episode % Config.val_freq), loss.item(),
-                    self.feature_encoder_scheduler.get_lr()))
+                    episode + 1, all_loss / (episode % Config.val_freq),
+                    loss.item(), self.feature_encoder_scheduler.get_lr()))
                 pass
 
             if (episode + 1) % Config.val_freq == 0:
                 Tools.print()
-                Tools.print("Val...")
+                Tools.print("Valing...")
                 self.val_train(episode)
-                val_accuracy = self.val_val(episode)
-                self.val_test()
+                val_accuracy, val_h = self.val_val(episode)
+                self.val_test(episode)
+
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
                     torch.save(self.feature_encoder.state_dict(), Config.fe_dir)
@@ -363,32 +580,15 @@ class Runner(object):
 
         pass
 
-    def val_train(self, episode):
-        val_train_accuracy = self._val(self.folders_train, sampler_test=False, all_episode=Config.test_episode)
-        Tools.print("Val {} Train Accuracy: {}".format(episode, val_train_accuracy))
-        return val_train_accuracy
-
-    def val_val(self, episode):
-        val_accuracy = self._val(self.folders_val, sampler_test=False, all_episode=Config.test_episode)
-        Tools.print("Val {} Accuracy: {}".format(episode, val_accuracy))
-        return val_accuracy
-
-    def val_test(self):
-        Tools.print()
-        Tools.print("Testing...")
-        total_accuracy = 0.0
-        for episode in range(Config.test_avg_num):
-            test_accuracy = self._val(self.folders_test, sampler_test=True, all_episode=Config.test_episode)
-            total_accuracy += test_accuracy
-            Tools.print("episode={}, Test accuracy={}, Total accuracy={}".format(
-                episode, test_accuracy, total_accuracy))
-            pass
-
-        final_accuracy = total_accuracy / Config.test_avg_num
-        Tools.print("Final accuracy: {}".format(final_accuracy))
-        return final_accuracy
-
     def _val(self, folders, sampler_test, all_episode):
+
+        def mean_confidence_interval(data, confidence=0.95):
+            a = 1.0 * np.array(data)
+            n = len(a)
+            m, se = np.mean(a), scipy.stats.sem(a)
+            h = se * sp.stats.t._ppf((1 + confidence) / 2., n - 1)
+            return m, h
+
         accuracies = []
         for i in range(all_episode):
             total_rewards = 0
@@ -398,13 +598,11 @@ class Runner(object):
             sample_data_loader = MiniImageNet.get_data_loader(task, 1, "train", sampler_test=sampler_test, shuffle=False)
             batch_data_loader = MiniImageNet.get_data_loader(task, 3, "val", sampler_test=sampler_test, shuffle=True)
             samples, labels = sample_data_loader.__iter__().next()
-            samples = cuda(samples)
 
             for batches, batch_labels in batch_data_loader:
                 ###########################################################################
                 # calculate features
-                batches = cuda(batches)
-                relations= self.compare_fsl(samples, batches)
+                relations = self.compare_fsl_fn(self, samples, batches)
                 ###########################################################################
 
                 _, predict_labels = torch.max(relations.data, 1)
@@ -415,11 +613,47 @@ class Runner(object):
                 counter += batch_size
                 pass
 
-            accuracies.append(total_rewards / 1.0 / counter)
+            accuracy = total_rewards / 1.0 / counter
+            accuracies.append(accuracy)
             pass
-        return np.mean(np.array(accuracies, dtype=np.float))
+
+        accuracy, h = mean_confidence_interval(accuracies)
+        return accuracy, h
+
+    def val_train(self, episode):
+        acc, h = self._val(self.folders_train, sampler_test=False, all_episode=Config.test_episode)
+        Tools.print("Val {} Train Accuracy: {}, H: {}".format(episode, acc, h))
+        return acc, h
+
+    def val_val(self, episode):
+        acc, h = self._val(self.folders_val, sampler_test=False, all_episode=Config.test_episode)
+        Tools.print("Val {} Val Accuracy: {}, H: {}".format(episode, acc, h))
+        return val_accuracy, h
+
+    def val_test(self, episode):
+        acc, h = self._val(self.folders_test, sampler_test=False, all_episode=Config.test_episode)
+        Tools.print("Val {} Test Accuracy: {}, H: {}".format(episode, acc, h))
+        return val_accuracy, h
+
+    def test(self):
+        Tools.print()
+        Tools.print("Testing...")
+        total_accuracy = 0.0
+        for episode in range(Config.test_avg_num):
+            test_accuracy, h = self._val(self.folders_test, sampler_test=True, all_episode=Config.test_episode)
+            total_accuracy += test_accuracy
+            Tools.print("episode={}, Test accuracy={}, H={}, Total accuracy={}".format(
+                episode, test_accuracy, h, total_accuracy))
+            pass
+
+        final_accuracy = total_accuracy / Config.test_avg_num
+        Tools.print("Final accuracy: {}".format(final_accuracy))
+        return final_accuracy
 
     pass
+
+
+##############################################################################################################
 
 
 class Config(object):
@@ -439,8 +673,9 @@ class Config(object):
     print_freq = 1000
 
     model_name = "1"
-    fe_dir = Tools.new_dir("../models/fsl_old/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    rn_dir = Tools.new_dir("../models/fsl_old/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    _path = "train_one_shot_alisure_new"
+    fe_dir = Tools.new_dir("../models/{}/{}_fe_{}way_{}shot.pkl".format(_path, model_name, num_way, num_shot))
+    rn_dir = Tools.new_dir("../models/{}/{}_rn_{}way_{}shot.pkl".format(_path, model_name, num_way, num_shot))
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -449,19 +684,38 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
+    # 0.7547 / 0.4884  - 0.5855 / 0.4600
+    feature_encoder, relation_network, compare_fsl_fn = CNNEncoder(), RelationNetwork(), Runner.compare_fsl_1
+
+    # 0.8125 / 0.5215 / 0.5177 - 0.648 / 0.470
+    # feature_encoder, relation_network, compare_fsl_fn = CNNEncoder1(), RelationNetwork1(), Runner.compare_fsl_1
+
+    # 0.6432 / 0.4975
+    # feature_encoder, relation_network, compare_fsl_fn = CNNEncoder2(), RelationNetwork2(9 * 9), Runner.compare_fsl_2
+
+    # 0.6208 / 0.4928
+    # feature_encoder, relation_network, compare_fsl_fn = CNNEncoder2(), RelationNetwork2(9 * 9), Runner.compare_fsl_3
+
+    # 0.6168 / 0.4915
+    # avg_pool_stripe = 3
+    # feature_encoder = CNNEncoder2(avg_pool_stripe=avg_pool_stripe)
+    # relation_network, compare_fsl_fn = RelationNetwork2(np.power(15 // avg_pool_stripe, 4)), Runner.compare_fsl_3
+
     pass
-
-
-##############################################################################################################
 
 
 if __name__ == '__main__':
-    runner = Runner()
-    # runner.load_model()
+    runner = Runner(feature_encoder=Config.feature_encoder,
+                    relation_network=Config.relation_network, compare_fsl_fn=Config.compare_fsl_fn)
 
-    runner.val_test()
+    runner.load_model()
+
+    runner.test()
+    runner.val_train(episode=0)
+    runner.val_val(episode=0)
+    runner.val_test(episode=0)
     runner.train()
     runner.val_train(episode=Config.train_episode)
     runner.val_val(episode=Config.train_episode)
-    runner.val_test()
-    pass
+    runner.val_test(episode=Config.train_episode)
+    runner.test()
