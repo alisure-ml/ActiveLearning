@@ -342,25 +342,15 @@ class Runner(object):
 
 ##############################################################################################################
 
+
 """
-2020-10-20 03:53:35 Test 136 .......
-2020-10-20 03:54:06 Val 136 Train Accuracy: 0.7207780321325078
-2020-10-20 03:54:14 Val 136 Val Accuracy: 0.5846663433584107
-2020-10-20 03:54:14 Save networks for epoch: 136
-
-2020-10-20 22:07:32 Val 0 Train Accuracy: 0.462905070020458
-2020-10-20 22:08:04 Val 0 Val Accuracy: 0.415394183126455
-2020-10-20 22:11:04 Val 0 Train Accuracy: 0.3972173911328897
-2020-10-20 22:11:12 Val 0 Val Accuracy: 0.3183236666976281
-
-2020-10-21 11:23:43 load feature encoder success from ../models/fsl/1_64_5_1_fe_5way_1shot.pkl
-2020-10-21 11:23:43 load relation network success from ../models/fsl/1_64_5_1_rn_5way_1shot.pkl
-2020-10-21 11:24:20 Val 600 Final Train Accuracy: 0.6681735586720496
-2020-10-21 11:24:28 Val 600 Final Val Accuracy: 0.5544866524223822
-2020-10-21 11:24:28 Testing...
-2020-10-21 11:24:38 Val 600 Test 0 Accuracy: 0.46301855827246446
-2020-10-21 11:24:48 Val 600 Test 1 Accuracy: 0.45085185641926545
-2020-10-21 11:24:48 Final Test accuracy: 0.45693520734586496
+2020-10-21 20:54:21 load feature encoder success from ../models/fsl/1_64_5_1_fe_5way_1shot.pkl
+2020-10-21 20:54:21 load relation network success from ../models/fsl/1_64_5_1_rn_5way_1shot.pkl
+2020-10-21 20:54:58 Val 600 Final Train Accuracy: 0.783775971449595
+2020-10-21 20:55:07 Val 600 Final Val Accuracy: 0.5664206529505581
+2020-10-21 20:55:19 Val 600 Test 0 Accuracy: 0.4768637962972758
+2020-10-21 20:55:31 Val 600 Test 1 Accuracy: 0.46626023077881623
+2020-10-21 20:55:31 Final Test accuracy: 0.47156201353804605
 """
 
 
