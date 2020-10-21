@@ -349,7 +349,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
     num_way = 5
     num_shot = 1
@@ -358,12 +358,6 @@ class Config(object):
     test_avg_num = 5
     test_episode = 600
 
-    model_path = "fsl"
-    model_fe_name = "1_64_5_1_fe_5way_1shot.pkl"
-    model_rn_name = "1_64_5_1_rn_5way_1shot.pkl"
-    fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
-    rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
-
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
         if not os.path.isdir(data_root):
@@ -371,6 +365,23 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
+    # model_path = "fsl"
+    # model_fe_name = "1_64_5_1_fe_5way_1shot.pkl"
+    # model_rn_name = "1_64_5_1_rn_5way_1shot.pkl"
+    # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
+    # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
+
+    # model_path = "ic_fsl"
+    # model_fe_name = "2_64_5_1_fe_5way_1shot.pkl"
+    # model_rn_name = "2_64_5_1_rn_5way_1shot.pkl"
+    # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
+    # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
+
+    model_path = "fsl_old"
+    model_fe_name = "1_fe_5way_1shot.pkl"
+    model_rn_name = "1_rn_5way_1shot.pkl"
+    fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
+    rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
     pass
 
 
