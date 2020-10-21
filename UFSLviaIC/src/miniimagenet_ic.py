@@ -25,12 +25,14 @@ def cuda(x):
 
 class MiniImageNetIC(Dataset):
 
-    def __init__(self, data_list, is_train=True):
+    def __init__(self, data_list, is_train=True, image_size=84):
         self.data_list = data_list
         self.train_label = [one[1] for one in self.data_list]
 
         self.transform_train = transforms.Compose([
-            transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
+            # transforms.RandomCrop(size=image_size, padding=8),
+            # transforms.RandomResizedCrop(size=image_size, scale=(0.75, 1.)),
+            transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4),
             transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(),
@@ -38,7 +40,7 @@ class MiniImageNetIC(Dataset):
             transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL),
         ])
         self.transform_test = transforms.Compose([
-            transforms.CenterCrop(size=84),
+            transforms.CenterCrop(size=image_size),
             transforms.ToTensor(),
             transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL),
         ])
@@ -417,7 +419,7 @@ class Runner(object):
 ##############################################################################################################
 
 """
-1_64_200_0.001
+1_64_200_3_0.001
 2020-10-20 20:39:30 Test 650 .......
 2020-10-20 20:39:38 Epoch: [650] Train 0.3158/0.6327
 2020-10-20 20:39:40 Epoch: [650] Val 0.4698/0.8634
@@ -431,11 +433,19 @@ class Runner(object):
 2020-10-21 02:30:48 Epoch: [1000] Final Train 0.2982/0.6135
 2020-10-21 02:30:50 Epoch: [1000] Final Val 0.4645/0.8533
 2020-10-21 02:30:53 Epoch: [1000] Final Test 0.4329/0.8311
+
+1_64_128_2_0.001
+2020-10-21 17:13:21 Train: [960] 15777/1366
+2020-10-21 17:13:21 Test 960 .......
+2020-10-21 17:13:31 Epoch: [960] Train 0.2896/0.6083
+2020-10-21 17:13:34 Epoch: [960] Val 0.4409/0.8501
+2020-10-21 17:13:37 Epoch: [960] Test 0.4218/0.8240
+2020-10-21 17:13:37 Save networks for epoch: 960
 """
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
     train_epoch = 1000
     learning_rate = 0.001
@@ -447,7 +457,7 @@ class Config(object):
 
     # ic
     ic_in_dim = 64
-    ic_out_dim = 128
+    ic_out_dim = 512
     ic_ratio = 2
 
     model_name = "1_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, learning_rate)
@@ -457,6 +467,8 @@ class Config(object):
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
+        if not os.path.isdir(data_root):
+            data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
     else:
         data_root = "F:\\data\\miniImagenet"
 
