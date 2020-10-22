@@ -297,6 +297,30 @@ class Runner(object):
         t_epoch = Config.t_epoch
         first_epoch = Config.first_epoch
         init_learning_rate = Config.learning_rate
+
+        if epoch < first_epoch + t_epoch * 0:  # 0-500
+            learning_rate = init_learning_rate
+        elif epoch < first_epoch + t_epoch * 1:  # 500-1000
+            learning_rate = init_learning_rate / 10
+        else:  # 1000-1500
+            learning_rate = init_learning_rate / 100
+            pass
+
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = learning_rate
+            pass
+
+        return learning_rate
+
+    @staticmethod
+    def _adjust_learning_rate2(optimizer, epoch):
+
+        def _get_lr(_base_lr, now_epoch, _t_epoch=Config.t_epoch, _eta_min=1e-05):
+            return _eta_min + (_base_lr - _eta_min) * (1 + math.cos(math.pi * now_epoch / _t_epoch)) / 2
+
+        t_epoch = Config.t_epoch
+        first_epoch = Config.first_epoch
+        init_learning_rate = Config.learning_rate
         if epoch < first_epoch + t_epoch * 0:  # 0-200
             learning_rate = init_learning_rate
         elif epoch < first_epoch + t_epoch * 1:  # 200-300
@@ -430,13 +454,17 @@ class Runner(object):
 class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
-    train_epoch = 1000
     num_workers = 8
     batch_size = 64
     val_freq = 10
 
     learning_rate = 0.01
-    first_epoch, t_epoch = 200, 100
+
+    # train_epoch = 1000
+    # first_epoch, t_epoch = 200, 100
+
+    train_epoch = 1500
+    first_epoch, t_epoch = 500, 500
 
     # ic
     ic_out_dim = 512
