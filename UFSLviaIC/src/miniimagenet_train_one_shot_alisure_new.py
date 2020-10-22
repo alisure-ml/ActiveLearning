@@ -192,7 +192,7 @@ class MiniImageNet(Dataset):
 ##############################################################################################################
 
 
-# Original 1
+# Original
 class CNNEncoder(nn.Module):
 
     def __init__(self):
@@ -240,7 +240,7 @@ class RelationNetwork(nn.Module):
     pass
 
 
-# Original 1 --> MaxPool, FC input
+# Original --> MaxPool, FC input
 class CNNEncoder1(nn.Module):
 
     def __init__(self):
@@ -288,66 +288,16 @@ class RelationNetwork1(nn.Module):
     pass
 
 
-# Original 2
-class CNNEncoder2(nn.Module):
-
-    def __init__(self, avg_pool_stripe=5):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0), nn.BatchNorm2d(
-            64, momentum=1, affine=True), nn.ReLU(), nn.AvgPool2d(avg_pool_stripe))
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out3 = self.layer3(out2)
-        out4 = self.layer4(out3)
-        return out4
-
-    pass
-
-
-class RelationNetwork2(nn.Module):
-
-    def __init__(self, input_size):
-        super().__init__()
-        self.fc1 = nn.Linear(input_size, 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.fc3 = nn.Linear(256, 64)
-        self.fc4 = nn.Linear(64, 1)
-        pass
-
-    def forward(self, x):
-        out = x.view(x.size(0), -1)
-        out = torch.relu(self.fc1(out))
-        out = torch.relu(self.fc2(out))
-        out = torch.relu(self.fc3(out))
-        out = self.fc4(out)
-        return out
-
-    pass
-
-
-##############################################################################################################
-
-
 ##############################################################################################################
 
 
 class Runner(object):
 
-    def __init__(self, feature_encoder, relation_network, compare_fsl_fn):
+    def __init__(self, feature_encoder, relation_network):
         self.best_accuracy = 0.0
 
         self.feature_encoder = feature_encoder
         self.relation_network = relation_network
-        self.compare_fsl_fn = compare_fsl_fn
 
         # data
         self.folders_train, self.folders_val, self.folders_test = MiniImageNet.folders(Config.data_root)
@@ -390,8 +340,7 @@ class Runner(object):
             Tools.print("load relation network success from {}".format(Config.rn_dir))
         pass
 
-    # Original 1
-    def compare_fsl_1(self, samples, batches):
+    def compare_fsl(self, samples, batches):
         # calculate features
         sample_features = self.feature_encoder(samples.cuda())  # 5x64*19*19
         batch_features = self.feature_encoder(batches.cuda())  # 75x64*19*19
@@ -404,112 +353,6 @@ class Runner(object):
         batch_features_ext = torch.transpose(batch_features_ext, 0, 1)
         relation_pairs = torch.cat((sample_features_ext, batch_features_ext),
                                    2).view(-1, feature_dim * 2, feature_width, feature_height)
-
-        relations = self.relation_network(relation_pairs)
-        relations = relations.view(-1, Config.num_way * Config.num_shot)
-
-        return relations
-
-    # Original 2
-    def compare_fsl_2(self, samples, batches):
-        # features
-        sample_features = self.feature_encoder(samples.cuda())  # 5x64*19*19
-        batch_features = self.feature_encoder(batches.cuda())  # 75x64*19*19
-
-        # size
-        sample_batch_size, feature_channel, feature_width, feature_height = sample_features.shape
-        batch_batch_size = batch_features.shape[0]
-        wxh = feature_width * feature_height
-
-        # 配对
-        sample_features_ext = sample_features.unsqueeze(0).repeat(batch_batch_size, 1, 1, 1, 1)
-        batch_features_ext = batch_features.unsqueeze(0).repeat(Config.num_shot * Config.num_way, 1, 1, 1, 1)
-        batch_features_ext = torch.transpose(batch_features_ext, 0, 1)
-
-        # 变换形状
-        sample_features_ext = sample_features_ext.view(batch_batch_size, sample_batch_size, feature_channel, -1)
-        sample_features_ext = sample_features_ext.view(-1, feature_channel, sample_features_ext.shape[-1])
-        batch_features_ext = batch_features_ext.view(batch_batch_size, sample_batch_size, feature_channel, -1)
-        batch_features_ext = batch_features_ext.reshape(-1, feature_channel, batch_features_ext.shape[-1])
-
-        # 准备两两特征
-        sample_features_ext = sample_features_ext.unsqueeze(2).repeat(1, 1, wxh, 1)
-        batch_features_ext = torch.transpose(batch_features_ext.unsqueeze(2).repeat(1, 1, wxh, 1), 2, 3)
-
-        # 求余弦相似度
-        relation_pairs = torch.cosine_similarity(sample_features_ext, batch_features_ext, dim=1)
-        relation_pairs = relation_pairs.view(-1, wxh * wxh)
-
-        # 计算关系得分
-        relations = self.relation_network(relation_pairs)
-        relations = relations.view(-1, Config.num_way * Config.num_shot)
-
-        return relations
-
-    # Original 2
-    def compare_fsl_3(self, samples, batches):
-        # features
-        sample_features = self.feature_encoder(samples.cuda())  # 5x64*19*19
-        batch_features = self.feature_encoder(batches.cuda())  # 75x64*19*19
-
-        # size
-        sample_batch_size, feature_channel, feature_width, feature_height = sample_features.shape
-        batch_batch_size = batch_features.shape[0]
-        wxh = feature_width * feature_height
-
-        sample_features = sample_features.view(sample_batch_size, feature_channel, -1)
-        batch_features = batch_features.view(batch_batch_size, feature_channel, -1)
-
-        # 配对
-        sample_features_ext = sample_features.unsqueeze(0).repeat(batch_batch_size, 1, 1, 1)
-        batch_features_ext = batch_features.unsqueeze(0).repeat(Config.num_shot * Config.num_way, 1, 1, 1)
-        batch_features_ext = torch.transpose(batch_features_ext, 0, 1)
-
-        # 变换形状
-        sample_features_ext = sample_features_ext.view(-1, feature_channel, wxh)
-        batch_features_ext = batch_features_ext.reshape(-1, feature_channel, wxh)
-        batch_features_ext = torch.transpose(batch_features_ext, 1, 2)
-
-        # 求余弦相似度
-        relation_pairs = torch.matmul(batch_features_ext, sample_features_ext)
-        relation_pairs = relation_pairs.view(-1, wxh * wxh)
-
-        # 计算关系得分
-        relations = self.relation_network(relation_pairs)
-        relations = relations.view(-1, Config.num_way * Config.num_shot)
-
-        return relations
-
-    # dilation
-    def compare_fsl_4(self, samples, batches):
-        # features
-        sample_features_all = self.feature_encoder(samples.cuda())  # 5x64*19*19
-        batch_features_all = self.feature_encoder(batches.cuda())  # 75x64*19*19
-
-        batch_size, feature_dim, feature_width, feature_height = batch_features_all[0].shape
-
-        sample_features_all_ext = []
-        batch_features_all_ext = []
-        sample_features_all = [sample_features_all[0], sample_features_all[0], sample_features_all[0],
-                               sample_features_all[1], sample_features_all[1], sample_features_all[1],
-                               sample_features_all[2], sample_features_all[2], sample_features_all[2]]
-        batch_features_all = [batch_features_all[0], batch_features_all[1], batch_features_all[2],
-                              batch_features_all[0], batch_features_all[1], batch_features_all[2],
-                              batch_features_all[0], batch_features_all[1], batch_features_all[2]]
-        for sample_features, batch_features in zip(sample_features_all, batch_features_all):
-            # calculate relations
-            sample_features_ext = sample_features.unsqueeze(0).repeat(batch_size, 1, 1, 1, 1)
-            batch_features_ext = batch_features.unsqueeze(0).repeat(
-                Config.num_shot * Config.num_way, 1, 1, 1, 1)
-            batch_features_ext = torch.transpose(batch_features_ext, 0, 1)
-            sample_features_all_ext.append(sample_features_ext)
-            batch_features_all_ext.append(batch_features_ext)
-            pass
-
-        sample_features_all_ext = torch.cat(sample_features_all_ext, 2)
-        batch_features_all_ext = torch.cat(batch_features_all_ext, 2)
-        relation_pairs = torch.cat((sample_features_all_ext, batch_features_all_ext),
-                                   2).view(-1, feature_dim * 2 * 3 * 3, feature_width, feature_height)
 
         relations = self.relation_network(relation_pairs)
         relations = relations.view(-1, Config.num_way * Config.num_shot)
@@ -531,7 +374,7 @@ class Runner(object):
 
             ###########################################################################
             # calculate features
-            relations = self.compare_fsl_fn(self, samples, batches)
+            relations = self.compare_fsl(samples, batches)
             ###########################################################################
 
             one_hot_labels = torch.zeros(Config.task_batch_size * Config.num_way,Config.num_way
@@ -602,7 +445,7 @@ class Runner(object):
             for batches, batch_labels in batch_data_loader:
                 ###########################################################################
                 # calculate features
-                relations = self.compare_fsl_fn(self, samples, batches)
+                relations = self.compare_fsl(samples, batches)
                 ###########################################################################
 
                 _, predict_labels = torch.max(relations.data, 1)
@@ -622,42 +465,39 @@ class Runner(object):
 
     def val_train(self, episode):
         acc, h = self._val(self.folders_train, sampler_test=False, all_episode=Config.test_episode)
-        Tools.print("Val {} Train Accuracy: {}, H: {}".format(episode, acc, h))
+        Tools.print("Val {} Train Accuracy: {}".format(episode, acc))
         return acc, h
 
     def val_val(self, episode):
         acc, h = self._val(self.folders_val, sampler_test=False, all_episode=Config.test_episode)
-        Tools.print("Val {} Val Accuracy: {}, H: {}".format(episode, acc, h))
+        Tools.print("Val {} Val Accuracy: {}".format(episode, acc))
         return acc, h
 
     def val_test(self, episode):
         acc, h = self._val(self.folders_test, sampler_test=False, all_episode=Config.test_episode)
-        Tools.print("Val {} Test Accuracy: {}, H: {}".format(episode, acc, h))
+        Tools.print("Val {} Test Accuracy: {}".format(episode, acc))
         return acc, h
 
-    def test(self):
+    def test(self, test_avg_num=None):
         Tools.print()
         Tools.print("Testing...")
-        total_accuracy = 0.0
-        for episode in range(Config.test_avg_num):
-            test_accuracy, h = self._val(self.folders_test, sampler_test=True, all_episode=Config.test_episode)
-            total_accuracy += test_accuracy
-            Tools.print("episode={}, Test accuracy={}, H={}, Total accuracy={}".format(
-                episode, test_accuracy, h, total_accuracy))
+        total_acc = 0.0
+        test_avg_num = Config.test_avg_num if test_avg_num is None else test_avg_num
+        for episode in range(test_avg_num):
+            acc, h = self._val(self.folders_test, sampler_test=True, all_episode=Config.test_episode)
+            total_acc += acc
+            Tools.print("episode={}, Test accuracy={}, Total accuracy={}".format(episode, acc, total_acc))
             pass
 
-        final_accuracy = total_accuracy / Config.test_avg_num
+        final_accuracy = total_acc / test_avg_num
         Tools.print("Final accuracy: {}".format(final_accuracy))
         return final_accuracy
 
     pass
 
 
-##############################################################################################################
-
-
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
     train_episode = 300000
     learning_rate = 0.001
@@ -672,6 +512,7 @@ class Config(object):
     val_freq = 5000  # 5000
     print_freq = 1000
 
+    # model_name = "1"
     model_name = "2"
     _path = "train_one_shot_alisure_new"
     fe_dir = Tools.new_dir("../models/{}/{}_fe_{}way_{}shot.pkl".format(_path, model_name, num_way, num_shot))
@@ -684,38 +525,57 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    # 0.7547 / 0.4884  - 0.5855 / 0.4600
-    # feature_encoder, relation_network, compare_fsl_fn = CNNEncoder(), RelationNetwork(), Runner.compare_fsl_1
+    if model_name == "1": # 0.7547 / 0.4884  - 0.5855 / 0.4600
+        feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
 
-    # 0.8125 / 0.5215 / 0.5177 - 0.648 / 0.470
-    feature_encoder, relation_network, compare_fsl_fn = CNNEncoder1(), RelationNetwork1(), Runner.compare_fsl_1
-
-    # 0.6432 / 0.4975
-    # feature_encoder, relation_network, compare_fsl_fn = CNNEncoder2(), RelationNetwork2(9 * 9), Runner.compare_fsl_2
-
-    # 0.6208 / 0.4928
-    # feature_encoder, relation_network, compare_fsl_fn = CNNEncoder2(), RelationNetwork2(9 * 9), Runner.compare_fsl_3
-
-    # 0.6168 / 0.4915
-    # avg_pool_stripe = 3
-    # feature_encoder = CNNEncoder2(avg_pool_stripe=avg_pool_stripe)
-    # relation_network, compare_fsl_fn = RelationNetwork2(np.power(15 // avg_pool_stripe, 4)), Runner.compare_fsl_3
+    if model_name == "2": # 0.8125 / 0.5215 / 0.5177 - 0.648 / 0.470
+        feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
     pass
 
 
+##############################################################################################################
+
+
+"""
+1
+2020-10-22 11:14:26 load feature encoder success from ../models/train_one_shot_alisure_new/1_fe_5way_1shot.pkl
+2020-10-22 11:14:26 load relation network success from ../models/train_one_shot_alisure_new/1_rn_5way_1shot.pkl
+2020-10-22 11:14:48 Val 300000 Train Accuracy: 0.7323333333333333
+2020-10-22 11:15:08 Val 300000 Val Accuracy: 0.4902222222222222
+2020-10-22 11:16:28 episode=0, Test accuracy=0.504488888888889, Total accuracy=0.504488888888889
+2020-10-22 11:17:28 episode=1, Test accuracy=0.49617777777777783, Total accuracy=1.0006666666666668
+2020-10-22 11:18:29 episode=2, Test accuracy=0.5102444444444444, Total accuracy=1.510911111111111
+2020-10-22 11:19:27 episode=3, Test accuracy=0.49133333333333334, Total accuracy=2.0022444444444445
+2020-10-22 11:20:25 episode=4, Test accuracy=0.5007777777777778, Total accuracy=2.5030222222222225
+2020-10-22 11:20:25 Final accuracy: 0.5006044444444445
+
+2
+2020-10-22 11:23:59 load feature encoder success from ../models/train_one_shot_alisure_new/2_fe_5way_1shot.pkl
+2020-10-22 11:23:59 load relation network success from ../models/train_one_shot_alisure_new/2_rn_5way_1shot.pkl
+2020-10-22 11:24:18 Val 300000 Train Accuracy: 0.676111111111111
+2020-10-22 11:24:38 Val 300000 Val Accuracy: 0.4984444444444444
+2020-10-22 11:25:58 episode=0, Test accuracy=0.5174222222222222, Total accuracy=0.5174222222222222
+2020-10-22 11:26:59 episode=1, Test accuracy=0.5154888888888888, Total accuracy=1.032911111111111
+2020-10-22 11:27:59 episode=2, Test accuracy=0.5238444444444444, Total accuracy=1.5567555555555552
+2020-10-22 11:29:00 episode=3, Test accuracy=0.5088222222222223, Total accuracy=2.0655777777777775
+2020-10-22 11:30:01 episode=4, Test accuracy=0.5192222222222221, Total accuracy=2.5847999999999995
+2020-10-22 11:30:01 Final accuracy: 0.5169599999999999
+"""
+
+
 if __name__ == '__main__':
-    runner = Runner(feature_encoder=Config.feature_encoder,
-                    relation_network=Config.relation_network, compare_fsl_fn=Config.compare_fsl_fn)
+    runner = Runner(feature_encoder=Config.feature_encoder, relation_network=Config.relation_network)
+    # runner.load_model()
+
+    # runner.test()
+    # runner.val_train(episode=0)
+    # runner.val_val(episode=0)
+    # runner.val_test(episode=0)
+    # runner.train()
 
     runner.load_model()
-
-    runner.test()
-    runner.val_train(episode=0)
-    runner.val_val(episode=0)
-    runner.val_test(episode=0)
-    runner.train()
     runner.val_train(episode=Config.train_episode)
     runner.val_val(episode=Config.train_episode)
     runner.val_test(episode=Config.train_episode)
-    runner.test()
+    runner.test(test_avg_num=5)

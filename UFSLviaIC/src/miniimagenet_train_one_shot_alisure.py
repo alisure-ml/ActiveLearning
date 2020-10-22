@@ -373,18 +373,19 @@ class Runner(object):
         Tools.print("Val {} Accuracy: {}".format(episode, val_accuracy))
         return val_accuracy
 
-    def val_test(self):
+    def val_test(self, test_avg_num=None):
         Tools.print()
         Tools.print("Testing...")
         total_accuracy = 0.0
-        for episode in range(Config.test_avg_num):
+        test_avg_num = Config.test_avg_num if test_avg_num is None else test_avg_num
+        for episode in range(test_avg_num):
             test_accuracy = self._val(self.folders_test, sampler_test=True, all_episode=Config.test_episode)
             total_accuracy += test_accuracy
             Tools.print("episode={}, Test accuracy={}, Total accuracy={}".format(
                 episode, test_accuracy, total_accuracy))
             pass
 
-        final_accuracy = total_accuracy / Config.test_avg_num
+        final_accuracy = total_accuracy / test_avg_num
         Tools.print("Final accuracy: {}".format(final_accuracy))
         return final_accuracy
 
@@ -455,13 +456,29 @@ class Config(object):
 ##############################################################################################################
 
 
+"""
+2020-10-22 11:06:32 load feature encoder success from ../models/fsl_old/1_fe_5way_1shot.pkl
+2020-10-22 11:06:32 load relation network success from ../models/fsl_old/1_rn_5way_1shot.pkl
+2020-10-22 11:06:50 Val 300000 Train Accuracy: 0.7022222222222223
+2020-10-22 11:07:08 Val 300000 Accuracy: 0.4968888888888889
+2020-10-22 11:08:02 episode=0, Test accuracy=0.5071333333333333, Total accuracy=0.5071333333333333
+2020-10-22 11:08:55 episode=1, Test accuracy=0.503688888888889, Total accuracy=1.0108222222222223
+2020-10-22 11:09:47 episode=2, Test accuracy=0.49882222222222233, Total accuracy=1.5096444444444446
+2020-10-22 11:10:40 episode=3, Test accuracy=0.5037111111111111, Total accuracy=2.0133555555555556
+2020-10-22 11:11:32 episode=4, Test accuracy=0.5077555555555555, Total accuracy=2.521111111111111
+2020-10-22 11:11:32 Final accuracy: 0.504
+"""
+
+
 if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    runner.val_test()
-    runner.train()
+    # runner.val_test()
+    # runner.train()
+
+    runner.load_model()
     runner.val_train(episode=Config.train_episode)
     runner.val_val(episode=Config.train_episode)
-    runner.val_test()
+    runner.val_test(test_avg_num=5)
     pass
