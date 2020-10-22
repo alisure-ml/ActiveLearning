@@ -310,8 +310,9 @@ class Runner(object):
 
         self.feature_encoder = cuda(feature_encoder)
         self.relation_network = cuda(relation_network)
-        # self.feature_encoder.apply(self._weights_init).cuda()
-        # self.relation_network.apply(self._weights_init).cuda()
+
+        self.feature_encoder.apply(self._weights_init).cuda()
+        self.relation_network.apply(self._weights_init).cuda()
 
         # model
         self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
@@ -497,7 +498,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
     train_episode = 300000
     learning_rate = 0.001
@@ -512,8 +513,8 @@ class Config(object):
     val_freq = 5000  # 5000
     print_freq = 1000
 
-    model_name = "1"
-    # model_name = "2"
+    # model_name = "1"
+    model_name = "2"
     _path = "train_one_shot_alisure"  # fsl_old
     fe_dir = Tools.new_dir("../models/{}/{}_fe_{}way_{}shot.pkl".format(_path, model_name, num_way, num_shot))
     rn_dir = Tools.new_dir("../models/{}/{}_rn_{}way_{}shot.pkl".format(_path, model_name, num_way, num_shot))
@@ -573,6 +574,20 @@ class Config(object):
 2020-10-22 11:29:00 episode=3, Test accuracy=0.5088222222222223, Total accuracy=2.0655777777777775
 2020-10-22 11:30:01 episode=4, Test accuracy=0.5192222222222221, Total accuracy=2.5847999999999995
 2020-10-22 11:30:01 Final accuracy: 0.5169599999999999
+
+1
+2020-10-22 21:10:12 load feature encoder success from ../models/train_one_shot_alisure/1_fe_5way_1shot.pkl
+2020-10-22 21:10:12 load relation network success from ../models/train_one_shot_alisure/1_rn_5way_1shot.pkl
+2020-10-22 21:10:31 Val 0 Train Accuracy: 0.6805555555555556
+2020-10-22 21:10:48 Val 0 Accuracy: 0.4835555555555555
+2020-10-22 21:14:55 Final accuracy: 0.48858666666666667
+
+2
+2020-10-22 21:17:50 load feature encoder success from ../models/train_one_shot_alisure/2_fe_5way_1shot.pkl
+2020-10-22 21:17:51 load relation network success from ../models/train_one_shot_alisure/2_rn_5way_1shot.pkl
+2020-10-22 21:18:10 Val 0 Train Accuracy: 0.7387777777777779
+2020-10-22 21:18:29 Val 0 Accuracy: 0.5064444444444445
+2020-10-22 21:23:15 Final accuracy: 0.5069511111111111
 """
 
 
@@ -591,3 +606,4 @@ if __name__ == '__main__':
     runner.val_val(episode=Config.train_episode)
     runner.val_test(episode=Config.train_episode)
     runner.test(test_avg_num=5)
+    pass

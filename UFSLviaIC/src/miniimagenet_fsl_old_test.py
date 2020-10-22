@@ -248,14 +248,64 @@ class RelationNetwork(nn.Module):
     pass
 
 
+class CNNEncoder1(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
+        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
+        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        pass
+
+    def forward(self, x):
+        out1 = self.layer1(x)
+        out2 = self.layer2(out1)
+        out3 = self.layer3(out2)
+        out4 = self.layer4(out3)
+        return out4
+
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    pass
+
+
+class RelationNetwork1(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        self.fc1 = nn.Linear(64 * 5 * 5, 64)  # 64
+        self.fc2 = nn.Linear(64, 1)  # 64
+        pass
+
+    def forward(self, x):
+        out1 = self.layer1(x)
+        out2 = self.layer2(out1)
+        out = out2.view(out2.size(0), -1)
+        out = torch.relu(self.fc1(out))
+        out = torch.sigmoid(self.fc2(out))
+        return out
+
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    pass
+
 ##############################################################################################################
 
 
 class Runner(object):
 
     def __init__(self):
-        self.feature_encoder = cuda(CNNEncoder())
-        self.relation_network = cuda(RelationNetwork())
+        self.feature_encoder = cuda(Config.feature_encoder)
+        self.relation_network = cuda(Config.relation_network)
 
         # data
         self.folders_train, self.folders_val, self.folders_test = MiniImageNet.folders(Config.data_root)
@@ -368,24 +418,35 @@ class Config(object):
     # model_path = "fsl"
     # model_fe_name = "1_64_5_1_fe_5way_1shot.pkl"
     # model_rn_name = "1_64_5_1_rn_5way_1shot.pkl"
+    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
     # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
     # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
 
-    model_path = "ic_fsl"
-    model_fe_name = "2_64_5_1_fe_5way_1shot.pkl"
-    model_rn_name = "2_64_5_1_rn_5way_1shot.pkl"
+    # model_path = "ic_fsl"
+    # model_fe_name = "2_64_5_1_fe_5way_1shot.pkl"
+    # model_rn_name = "2_64_5_1_rn_5way_1shot.pkl"
+    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
+    # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
+
+    # model_path = "train_one_shot_alisure"
+    # model_fe_name = "1fe_5way_1shot.pkl"
+    # model_rn_name = "1_rn_5way_1shot.pkl"
+    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
+    # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
+
+    model_path = "train_one_shot_alisure"
+    model_fe_name = "2_fe_5way_1shot.pkl"
+    model_rn_name = "2_rn_5way_1shot.pkl"
+    feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
     fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
     rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
-
-    # model_path = "fsl_old"
-    # model_fe_name = "1_fe_5way_1shot.pkl"
-    # model_rn_name = "1_rn_5way_1shot.pkl"
-    # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
-    # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
 
     # model_path = "ic_ufsl"
     # model_fe_name = "2_64_5_1_fe_5way_1shot.pkl"
     # model_rn_name = "2_64_5_1_rn_5way_1shot.pkl"
+    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
     # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
     # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
     pass
