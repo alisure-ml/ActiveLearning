@@ -26,12 +26,12 @@ def cuda(x):
 
 class MiniImageNetIC(Dataset):
 
-    def __init__(self, data_list, is_train=True):
+    def __init__(self, data_list, is_train=True, image_size=84):
         self.data_list = data_list
         self.train_label = [one[1] for one in self.data_list]
 
         self.transform_train = transforms.Compose([
-            transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
+            transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4),
             transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(),
@@ -39,7 +39,7 @@ class MiniImageNetIC(Dataset):
             transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL),
         ])
         self.transform_test = transforms.Compose([
-            transforms.CenterCrop(size=84),
+            transforms.CenterCrop(size=image_size),
             transforms.ToTensor(),
             transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL),
         ])
@@ -278,14 +278,50 @@ class Runner(object):
         # model
         self.ic_model = cuda(ICResNet(Config.ic_out_dim))
         self.ic_loss = cuda(nn.CrossEntropyLoss())
-        self.ic_model_optim = torch.optim.Adam(self.ic_model.parameters(), lr=Config.learning_rate)
+
+        # self.ic_model_optim = torch.optim.Adam(self.ic_model.parameters(), lr=Config.learning_rate)
+        self.ic_model_optim = torch.optim.SGD(self.ic_model.parameters(),
+                                              lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
         # IC
-        self.produce_class1 = ProduceClass(len(self.data_train), Config.ic_out_dim, Config.ic_ratio)
-        self.produce_class2 = ProduceClass(len(self.data_train), Config.ic_out_dim, Config.ic_ratio)
-        self.produce_class1.init()
-        self.produce_class2.init()
+        self.produce_class = ProduceClass(len(self.data_train), Config.ic_out_dim, Config.ic_ratio)
+        self.produce_class.init()
         pass
+
+    @staticmethod
+    def _adjust_learning_rate(optimizer, epoch):
+
+        def _get_lr(_base_lr, now_epoch, _t_epoch=Config.t_epoch, _eta_min=1e-05):
+            return _eta_min + (_base_lr - _eta_min) * (1 + math.cos(math.pi * now_epoch / _t_epoch)) / 2
+
+        t_epoch = Config.t_epoch
+        first_epoch = Config.first_epoch
+        init_learning_rate = Config.learning_rate
+        if epoch < first_epoch + t_epoch * 0:  # 0-200
+            learning_rate = init_learning_rate
+        elif epoch < first_epoch + t_epoch * 1:  # 200-300
+            learning_rate = init_learning_rate / 2
+        elif epoch < first_epoch + t_epoch * 2:  # 300-400
+            learning_rate = init_learning_rate / 4
+        elif epoch < first_epoch + t_epoch * 3:  # 400-500
+            learning_rate = _get_lr(init_learning_rate / 2.0, epoch - first_epoch - t_epoch * 2)
+        elif epoch < first_epoch + t_epoch * 4:  # 500-600
+            learning_rate = _get_lr(init_learning_rate / 4.0, epoch - first_epoch - t_epoch * 3)
+        elif epoch < first_epoch + t_epoch * 5:  # 600-700
+            learning_rate = _get_lr(init_learning_rate / 8.0, epoch - first_epoch - t_epoch * 4)
+        elif epoch < first_epoch + t_epoch * 6:  # 700-800
+            learning_rate = _get_lr(init_learning_rate / 16., epoch - first_epoch - t_epoch * 5)
+        elif epoch < first_epoch + t_epoch * 7:  # 800-900
+            learning_rate = _get_lr(init_learning_rate / 32., epoch - first_epoch - t_epoch * 6)
+        else:  # 900-1000
+            learning_rate = _get_lr(init_learning_rate / 64., epoch - first_epoch - t_epoch * 7)
+            pass
+
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = learning_rate
+            pass
+
+        return learning_rate
 
     def load_model(self):
         if os.path.exists(Config.ic_dir):
@@ -301,8 +337,11 @@ class Runner(object):
             self.ic_model.train()
 
             Tools.print()
-            self.produce_class1.reset()
+            ic_lr = self._adjust_learning_rate(self.ic_model_optim, epoch)
+            Tools.print('Epoch: [{}] ic_lr={}'.format(epoch, ic_lr))
+
             all_loss = 0.0
+            self.produce_class.reset()
             for image, label, idx in tqdm(self.ic_train_train_loader):
                 image, label, idx = cuda(image), cuda(label), cuda(idx)
 
@@ -311,8 +350,8 @@ class Runner(object):
                 ic_out_logits, ic_out_l2norm = self.ic_model(image)
 
                 # 2 calculate labels
-                self.produce_class1.cal_label(ic_out_l2norm, idx)
-                ic_targets = self.produce_class2.get_label(idx)
+                ic_targets = self.produce_class.get_label(idx)
+                self.produce_class.cal_label(ic_out_l2norm, idx)
 
                 # 3 loss
                 loss = self.ic_loss(ic_out_logits, ic_targets)
@@ -327,16 +366,8 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f} lr:{}".format(
-                epoch + 1, all_loss / len(self.ic_train_train_loader), Config.learning_rate))
-            ###########################################################################
-
-            ###########################################################################
-            # 切换
-            classes = self.produce_class2.classes
-            self.produce_class2.classes = self.produce_class1.classes
-            self.produce_class1.classes = classes
-            Tools.print("Train: [{}] {}/{}".format(epoch, self.produce_class1.count, self.produce_class1.count_2))
+            Tools.print("{:6} loss:{:.3f}".format(epoch + 1, all_loss / len(self.ic_train_train_loader)))
+            Tools.print("Train: [{}] {}/{}".format(epoch, self.produce_class.count, self.produce_class.count_2))
             ###########################################################################
 
             ###########################################################################
@@ -368,43 +399,50 @@ class Runner(object):
 
 
 ##############################################################################################################
-"""
-2_64_200_1_0.001
-2020-10-20 21:02:27 Test 237 .......
-2020-10-20 21:02:42 Epoch: [237] Train 0.3524/0.6671
-2020-10-20 21:02:46 Epoch: [237] Val 0.4882/0.8697
-2020-10-20 21:02:51 Epoch: [237] Test 0.4667/0.8555
-2020-10-20 21:02:51 Save networks for epoch: 237
 
-2_64_128_2_0.001
+
+"""
+2_64_128_2_0.001 no stand resnet18
 2020-10-21 08:12:53 Test 830 .......
-2020-10-21 08:13:09 Epoch: [830] Train 0.3792/0.6978
-2020-10-21 08:13:13 Epoch: [830] Val 0.5069/0.8831
-2020-10-21 08:13:18 Epoch: [830] Test 0.4816/0.8652
-2020-10-21 08:13:18 Save networks for epoch: 830
 2020-10-21 10:19:59 load ic model success from ../models/ic/2_64_128_2_0.001_ic.pkl
 2020-10-21 10:20:15 Epoch: [1000] Final Train 0.3792/0.6978
 2020-10-21 10:20:19 Epoch: [1000] Final Val 0.5069/0.8831
 2020-10-21 10:20:24 Epoch: [1000] Final Test 0.4816/0.8652
+
+2_64_128_2_0.001 stand resnet18
+2020-10-22 05:41:30   1000 loss:1.109 lr:0.001
+2020-10-22 05:41:30 Train: [999] 12085/2720
+2020-10-22 05:41:30 load ic model success from ../models/ic/2_64_128_2_0.001_ic.pkl
+2020-10-22 05:41:41 Epoch: [1000] Final Train 0.3528/0.6679
+2020-10-22 05:41:44 Epoch: [1000] Final Val 0.4795/0.8682
+2020-10-22 05:41:48 Epoch: [1000] Final Test 0.4552/0.8438
+
+2_64_512_2_0.001 stand resnet18
+2020-10-22 06:17:58   1000 loss:1.244 lr:0.001
+2020-10-22 06:17:58 Train: [999] 10926/1860
+2020-10-22 06:17:58 load ic model success from ../models/ic/2_64_512_2_0.001_ic.pkl
+2020-10-22 06:18:05 Epoch: [1000] Final Train 0.3662/0.6720
+2020-10-22 06:18:08 Epoch: [1000] Final Val 0.4821/0.8674
+2020-10-22 06:18:10 Epoch: [1000] Final Test 0.4570/0.8373
 """
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
     train_epoch = 1000
-    learning_rate = 0.001
     num_workers = 8
-
     batch_size = 64
-
     val_freq = 10
+
+    learning_rate = 0.01
+    first_epoch, t_epoch = 200, 100
 
     # ic
     ic_out_dim = 512
     ic_ratio = 2
 
-    model_name = "2_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, learning_rate)
+    model_name = "1_{}_{}_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, first_epoch, t_epoch, learning_rate)
 
     MEAN_PIXEL = [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
     STD_PIXEL = [x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]
