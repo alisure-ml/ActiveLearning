@@ -262,6 +262,7 @@ class Runner(object):
 
     def __init__(self):
         self.best_accuracy = 0.0
+        self.adjust_learning_rate = Config.adjust_learning_rate
 
         # data
         self.data_train, self.data_val, self.data_test = MiniImageNetDataset.get_data_all(Config.data_root)
@@ -289,31 +290,7 @@ class Runner(object):
         pass
 
     @staticmethod
-    def _adjust_learning_rate(optimizer, epoch):
-
-        def _get_lr(_base_lr, now_epoch, _t_epoch=Config.t_epoch, _eta_min=1e-05):
-            return _eta_min + (_base_lr - _eta_min) * (1 + math.cos(math.pi * now_epoch / _t_epoch)) / 2
-
-        t_epoch = Config.t_epoch
-        first_epoch = Config.first_epoch
-        init_learning_rate = Config.learning_rate
-
-        if epoch < first_epoch + t_epoch * 0:  # 0-500
-            learning_rate = init_learning_rate
-        elif epoch < first_epoch + t_epoch * 1:  # 500-1000
-            learning_rate = init_learning_rate / 10
-        else:  # 1000-1500
-            learning_rate = init_learning_rate / 100
-            pass
-
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = learning_rate
-            pass
-
-        return learning_rate
-
-    @staticmethod
-    def _adjust_learning_rate2(optimizer, epoch):
+    def adjust_learning_rate1(optimizer, epoch):
 
         def _get_lr(_base_lr, now_epoch, _t_epoch=Config.t_epoch, _eta_min=1e-05):
             return _eta_min + (_base_lr - _eta_min) * (1 + math.cos(math.pi * now_epoch / _t_epoch)) / 2
@@ -347,6 +324,30 @@ class Runner(object):
 
         return learning_rate
 
+    @staticmethod
+    def adjust_learning_rate2(optimizer, epoch):
+
+        def _get_lr(_base_lr, now_epoch, _t_epoch=Config.t_epoch, _eta_min=1e-05):
+            return _eta_min + (_base_lr - _eta_min) * (1 + math.cos(math.pi * now_epoch / _t_epoch)) / 2
+
+        t_epoch = Config.t_epoch
+        first_epoch = Config.first_epoch
+        init_learning_rate = Config.learning_rate
+
+        if epoch < first_epoch + t_epoch * 0:  # 0-500
+            learning_rate = init_learning_rate
+        elif epoch < first_epoch + t_epoch * 1:  # 500-1000
+            learning_rate = init_learning_rate / 10
+        else:  # 1000-1500
+            learning_rate = init_learning_rate / 100
+            pass
+
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = learning_rate
+            pass
+
+        return learning_rate
+
     def load_model(self):
         if os.path.exists(Config.ic_dir):
             self.ic_model.load_state_dict(torch.load(Config.ic_dir))
@@ -361,7 +362,7 @@ class Runner(object):
             self.ic_model.train()
 
             Tools.print()
-            ic_lr = self._adjust_learning_rate(self.ic_model_optim, epoch)
+            ic_lr = self.adjust_learning_rate(self.ic_model_optim, epoch)
             Tools.print('Epoch: [{}] ic_lr={}'.format(epoch, ic_lr))
 
             all_loss = 0.0
@@ -448,11 +449,18 @@ class Runner(object):
 2020-10-22 06:18:05 Epoch: [1000] Final Train 0.3662/0.6720
 2020-10-22 06:18:08 Epoch: [1000] Final Val 0.4821/0.8674
 2020-10-22 06:18:10 Epoch: [1000] Final Test 0.4570/0.8373
+
+1_64_512_2_200_100_0.01 stand resnet18
+2020-10-22 20:33:53 Train: [999] 13294/2094
+2020-10-22 20:33:53 load ic model success from ../models/ic/1_64_512_2_200_100_0.01_ic.pkl
+2020-10-22 20:34:05 Epoch: [1000] Final Train 0.4563/0.7607
+2020-10-22 20:34:09 Epoch: [1000] Final Val 0.5566/0.9118
+2020-10-22 20:34:13 Epoch: [1000] Final Test 0.5407/0.8958
 """
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     num_workers = 8
     batch_size = 64
@@ -462,13 +470,20 @@ class Config(object):
 
     # train_epoch = 1000
     # first_epoch, t_epoch = 200, 100
+    # adjust_learning_rate = Runner.adjust_learning_rate1
 
-    train_epoch = 1500
-    first_epoch, t_epoch = 500, 500
+    # train_epoch = 1500
+    # first_epoch, t_epoch = 500, 500
+    # adjust_learning_rate = Runner.adjust_learning_rate2
+
+    train_epoch = 2100
+    first_epoch, t_epoch = 500, 200
+    adjust_learning_rate = Runner.adjust_learning_rate1
 
     # ic
     ic_out_dim = 512
-    ic_ratio = 2
+    # ic_ratio = 2
+    ic_ratio = 3
 
     model_name = "1_{}_{}_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, first_epoch, t_epoch, learning_rate)
 
@@ -482,7 +497,7 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    ic_dir = Tools.new_dir("../models/ic/{}_ic.pkl".format(model_name))
+    ic_dir = Tools.new_dir("../models/ic_res/{}_ic.pkl".format(model_name))
     pass
 
 

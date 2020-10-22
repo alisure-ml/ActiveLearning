@@ -349,7 +349,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     num_way = 5
     num_shot = 1
@@ -371,17 +371,23 @@ class Config(object):
     # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
     # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
 
-    # model_path = "ic_fsl"
+    model_path = "ic_fsl"
+    model_fe_name = "2_64_5_1_fe_5way_1shot.pkl"
+    model_rn_name = "2_64_5_1_rn_5way_1shot.pkl"
+    fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
+    rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
+
+    # model_path = "fsl_old"
+    # model_fe_name = "1_fe_5way_1shot.pkl"
+    # model_rn_name = "1_rn_5way_1shot.pkl"
+    # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
+    # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
+
+    # model_path = "ic_ufsl"
     # model_fe_name = "2_64_5_1_fe_5way_1shot.pkl"
     # model_rn_name = "2_64_5_1_rn_5way_1shot.pkl"
     # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
     # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
-
-    model_path = "fsl_old"
-    model_fe_name = "1_fe_5way_1shot.pkl"
-    model_rn_name = "1_rn_5way_1shot.pkl"
-    fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
-    rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
     pass
 
 

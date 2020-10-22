@@ -638,8 +638,29 @@ class Runner(object):
 ##############################################################################################################
 
 
+"""
+2020-10-22 17:40:35 load feature encoder success from ../models/ic_ufsl/2_64_5_1_fe_5way_1shot.pkl
+2020-10-22 17:40:35 load relation network success from ../models/ic_ufsl/2_64_5_1_rn_5way_1shot.pkl
+2020-10-22 17:40:35 load ic model success from ../models/ic_ufsl/2_64_5_1_ic_5way_1shot.pkl
+2020-10-22 17:40:42 Epoch: [1000] Final Train 0.3321/0.6445
+2020-10-22 17:40:44 Epoch: [1000] Final Val 0.4809/0.8696
+2020-10-22 17:40:47 Epoch: [1000] Final Test 0.4617/0.8492
+my test
+2020-10-22 17:41:17 Val 1000 Final Train Accuracy: 0.46069554316547445
+2020-10-22 17:41:26 Val 1000 Final Val Accuracy: 0.47446542204646336
+2020-10-22 17:41:46 Final Test accuracy: 0.41218151313835116
+2020-10-22 19:25:02 Val 1000 Final Train Accuracy: 0.44598512336185026
+2020-10-22 19:25:09 Val 1000 Final Val Accuracy: 0.4731252974778569
+2020-10-22 19:25:28 Final Test accuracy: 0.42150961229322936
+old test
+2020-10-22 17:45:32 Val 0 Train Accuracy: 0.44966666666666666
+2020-10-22 17:45:49 Val 0 Accuracy: 0.40722222222222226
+2020-10-22 17:50:02 Final accuracy: 0.4325644444444444
+"""
+
+
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     train_epoch = 1000
     learning_rate = 0.001
@@ -679,17 +700,17 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    runner.feature_encoder.eval()
-    runner.relation_network.eval()
-    runner.ic_model.eval()
-    runner.val_ic(0, ic_loader=runner.ic_test_train_loader, name="Train")
-    runner.val_ic(0, ic_loader=runner.ic_test_val_loader, name="Val")
-    runner.val_ic(0, ic_loader=runner.ic_test_test_loader, name="Test")
-    runner.val_fsl(epoch=0, loader=runner.task_test_train_loader, name="First Train")
-    runner.val_fsl(epoch=0, loader=runner.task_test_val_loader, name="First Val")
-    runner.val_fsl(epoch=0, loader=runner.task_test_test_loader, name="First Test")
+    # runner.feature_encoder.eval()
+    # runner.relation_network.eval()
+    # runner.ic_model.eval()
+    # runner.val_ic(0, ic_loader=runner.ic_test_train_loader, name="Train")
+    # runner.val_ic(0, ic_loader=runner.ic_test_val_loader, name="Val")
+    # runner.val_ic(0, ic_loader=runner.ic_test_test_loader, name="Test")
+    # runner.val_fsl(epoch=0, loader=runner.task_test_train_loader, name="First Train")
+    # runner.val_fsl(epoch=0, loader=runner.task_test_val_loader, name="First Val")
+    # runner.val_fsl(epoch=0, loader=runner.task_test_test_loader, name="First Test")
 
-    runner.train()
+    # runner.train()
 
     runner.load_model()
     runner.feature_encoder.eval()

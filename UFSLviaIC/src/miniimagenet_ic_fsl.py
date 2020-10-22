@@ -587,15 +587,27 @@ class Runner(object):
 
 """
 020-10-21 23:02:50 Train: [999] 19471/1854
-2020-10-21 23:02:50 load feature encoder success from ../models/ic_fsl/2_64_5_1_fe_5way_1shot.pkl
-2020-10-21 23:02:50 load relation network success from ../models/ic_fsl/2_64_5_1_rn_5way_1shot.pkl
-2020-10-21 23:02:50 load ic model success from ../models/ic_fsl/2_64_5_1_ic_5way_1shot.pkl
 2020-10-21 23:02:58 Epoch: [1000] Final Train 0.3397/0.6713
 2020-10-21 23:03:00 Epoch: [1000] Final Val 0.4889/0.8769
 2020-10-21 23:03:02 Epoch: [1000] Final Test 0.4594/0.8553
 2020-10-21 23:04:09 Val 1000 Final Train Accuracy: 0.5360503222390252
 2020-10-21 23:04:16 Val 1000 Final Val   Accuracy: 0.5810896711451617
 2020-10-21 23:04:26 Val 1000 Final Test  Accuracy: 0.4569410663324587
+
+2020-10-22 18:56:34 load feature encoder success from ../models/ic_fsl/2_64_5_1_fe_5way_1shot.pkl
+2020-10-22 18:56:34 load relation network success from ../models/ic_fsl/2_64_5_1_rn_5way_1shot.pkl
+2020-10-22 18:56:34 load ic model success from ../models/ic_fsl/2_64_5_1_ic_5way_1shot.pkl
+2020-10-22 18:56:41 Epoch: [1000] Final Train 0.3625/0.6861
+2020-10-22 18:56:43 Epoch: [1000] Final Val 0.4945/0.8794
+2020-10-22 18:56:46 Epoch: [1000] Final Test 0.4871/0.8697
+my test
+2020-10-22 18:57:33 Val 1000 Final Train Accuracy: 0.6333999367218942
+2020-10-22 18:57:43 Val 1000 Final Val Accuracy: 0.4862126547309331
+2020-10-22 18:58:06 Final Test accuracy: 0.4868016377933242
+old test
+2020-10-22 19:01:16 Val 0 Train Accuracy: 0.6020000000000001
+2020-10-22 19:01:36 Val 0 Accuracy: 0.47722222222222227
+2020-10-22 19:06:28 Final accuracy: 0.4842488888888889
 """
 
 

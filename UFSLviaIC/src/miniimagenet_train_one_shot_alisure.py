@@ -497,7 +497,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
     train_episode = 300000
     learning_rate = 0.001
@@ -512,8 +512,8 @@ class Config(object):
     val_freq = 5000  # 5000
     print_freq = 1000
 
-    # model_name = "1"
-    model_name = "2"
+    model_name = "1"
+    # model_name = "2"
     _path = "train_one_shot_alisure"  # fsl_old
     fe_dir = Tools.new_dir("../models/{}/{}_fe_{}way_{}shot.pkl".format(_path, model_name, num_way, num_shot))
     rn_dir = Tools.new_dir("../models/{}/{}_rn_{}way_{}shot.pkl".format(_path, model_name, num_way, num_shot))
@@ -580,11 +580,11 @@ if __name__ == '__main__':
     runner = Runner(feature_encoder=Config.feature_encoder, relation_network=Config.relation_network)
     # runner.load_model()
 
-    # runner.test()
-    # runner.val_train(episode=0)
-    # runner.val_val(episode=0)
-    # runner.val_test(episode=0)
-    # runner.train()
+    runner.test()
+    runner.val_train(episode=0)
+    runner.val_val(episode=0)
+    runner.val_test(episode=0)
+    runner.train()
 
     runner.load_model()
     runner.val_train(episode=Config.train_episode)

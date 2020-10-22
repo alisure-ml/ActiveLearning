@@ -344,13 +344,11 @@ class Runner(object):
 
 
 """
-2020-10-21 20:54:21 load feature encoder success from ../models/fsl/1_64_5_1_fe_5way_1shot.pkl
-2020-10-21 20:54:21 load relation network success from ../models/fsl/1_64_5_1_rn_5way_1shot.pkl
-2020-10-21 20:54:58 Val 600 Final Train Accuracy: 0.783775971449595
-2020-10-21 20:55:07 Val 600 Final Val Accuracy: 0.5664206529505581
-2020-10-21 20:55:19 Val 600 Test 0 Accuracy: 0.4768637962972758
-2020-10-21 20:55:31 Val 600 Test 1 Accuracy: 0.46626023077881623
-2020-10-21 20:55:31 Final Test accuracy: 0.47156201353804605
+2020-10-22 16:58:21 load feature encoder success from ../models/fsl/1_64_5_1_fe_5way_1shot.pkl
+2020-10-22 16:58:21 load relation network success from ../models/fsl/1_64_5_1_rn_5way_1shot.pkl
+2020-10-22 16:59:16 Val 1000 Final Train Accuracy: 0.7856667234316946
+2020-10-22 16:59:29 Val 1000 Final Val Accuracy: 0.5062298349603024
+2020-10-22 16:59:46 Val 1000 Test 0 Accuracy: 0.49566093146157125
 """
 
 
