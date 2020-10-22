@@ -401,14 +401,14 @@ class Runner(object):
 
             self.feature_encoder_optim.step()
             self.relation_network_optim.step()
-            self.feature_encoder_scheduler.step(episode)
-            self.relation_network_scheduler.step(episode)
+            self.feature_encoder_scheduler.step()
+            self.relation_network_scheduler.step()
 
             all_loss += loss.item()
             if (episode + 1) % Config.print_freq == 0:
                 Tools.print("Episode: {} avg loss: {} loss: {} lr: {}".format(
                     episode + 1, all_loss / (episode % Config.val_freq),
-                    loss.item(), self.feature_encoder_scheduler.get_lr()))
+                    loss.item(), self.feature_encoder_scheduler.get_last_lr()))
                 pass
 
             if (episode + 1) % Config.val_freq == 0:
