@@ -8,7 +8,6 @@ import torch.nn as nn
 from PIL import Image
 import torchvision.utils as vutils
 from alisuretool.Tools import Tools
-from tensorboardX import SummaryWriter
 from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
@@ -92,7 +91,6 @@ class ClassBalancedSamplerTest(Sampler):
 
 
 class MiniImageNetTask(object):
-
     def __init__(self, character_folders, num_classes, train_num, test_num):
         self.character_folders = character_folders
         self.num_classes = num_classes
@@ -122,7 +120,6 @@ class MiniImageNetTask(object):
 
 
 class MiniImageNet(Dataset):
-
     def __init__(self, task, split='train', transform=None, target_transform=None):
         self.task = task
         self.split = split
@@ -196,8 +193,8 @@ class MiniImageNet(Dataset):
 ##############################################################################################################
 
 
+# Original
 class CNNEncoder(nn.Module):
-
     def __init__(self):
         super().__init__()
         self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=0),
@@ -224,7 +221,6 @@ class CNNEncoder(nn.Module):
 
 
 class RelationNetwork(nn.Module):
-
     def __init__(self):
         super().__init__()
         self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=0),
@@ -249,26 +245,98 @@ class RelationNetwork(nn.Module):
     pass
 
 
+# Original --> MaxPool, FC input
+class CNNEncoder1(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
+        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
+        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        pass
+
+    def forward(self, x):
+        out1 = self.layer1(x)
+        out2 = self.layer2(out1)
+        out3 = self.layer3(out2)
+        out4 = self.layer4(out3)
+        return out4
+
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    pass
+
+
+class RelationNetwork1(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
+        self.fc1 = nn.Linear(64 * 5 * 5, 64)  # 64
+        self.fc2 = nn.Linear(64, 1)  # 64
+        pass
+
+    def forward(self, x):
+        out1 = self.layer1(x)
+        out2 = self.layer2(out1)
+        out = out2.view(out2.size(0), -1)
+        out = torch.relu(self.fc1(out))
+        out = torch.sigmoid(self.fc2(out))
+        return out
+
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    pass
+
+
 ##############################################################################################################
 
 
 class Runner(object):
 
-    def __init__(self):
+    def __init__(self, feature_encoder, relation_network):
         self.best_accuracy = 0.0
-        self.feature_encoder = cuda(CNNEncoder())
-        self.relation_network = cuda(RelationNetwork())
 
         # data
         self.folders_train, self.folders_val, self.folders_test = MiniImageNet.folders(Config.data_root)
 
+        self.feature_encoder = cuda(feature_encoder)
+        self.relation_network = cuda(relation_network)
+        # self.feature_encoder.apply(self._weights_init).cuda()
+        # self.relation_network.apply(self._weights_init).cuda()
+
         # model
         self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
-        self.feature_encoder_scheduler = StepLR(self.feature_encoder_optim, Config.train_episode//3, gamma=0.5)
+        self.feature_encoder_scheduler = StepLR(self.feature_encoder_optim, Config.train_episode // 3, gamma=0.5)
         self.relation_network_optim = torch.optim.Adam(self.relation_network.parameters(), lr=Config.learning_rate)
-        self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_episode//3, gamma=0.5)
+        self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_episode // 3, gamma=0.5)
 
         self.loss = cuda(nn.MSELoss())
+        pass
+
+    @staticmethod
+    def _weights_init(m):
+        class_name = m.__class__.__name__
+        if class_name.find('Conv') != -1:
+            n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+            m.weight.data.normal_(0, math.sqrt(2. / n))
+            if m.bias is not None:
+                m.bias.data.zero_()
+        elif class_name.find('BatchNorm') != -1:
+            m.weight.data.fill_(1)
+            m.bias.data.zero_()
+        elif class_name.find('Linear') != -1:
+            m.weight.data.normal_(0, 0.01)
+            m.bias.data = torch.ones(m.bias.data.size())
+            pass
         pass
 
     def load_model(self):
@@ -293,7 +361,7 @@ class Runner(object):
             Config.num_shot * Config.num_way, 1, 1, 1, 1)
         batch_features_ext = torch.transpose(batch_features_ext, 0, 1)
         relation_pairs = torch.cat((sample_features_ext,
-                                    batch_features_ext),2).view(-1, feature_dim * 2, feature_width, feature_height)
+                                    batch_features_ext), 2).view(-1, feature_dim * 2, feature_width, feature_height)
 
         relations = self.relation_network(relation_pairs)
         relations = relations.view(-1, Config.num_way * Config.num_shot)
@@ -311,7 +379,7 @@ class Runner(object):
             batch_data_loader = MiniImageNet.get_data_loader(task, Config.task_batch_size, split="val", shuffle=True)
             samples, sample_labels = sample_data_loader.__iter__().next()
             batches, batch_labels = batch_data_loader.__iter__().next()
-            samples, batches =  cuda(samples), cuda(batches)
+            samples, batches = cuda(samples), cuda(batches)
 
             ###########################################################################
             # calculate features
@@ -338,8 +406,8 @@ class Runner(object):
             all_loss += loss.item()
             if (episode + 1) % Config.print_freq == 0:
                 Tools.print("Episode: {} avg loss: {} loss: {} lr: {}".format(
-                    episode + 1, all_loss / (episode % Config.val_freq), loss.item(),
-                    self.feature_encoder_scheduler.get_lr()))
+                    episode + 1, all_loss / (episode % Config.val_freq),
+                    loss.item(), self.feature_encoder_scheduler.get_lr()))
                 pass
 
             if (episode + 1) % Config.val_freq == 0:
@@ -347,7 +415,7 @@ class Runner(object):
                 Tools.print("Val...")
                 self.val_train(episode)
                 val_accuracy = self.val_val(episode)
-                self.val_test()
+                self.val_test(episode)
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
                     torch.save(self.feature_encoder.state_dict(), Config.fe_dir)
@@ -364,28 +432,32 @@ class Runner(object):
         pass
 
     def val_train(self, episode):
-        val_train_accuracy = self._val(self.folders_train, sampler_test=False, all_episode=Config.test_episode)
-        Tools.print("Val {} Train Accuracy: {}".format(episode, val_train_accuracy))
-        return val_train_accuracy
+        acc = self._val(self.folders_train, sampler_test=False, all_episode=Config.test_episode)
+        Tools.print("Val {} Train Accuracy: {}".format(episode, acc))
+        return acc
 
     def val_val(self, episode):
-        val_accuracy = self._val(self.folders_val, sampler_test=False, all_episode=Config.test_episode)
-        Tools.print("Val {} Accuracy: {}".format(episode, val_accuracy))
-        return val_accuracy
+        acc = self._val(self.folders_val, sampler_test=False, all_episode=Config.test_episode)
+        Tools.print("Val {} Val Accuracy: {}".format(episode, acc))
+        return acc
 
-    def val_test(self, test_avg_num=None):
+    def val_test(self, episode):
+        acc = self._val(self.folders_test, sampler_test=False, all_episode=Config.test_episode)
+        Tools.print("Val {} Test Accuracy: {}".format(episode, acc))
+        return acc
+
+    def test(self, test_avg_num=None):
         Tools.print()
         Tools.print("Testing...")
-        total_accuracy = 0.0
+        total_acc = 0.0
         test_avg_num = Config.test_avg_num if test_avg_num is None else test_avg_num
         for episode in range(test_avg_num):
-            test_accuracy = self._val(self.folders_test, sampler_test=True, all_episode=Config.test_episode)
-            total_accuracy += test_accuracy
-            Tools.print("episode={}, Test accuracy={}, Total accuracy={}".format(
-                episode, test_accuracy, total_accuracy))
+            acc = self._val(self.folders_test, sampler_test=True, all_episode=Config.test_episode)
+            total_acc += acc
+            Tools.print("episode={}, Test accuracy={}, Total accuracy={}".format(episode, acc, total_acc))
             pass
 
-        final_accuracy = total_accuracy / test_avg_num
+        final_accuracy = total_acc / test_avg_num
         Tools.print("Final accuracy: {}".format(final_accuracy))
         return final_accuracy
 
@@ -396,7 +468,8 @@ class Runner(object):
             counter = 0
             # 随机选5类，每类中取出1个作为训练样本，每类取出15个作为测试样本
             task = MiniImageNetTask(folders, Config.num_way, Config.num_shot, Config.task_batch_size)
-            sample_data_loader = MiniImageNet.get_data_loader(task, 1, "train", sampler_test=sampler_test, shuffle=False)
+            sample_data_loader = MiniImageNet.get_data_loader(task, 1, "train", sampler_test=sampler_test,
+                                                              shuffle=False)
             batch_data_loader = MiniImageNet.get_data_loader(task, 3, "val", sampler_test=sampler_test, shuffle=True)
             samples, labels = sample_data_loader.__iter__().next()
             samples = cuda(samples)
@@ -405,7 +478,7 @@ class Runner(object):
                 ###########################################################################
                 # calculate features
                 batches = cuda(batches)
-                relations= self.compare_fsl(samples, batches)
+                relations = self.compare_fsl(samples, batches)
                 ###########################################################################
 
                 _, predict_labels = torch.max(relations.data, 1)
@@ -439,9 +512,11 @@ class Config(object):
     val_freq = 5000  # 5000
     print_freq = 1000
 
-    model_name = "1"
-    fe_dir = Tools.new_dir("../models/fsl_old/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    rn_dir = Tools.new_dir("../models/fsl_old/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    # model_name = "1"
+    model_name = "2"
+    _path = "train_one_shot_alisure"  # fsl_old
+    fe_dir = Tools.new_dir("../models/{}/{}_fe_{}way_{}shot.pkl".format(_path, model_name, num_way, num_shot))
+    rn_dir = Tools.new_dir("../models/{}/{}_rn_{}way_{}shot.pkl".format(_path, model_name, num_way, num_shot))
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -450,6 +525,12 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
+    if model_name == "1":  # 0.7547 / 0.4884  - 0.5855 / 0.4600
+        feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+
+    if model_name == "2":  # 0.8125 / 0.5215 / 0.5177 - 0.648 / 0.470
+        feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+
     pass
 
 
@@ -457,6 +538,7 @@ class Config(object):
 
 
 """
+1
 2020-10-22 11:06:32 load feature encoder success from ../models/fsl_old/1_fe_5way_1shot.pkl
 2020-10-22 11:06:32 load relation network success from ../models/fsl_old/1_rn_5way_1shot.pkl
 2020-10-22 11:06:50 Val 300000 Train Accuracy: 0.7022222222222223
@@ -467,18 +549,45 @@ class Config(object):
 2020-10-22 11:10:40 episode=3, Test accuracy=0.5037111111111111, Total accuracy=2.0133555555555556
 2020-10-22 11:11:32 episode=4, Test accuracy=0.5077555555555555, Total accuracy=2.521111111111111
 2020-10-22 11:11:32 Final accuracy: 0.504
+
+1
+2020-10-22 11:14:26 load feature encoder success from ../models/train_one_shot_alisure_new/1_fe_5way_1shot.pkl
+2020-10-22 11:14:26 load relation network success from ../models/train_one_shot_alisure_new/1_rn_5way_1shot.pkl
+2020-10-22 11:14:48 Val 300000 Train Accuracy: 0.7323333333333333
+2020-10-22 11:15:08 Val 300000 Val Accuracy: 0.4902222222222222
+2020-10-22 11:16:28 episode=0, Test accuracy=0.504488888888889, Total accuracy=0.504488888888889
+2020-10-22 11:17:28 episode=1, Test accuracy=0.49617777777777783, Total accuracy=1.0006666666666668
+2020-10-22 11:18:29 episode=2, Test accuracy=0.5102444444444444, Total accuracy=1.510911111111111
+2020-10-22 11:19:27 episode=3, Test accuracy=0.49133333333333334, Total accuracy=2.0022444444444445
+2020-10-22 11:20:25 episode=4, Test accuracy=0.5007777777777778, Total accuracy=2.5030222222222225
+2020-10-22 11:20:25 Final accuracy: 0.5006044444444445
+
+2
+2020-10-22 11:23:59 load feature encoder success from ../models/train_one_shot_alisure_new/2_fe_5way_1shot.pkl
+2020-10-22 11:23:59 load relation network success from ../models/train_one_shot_alisure_new/2_rn_5way_1shot.pkl
+2020-10-22 11:24:18 Val 300000 Train Accuracy: 0.676111111111111
+2020-10-22 11:24:38 Val 300000 Val Accuracy: 0.4984444444444444
+2020-10-22 11:25:58 episode=0, Test accuracy=0.5174222222222222, Total accuracy=0.5174222222222222
+2020-10-22 11:26:59 episode=1, Test accuracy=0.5154888888888888, Total accuracy=1.032911111111111
+2020-10-22 11:27:59 episode=2, Test accuracy=0.5238444444444444, Total accuracy=1.5567555555555552
+2020-10-22 11:29:00 episode=3, Test accuracy=0.5088222222222223, Total accuracy=2.0655777777777775
+2020-10-22 11:30:01 episode=4, Test accuracy=0.5192222222222221, Total accuracy=2.5847999999999995
+2020-10-22 11:30:01 Final accuracy: 0.5169599999999999
 """
 
 
 if __name__ == '__main__':
-    runner = Runner()
+    runner = Runner(feature_encoder=Config.feature_encoder, relation_network=Config.relation_network)
     # runner.load_model()
 
-    # runner.val_test()
+    # runner.test()
+    # runner.val_train(episode=0)
+    # runner.val_val(episode=0)
+    # runner.val_test(episode=0)
     # runner.train()
 
     runner.load_model()
     runner.val_train(episode=Config.train_episode)
     runner.val_val(episode=Config.train_episode)
-    runner.val_test(test_avg_num=5)
-    pass
+    runner.val_test(episode=Config.train_episode)
+    runner.test(test_avg_num=5)
