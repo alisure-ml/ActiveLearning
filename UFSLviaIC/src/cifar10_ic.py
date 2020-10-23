@@ -461,15 +461,23 @@ class ICRunner(object):
     pass
 
 
+"""
+2020-10-20 06:57:30 Test 1 0 Top1=83.11 Top5=99.34
+2020-10-20 06:57:51 Test 1 0 Top1=81.30 Top5=99.25
+2020-10-20 06:57:51 final accuracy: 83.11
+"""
+
+
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
     start_epoch = 0
     max_epoch = 1600
     learning_rate = 0.01
     first_epoch, t_epoch = 200, 100
     low_dim = 512
-    ratio = 2
+    ratio = 1
+    # ratio = 2
 
     batch_size = 64
     resume = False
@@ -478,10 +486,10 @@ class Config(object):
     checkpoint_path = Tools.new_dir("./checkpoint/{}/ckpt.t7".format(name))
 
     if "Linux" in platform.platform():
-        # data_root = "/mnt/4T/Data/data/miniImagenet"
         data_root = "/mnt/4T/Data/data/CIFAR"
+        if not os.path.isdir(data_root):
+            data_root = '/media/ubuntu/4T/ALISURE/Data/cifar'
     else:
-        # data_root = "F:\\data\\miniImagenet"
         data_root  ="F:\\data\\cifar10"
     pass
 
