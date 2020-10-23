@@ -761,9 +761,9 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    fe_dir = Tools.new_dir("../models/ic_fsl/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    rn_dir = Tools.new_dir("../models/ic_fsl/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    ic_dir = Tools.new_dir("../models/ic_fsl/{}_ic_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    fe_dir = Tools.new_dir("../models/ic_fsl_old/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    rn_dir = Tools.new_dir("../models/ic_fsl_old/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    ic_dir = Tools.new_dir("../models/ic_fsl_old/{}_ic_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     pass
 
 
