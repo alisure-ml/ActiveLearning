@@ -456,6 +456,27 @@ class Runner(object):
 2020-10-22 20:34:05 Epoch: [1000] Final Train 0.4563/0.7607
 2020-10-22 20:34:09 Epoch: [1000] Final Val 0.5566/0.9118
 2020-10-22 20:34:13 Epoch: [1000] Final Test 0.5407/0.8958
+
+1_64_512_2_500_500_0.01 stand resnet18
+2020-10-23 01:40:50 Train: [1499] 11522/1793
+2020-10-23 01:40:50 load ic model success from ../models/ic/1_64_512_2_500_500_0.01_ic.pkl
+2020-10-23 01:40:59 Epoch: [1500] Final Train 0.4722/0.7703
+2020-10-23 01:41:01 Epoch: [1500] Final Val 0.5675/0.9091
+2020-10-23 01:41:04 Epoch: [1500] Final Test 0.5453/0.9009
+
+1_64_512_2_500_200_0.01 stand resnet18
+2020-10-23 09:10:26 Train: [2099] 8755/1740
+2020-10-23 09:10:26 load ic model success from ../models/ic_res/1_64_512_2_500_200_0.01_ic.pkl
+2020-10-23 09:10:35 Epoch: [2100] Final Train 0.4848/0.7825
+2020-10-23 09:10:37 Epoch: [2100] Final Val 0.5739/0.9129
+2020-10-23 09:10:40 Epoch: [2100] Final Test 0.5520/0.9032
+
+1_64_512_3_500_200_0.01 stand resnet18
+2020-10-23 09:10:49 Train: [2099] 8481/1567
+2020-10-23 09:10:49 load ic model success from ../models/ic_res/1_64_512_3_500_200_0.01_ic.pkl
+2020-10-23 09:10:56 Epoch: [2100] Final Train 0.4790/0.7811
+2020-10-23 09:10:58 Epoch: [2100] Final Val 0.5698/0.9137
+2020-10-23 09:11:00 Epoch: [2100] Final Test 0.5463/0.9018
 """
 
 
@@ -463,7 +484,9 @@ class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     num_workers = 8
+    # batch_size = 32
     batch_size = 64
+    # batch_size = 256
     val_freq = 10
 
     learning_rate = 0.01
@@ -482,13 +505,21 @@ class Config(object):
 
     # ic
     ic_out_dim = 512
+    ic_ratio = 1
     # ic_ratio = 2
-    ic_ratio = 3
+    # ic_ratio = 3
 
-    model_name = "1_{}_{}_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, first_epoch, t_epoch, learning_rate)
+    # norm = "1"
+    norm = "2"
+    if norm == "1":
+        MEAN_PIXEL = [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
+        STD_PIXEL = [x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]
+    else:
+        MEAN_PIXEL = [0.92206, 0.92206, 0.92206]
+        STD_PIXEL = [0.08426, 0.08426, 0.08426]
 
-    MEAN_PIXEL = [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
-    STD_PIXEL = [x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]
+    model_name = "1_{}_{}_{}_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio,
+                                                 first_epoch, t_epoch, learning_rate, norm)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
