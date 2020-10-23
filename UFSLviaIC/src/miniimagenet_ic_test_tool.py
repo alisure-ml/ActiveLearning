@@ -115,8 +115,15 @@ class KNN(object):
 
             out_list = []
             for batch_idx, (inputs, labels, indexes) in enumerate(train_loader):
-                features = feature_encoder(cls.to_cuda(inputs))  # 5x64*19*19
-                _, out_l2norm = ic_model(features)
+                inputs = cls.to_cuda(inputs)
+
+                if feature_encoder is None:
+                    _, out_l2norm = ic_model(inputs)
+                else:
+                    features = feature_encoder(inputs)  # 5x64*19*19
+                    _, out_l2norm = ic_model(features)
+                    pass
+
                 out_list.append([out_l2norm, cls.to_cuda(labels)])
                 out_memory[:, batch_idx * inputs.size(0):(batch_idx + 1) * inputs.size(0)] = out_l2norm.data.t()
                 pass
@@ -144,7 +151,7 @@ class KNN(object):
 class ICTestTool(object):
 
     def __init__(self, feature_encoder, ic_model, data_root, batch_size=64, num_workers=8, ic_out_dim=512):
-        self.feature_encoder = self.to_cuda(feature_encoder)
+        self.feature_encoder = feature_encoder if feature_encoder is None else self.to_cuda(feature_encoder)
         self.ic_model = self.to_cuda(ic_model)
         self.ic_out_dim = ic_out_dim
 
@@ -178,7 +185,7 @@ class ICTestTool(object):
             Tools.print("Epoch: [{}] Val   {:.4f}/{:.4f}".format(epoch, acc_1_val, acc_2_val))
             Tools.print("Epoch: [{}] Test  {:.4f}/{:.4f}".format(epoch, acc_1_test, acc_2_test))
             pass
-        pass
+        return acc_1_val
 
     pass
 
