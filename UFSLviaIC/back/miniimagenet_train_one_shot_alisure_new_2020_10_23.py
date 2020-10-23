@@ -372,7 +372,7 @@ class Runner(object):
 class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
-    train_episode = 300000
+    train_episode = 180000
     learning_rate = 0.001
 
     num_way = 5

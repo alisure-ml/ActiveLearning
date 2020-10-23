@@ -334,8 +334,6 @@ if __name__ == '__main__':
 
     runner.load_model()
 
-    runner.feature_encoder.eval()
-    runner.relation_network.eval()
     runner.val_fsl(epoch=0, loader=runner.task_test_train_loader, name="Final Train")
     runner.val_fsl(epoch=0, loader=runner.task_test_val_loader, name="Final Val")
     runner.val_fsl_test(epoch=0, test_avg_num=Config.test_avg_num)
