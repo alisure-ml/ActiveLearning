@@ -399,6 +399,21 @@ class Config(object):
     pass
 
 
+##############################################################################################################
+
+
+"""
+has feature_encoder.train() and feature_encoder.eval()
+2020-10-23 22:09:45 load feature encoder success from ../models/fsl/1_64_5_1_fe_5way_1shot.pkl
+2020-10-23 22:09:45 load relation network success from ../models/fsl/1_64_5_1_rn_5way_1shot.pkl
+2020-10-23 22:11:25 Train 150 Accuracy: 0.7066666666666667
+2020-10-23 22:11:25 Val   150 Accuracy: 0.5073333333333333
+2020-10-23 22:11:25 Test1 150 Accuracy: 0.49433333333333335
+2020-10-23 22:11:25 Test2 150 Accuracy: 0.49162222222222224
+2020-10-23 22:15:30 episode=4, Mean Test accuracy=0.49612888888888895
+"""
+
+
 if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
