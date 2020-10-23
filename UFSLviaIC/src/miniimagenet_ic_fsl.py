@@ -499,9 +499,6 @@ class Runner(object):
             ###########################################################################
             # Val
             if epoch % Config.val_freq == 0:
-                Tools.print()
-                Tools.print("Test {} .......".format(epoch))
-
                 self.test_tool_ic.val(epoch=epoch)
                 val_accuracy = self.test_tool_fsl.val(episode=epoch, is_print=True)
 
@@ -553,7 +550,7 @@ old test
 class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
-    train_epoch = 150
+    train_epoch = 300
     num_workers = 8
     batch_size = 64
     val_freq = 10
@@ -574,7 +571,8 @@ class Config(object):
     ic_out_dim = 512
     ic_ratio = 1
 
-    model_name = "2_{}_{}_{}_{}_{}_{}".format(batch_size, num_way, num_shot, ic_in_dim, ic_out_dim, ic_ratio)
+    model_name = "2_{}_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot,
+                                                 ic_in_dim, ic_out_dim, ic_ratio)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'

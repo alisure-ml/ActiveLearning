@@ -364,9 +364,9 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-    train_epoch = 150
+    train_epoch = 300
     learning_rate = 0.001
     num_workers = 8
 
@@ -379,10 +379,10 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
-    feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
-    model_name = "3_{}_{}_{}".format(batch_size, num_way, num_shot)
+    model_name = "2_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
 
     MEAN_PIXEL = [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
     STD_PIXEL = [x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]
