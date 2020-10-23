@@ -11,6 +11,7 @@ from alisuretool.Tools import Tools
 from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
+from miniimagenet_fsl_test_tool import TestTool
 from torch.utils.data import DataLoader, Dataset
 
 
@@ -304,8 +305,8 @@ class Runner(object):
             sample_data_loader = DataLoader(sample_dataset, Config.num_shot * Config.num_way, sampler=sample_sampler)
 
             batch_dataset = MiniImageNet(test_labels, test_roots)
-            batch_sampler = ClassBalancedSampler(Config.num_shot, Config.num_way, Config.episode_size, shuffle=True)
-            batch_data_loader = DataLoader(batch_dataset, Config.num_shot * Config.num_way, sampler=batch_sampler)
+            batch_sampler = ClassBalancedSampler(Config.episode_size, Config.num_way, Config.episode_size, shuffle=True)
+            batch_data_loader = DataLoader(batch_dataset, Config.episode_size * Config.num_way, sampler=batch_sampler)
 
             samples, sample_labels = sample_data_loader.__iter__().next()
             batches, batch_labels = batch_data_loader.__iter__().next()
