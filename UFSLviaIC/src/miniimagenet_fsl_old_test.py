@@ -399,7 +399,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     num_way = 5
     num_shot = 1
@@ -436,12 +436,12 @@ class Config(object):
     # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
     # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
 
-    model_path = "train_one_shot_alisure"
-    model_fe_name = "2_fe_5way_1shot.pkl"
-    model_rn_name = "2_rn_5way_1shot.pkl"
-    feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
-    fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
-    rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
+    # model_path = "train_one_shot_alisure"
+    # model_fe_name = "2_fe_5way_1shot.pkl"
+    # model_rn_name = "2_rn_5way_1shot.pkl"
+    # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+    # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
+    # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
 
     # model_path = "ic_ufsl"
     # model_fe_name = "2_64_5_1_fe_5way_1shot.pkl"
@@ -449,6 +449,20 @@ class Config(object):
     # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
     # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
     # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
+
+    # model_path = "fsl2"
+    # model_fe_name = "1_64_5_1_fe_5way_1shot.pkl"
+    # model_rn_name = "1_64_5_1_rn_5way_1shot.pkl"
+    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    # fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
+    # rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
+
+    model_path = "fsl2"
+    model_fe_name = "1_64_5_1_fe_5way_1shot.pkl"
+    model_rn_name = "1_64_5_1_rn_5way_1shot.pkl"
+    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    fe_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_fe_name))
+    rn_dir = Tools.new_dir("../models/{}/{}".format(model_path, model_rn_name))
     pass
 
 

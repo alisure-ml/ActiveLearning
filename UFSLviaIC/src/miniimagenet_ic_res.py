@@ -464,6 +464,13 @@ class Runner(object):
 2020-10-23 01:41:01 Epoch: [1500] Final Val 0.5675/0.9091
 2020-10-23 01:41:04 Epoch: [1500] Final Test 0.5453/0.9009
 
+1_64_512_1_500_200_0.01 stand resnet18
+2020-10-23 12:43:06 Train: [2099] 8892/1647
+2020-10-23 12:43:06 load ic model success from ../models/ic_res/1_64_512_1_500_200_0.01_ic.pkl
+2020-10-23 12:43:14 Epoch: [2100] Final Train 0.4959/0.7840
+2020-10-23 12:43:17 Epoch: [2100] Final Val 0.5796/0.9132
+2020-10-23 12:43:19 Epoch: [2100] Final Test 0.5544/0.9008
+
 1_64_512_2_500_200_0.01 stand resnet18
 2020-10-23 09:10:26 Train: [2099] 8755/1740
 2020-10-23 09:10:26 load ic model success from ../models/ic_res/1_64_512_2_500_200_0.01_ic.pkl
@@ -477,6 +484,7 @@ class Runner(object):
 2020-10-23 09:10:56 Epoch: [2100] Final Train 0.4790/0.7811
 2020-10-23 09:10:58 Epoch: [2100] Final Val 0.5698/0.9137
 2020-10-23 09:11:00 Epoch: [2100] Final Test 0.5463/0.9018
+
 """
 
 

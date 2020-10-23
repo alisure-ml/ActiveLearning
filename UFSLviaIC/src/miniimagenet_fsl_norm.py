@@ -35,11 +35,8 @@ class MiniImageNetDataset(object):
                 self.data_dict[label] = []
             self.data_dict[label].append((index, label, image_filename))
             pass
-
         normalize = transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL)
-        self.transform_train = transforms.Compose([
-            transforms.RandomCrop(84, padding=8),
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        self.transform_train = transforms.Compose([transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
         self.transform = self.transform_train if self.is_train else self.transform_test
         pass
@@ -374,7 +371,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     train_epoch = 600
     learning_rate = 0.001
@@ -387,10 +384,17 @@ class Config(object):
     batch_size = 64
     test_avg_num = 2
 
-    model_name = "1_{}_{}_{}".format(batch_size, num_way, num_shot)
+    # norm = "1"
+    norm = "2"
+    if norm == "1":
+        MEAN_PIXEL = [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
+        STD_PIXEL = [x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]
+    else:
+        MEAN_PIXEL = [0.92206, 0.92206, 0.92206]
+        STD_PIXEL = [0.08426, 0.08426, 0.08426]
+        pass
 
-    MEAN_PIXEL = [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
-    STD_PIXEL = [x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]
+    model_name = "2_{}_{}_{}_{}".format(batch_size, num_way, num_shot, norm)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -399,8 +403,8 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    fe_dir = Tools.new_dir("../models/fsl/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    rn_dir = Tools.new_dir("../models/fsl/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    fe_dir = Tools.new_dir("../models/fsl2/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    rn_dir = Tools.new_dir("../models/fsl2/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     pass
 
 
