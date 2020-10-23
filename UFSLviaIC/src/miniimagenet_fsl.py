@@ -320,11 +320,11 @@ class Runner(object):
 class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
-    train_epoch = 300
+    train_epoch = 150
     learning_rate = 0.001
     num_workers = 8
 
-    val_freq = 1
+    val_freq = 10
 
     num_way = 5
     num_shot = 1

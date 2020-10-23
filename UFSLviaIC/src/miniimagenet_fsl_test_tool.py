@@ -208,7 +208,7 @@ class TestTool(object):
 
     def test(self, test_avg_num, episode=0, is_print=True):
         acc_list = []
-        for episode in range(test_avg_num):
+        for _ in range(test_avg_num):
             acc = self._val(self.folders_test, sampler_test=True, all_episode=self.test_episode)
             acc_list.append(acc)
             pass

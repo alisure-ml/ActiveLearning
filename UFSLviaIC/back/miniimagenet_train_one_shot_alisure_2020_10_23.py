@@ -588,6 +588,21 @@ class Config(object):
 2020-10-22 21:18:10 Val 0 Train Accuracy: 0.7387777777777779
 2020-10-22 21:18:29 Val 0 Accuracy: 0.5064444444444445
 2020-10-22 21:23:15 Final accuracy: 0.5069511111111111
+
+1
+2020-10-23 10:21:25 load feature encoder success from ../models/train_one_shot_alisure/1_fe_5way_1shot.pkl
+2020-10-23 10:21:25 load relation network success from ../models/train_one_shot_alisure/2_rn_5way_1shot.pkl
+2020-10-23 10:12:03 Val 300000 Train Accuracy: 0.7307777777777777
+2020-10-23 10:12:23 Val 300000 Val Accuracy: 0.48133333333333334
+2020-10-23 10:17:54 Final accuracy: 0.4982044444444445
+
+2
+2020-10-23 10:21:25 load feature encoder success from ../models/train_one_shot_alisure/2_fe_5way_1shot.pkl
+2020-10-23 10:21:25 load relation network success from ../models/train_one_shot_alisure/2_rn_5way_1shot.pkl
+2020-10-23 10:21:45 Val 300000 Train Accuracy: 0.6716666666666666
+2020-10-23 10:22:05 Val 300000 Val Accuracy: 0.5006666666666666
+2020-10-23 10:27:23 Final accuracy: 0.5143644444444444
+
 """
 
 
@@ -595,11 +610,11 @@ if __name__ == '__main__':
     runner = Runner(feature_encoder=Config.feature_encoder, relation_network=Config.relation_network)
     # runner.load_model()
 
-    runner.test()
-    runner.val_train(episode=0)
-    runner.val_val(episode=0)
-    runner.val_test(episode=0)
-    runner.train()
+    # runner.test()
+    # runner.val_train(episode=0)
+    # runner.val_val(episode=0)
+    # runner.val_test(episode=0)
+    # runner.train()
 
     runner.load_model()
     runner.val_train(episode=Config.train_episode)
