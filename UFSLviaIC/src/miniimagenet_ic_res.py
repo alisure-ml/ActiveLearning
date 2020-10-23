@@ -492,6 +492,12 @@ class Runner(object):
 2020-10-23 20:01:01 Epoch: [2100] Final Val 0.5459/0.8941
 2020-10-23 20:01:03 Epoch: [2100] Final Test 0.5059/0.8737
 
+1_64_512_1_500_200_0.01_2 stand resnet18 norm2
+2020-10-23 23:15:57 Train: [2099] 9191/1837
+2020-10-23 23:15:58 load ic model success from ../models/ic_res/1_64_512_1_500_200_0.01_2_ic.pkl
+2020-10-23 23:16:05 Epoch: [2100] Final Train 0.5005/0.7878
+2020-10-23 23:16:07 Epoch: [2100] Final Val 0.5781/0.9140
+2020-10-23 23:16:09 Epoch: [2100] Final Test 0.5600/0.9048
 """
 
 
