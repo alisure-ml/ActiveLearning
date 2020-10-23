@@ -13,11 +13,8 @@ from alisuretool.Tools import Tools
 from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
+from miniimagenet_fsl_test_tool import TestTool
 from torch.utils.data import DataLoader, Dataset
-
-
-def cuda(x):
-    return x.cuda() if torch.cuda.is_available() else x
 
 
 ##############################################################################################################
@@ -25,9 +22,8 @@ def cuda(x):
 
 class MiniImageNetDataset(object):
 
-    def __init__(self, data_list, is_train, num_way, num_shot):
-        self.data_list, self.is_train = data_list, is_train
-        self.num_way, self.num_shot = num_way, num_shot
+    def __init__(self, data_list, num_way, num_shot):
+        self.data_list, self.num_way, self.num_shot = data_list, num_way, num_shot
 
         self.data_dict = {}
         for index, label, image_filename in self.data_list:
@@ -36,9 +32,8 @@ class MiniImageNetDataset(object):
             self.data_dict[label].append((index, label, image_filename))
             pass
         normalize = transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL)
-        self.transform_train = transforms.Compose([transforms.ToTensor(), normalize])
+        self.transform = transforms.Compose([transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
-        self.transform = self.transform_train if self.is_train else self.transform_test
         pass
 
     def __len__(self):
@@ -47,8 +42,6 @@ class MiniImageNetDataset(object):
     @staticmethod
     def get_data_all(data_root):
         train_folder = os.path.join(data_root, "train")
-        val_folder = os.path.join(data_root, "val")
-        test_folder = os.path.join(data_root, "test")
 
         count_image, count_class, data_train_list = 0, 0, []
         for label in os.listdir(train_folder):
@@ -61,29 +54,7 @@ class MiniImageNetDataset(object):
                 count_class += 1
             pass
 
-        count_image, count_class, data_val_list = 0, 0, []
-        for label in os.listdir(val_folder):
-            now_class_path = os.path.join(val_folder, label)
-            if os.path.isdir(now_class_path):
-                for name in os.listdir(now_class_path):
-                    data_val_list.append((count_image, count_class, os.path.join(now_class_path, name)))
-                    count_image += 1
-                    pass
-                count_class += 1
-            pass
-
-        count_image, count_class, data_test_list = 0, 0, []
-        for label in os.listdir(test_folder):
-            now_class_path = os.path.join(test_folder, label)
-            if os.path.isdir(now_class_path):
-                for name in os.listdir(now_class_path):
-                    data_test_list.append((count_image, count_class, os.path.join(now_class_path, name)))
-                    count_image += 1
-                    pass
-                count_class += 1
-            pass
-
-        return data_train_list, data_val_list, data_test_list
+        return data_train_list
 
     def __getitem__(self, item):
         # 当前样本
@@ -125,7 +96,6 @@ class MiniImageNetDataset(object):
 
 
 class CNNEncoder(nn.Module):
-
     def __init__(self):
         super().__init__()
         self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=0),
@@ -152,7 +122,6 @@ class CNNEncoder(nn.Module):
 
 
 class RelationNetwork(nn.Module):
-
     def __init__(self):
         super().__init__()
         self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=0),
@@ -186,33 +155,34 @@ class Runner(object):
         self.best_accuracy = 0.0
 
         # all data
-        self.data_train, self.data_val, self.data_test = MiniImageNetDataset.get_data_all(Config.data_root)
-
-        self.task_train = MiniImageNetDataset(self.data_train, True, Config.num_way, Config.num_shot)
+        self.data_train = MiniImageNetDataset.get_data_all(Config.data_root)
+        self.task_train = MiniImageNetDataset(self.data_train, Config.num_way, Config.num_shot)
         self.task_train_loader = DataLoader(self.task_train, Config.batch_size, shuffle=True, num_workers=Config.num_workers)
 
-        self.task_test_train = MiniImageNetDataset(self.data_train, False, Config.num_way, Config.num_shot)
-        self.task_test_val = MiniImageNetDataset(self.data_val, False, Config.num_way, Config.num_shot)
-        self.task_test_test = MiniImageNetDataset(self.data_test, False, Config.num_way, Config.num_shot)
-        self.task_test_train_loader = DataLoader(self.task_test_train, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
-        self.task_test_val_loader = DataLoader(self.task_test_val, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
-        self.task_test_test_loader = DataLoader(self.task_test_test, Config.batch_size, shuffle=False, num_workers=Config.num_workers)
-
         # model
-        self.feature_encoder = cuda(CNNEncoder())
-        self.relation_network = cuda(RelationNetwork())
-        self.feature_encoder.apply(self._weights_init).cuda()
-        self.relation_network.apply(self._weights_init).cuda()
-
-        # loss
-        self.fsl_loss = cuda(nn.MSELoss())
+        self.feature_encoder = self.to_cuda(CNNEncoder())
+        self.relation_network = self.to_cuda(RelationNetwork())
+        self.to_cuda(self.feature_encoder.apply(self._weights_init))
+        self.to_cuda(self.relation_network.apply(self._weights_init))
 
         # optim
         self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
-        self.feature_encoder_scheduler = StepLR(self.feature_encoder_optim, Config.train_epoch//3, gamma=0.5)
+        self.feature_encoder_scheduler = StepLR(self.feature_encoder_optim, Config.train_epoch // 3, gamma=0.5)
         self.relation_network_optim = torch.optim.Adam(self.relation_network.parameters(), lr=Config.learning_rate)
-        self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_epoch//3, gamma=0.5)
+        self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_epoch // 3, gamma=0.5)
+
+        # loss
+        self.loss = self.to_cuda(nn.MSELoss())
+
+        self.test_tool = TestTool(self.compare_fsl_test, data_root=Config.data_root,
+                                  num_way=Config.num_way,  num_shot=Config.num_shot,
+                                  episode_size=Config.episode_size, test_episode=Config.test_episode,
+                                  transform=self.task_train.transform_test)
         pass
+
+    @staticmethod
+    def to_cuda(x):
+        return x.cuda() if torch.cuda.is_available() else x
 
     @staticmethod
     def _weights_init(m):
@@ -248,6 +218,8 @@ class Runner(object):
         # feature encoder
         data_features = self.feature_encoder(fe_inputs)  # 90x64*19*19
         _, feature_dim, feature_width, feature_height = data_features.shape
+
+        # calculate
         data_features = data_features.view([-1, data_image_num, feature_dim, feature_width, feature_height])
         data_features_support, data_features_query = data_features.split(Config.num_shot * Config.num_way, dim=1)
         data_features_query_repeat = data_features_query.repeat(1, Config.num_shot * Config.num_way, 1, 1, 1)
@@ -255,10 +227,28 @@ class Runner(object):
         # calculate relations
         relation_pairs = torch.cat((data_features_support, data_features_query_repeat), 2)
         relation_pairs = relation_pairs.view(-1, feature_dim * 2, feature_width, feature_height)
+
         relations = self.relation_network(relation_pairs)
         relations = relations.view(-1, Config.num_way * Config.num_shot)
+        return relations
 
-        return relations, data_features_query.squeeze()
+    def compare_fsl_test(self, samples, batches):
+        # calculate features
+        sample_features = self.feature_encoder(samples)  # 5x64*19*19
+        batch_features = self.feature_encoder(batches)  # 75x64*19*19
+        batch_size, feature_dim, feature_width, feature_height = batch_features.shape
+
+        # calculate
+        sample_features_ext = sample_features.unsqueeze(0).repeat(batch_size, 1, 1, 1, 1)
+        batch_features_ext = batch_features.unsqueeze(1).repeat(1, Config.num_shot * Config.num_way, 1, 1, 1)
+
+        # calculate relations
+        relation_pairs = torch.cat((sample_features_ext, batch_features_ext), 2)
+        relation_pairs = relation_pairs.view(-1, feature_dim * 2, feature_width, feature_height)
+
+        relations = self.relation_network(relation_pairs)
+        relations = relations.view(-1, Config.num_way * Config.num_shot)
+        return relations
 
     def train(self):
         Tools.print()
@@ -271,13 +261,13 @@ class Runner(object):
             Tools.print()
             all_loss = 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
-                task_data, task_labels = cuda(task_data), cuda(task_labels)
+                task_data, task_labels = self.to_cuda(task_data), self.to_cuda(task_labels)
 
                 # 1 calculate features
-                relations, query_features = self.compare_fsl(task_data)
+                relations = self.compare_fsl(task_data)
 
                 # 2 loss
-                loss = self.fsl_loss(relations, task_labels)
+                loss = self.loss(relations, task_labels)
                 all_loss += loss.item()
 
                 # 3 backward
@@ -308,9 +298,7 @@ class Runner(object):
 
                 Tools.print()
                 Tools.print("Test {} .......".format(epoch))
-                self.val_fsl(epoch, self.task_test_train_loader, name="Train")
-                val_accuracy = self.val_fsl(epoch, self.task_test_val_loader, name="Val")
-                self.val_fsl(epoch, loader=self.task_test_test_loader, name="Test")
+                val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
                     torch.save(self.feature_encoder.state_dict(), Config.fe_dir)
@@ -323,57 +311,13 @@ class Runner(object):
 
         pass
 
-    def val_fsl(self, epoch, loader, name=None):
-        accuracies = []
-        total_rewards, counter = 0, 0
-        for task_data, task_labels, _ in loader:
-            task_data, task_labels = cuda(task_data), cuda(task_labels)
-            batch_size = task_labels.shape[0]
-
-            relations, _ = self.compare_fsl(task_data)
-            _, predict_labels = torch.max(relations.data, 1)
-            rewards = [int(task_labels[i][predict_labels[i]]) for i in range(batch_size)]
-
-            total_rewards += np.sum(rewards)
-            counter += batch_size
-            accuracies.append(total_rewards / 1.0 / counter)
-            pass
-
-        final_accuracy = np.mean(np.array(accuracies, dtype=np.float))
-        Tools.print("Val {} {} Accuracy: {}".format(epoch, name, final_accuracy))
-        return final_accuracy
-
-    def val_fsl_test(self, epoch, test_avg_num=2):
-        Tools.print()
-        Tools.print("Testing...")
-        total_accuracy = 0.0
-        for _which in range(test_avg_num):
-            test_accuracy = self.val_fsl(epoch, loader=self.task_test_test_loader, name="Test {}".format(_which))
-            total_accuracy += test_accuracy
-            pass
-        final_accuracy = total_accuracy / Config.test_avg_num
-        Tools.print("Final Test accuracy: {}".format(final_accuracy))
-        return final_accuracy
-
     pass
-
-
-##############################################################################################################
-
-
-"""
-2020-10-22 16:58:21 load feature encoder success from ../models/fsl/1_64_5_1_fe_5way_1shot.pkl
-2020-10-22 16:58:21 load relation network success from ../models/fsl/1_64_5_1_rn_5way_1shot.pkl
-2020-10-22 16:59:16 Val 1000 Final Train Accuracy: 0.7856667234316946
-2020-10-22 16:59:29 Val 1000 Final Val Accuracy: 0.5062298349603024
-2020-10-22 16:59:46 Val 1000 Test 0 Accuracy: 0.49566093146157125
-"""
 
 
 class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-    train_epoch = 600
+    train_epoch = 300
     learning_rate = 0.001
     num_workers = 8
 
@@ -382,7 +326,9 @@ class Config(object):
     num_way = 5
     num_shot = 1
     batch_size = 64
-    test_avg_num = 2
+
+    episode_size = 15
+    test_episode = 600
 
     # norm = "1"
     norm = "2"
@@ -414,16 +360,13 @@ if __name__ == '__main__':
 
     runner.feature_encoder.eval()
     runner.relation_network.eval()
-    runner.val_fsl(epoch=0, loader=runner.task_test_train_loader, name="First Train")
-    runner.val_fsl(epoch=0, loader=runner.task_test_val_loader, name="First Val")
-    runner.val_fsl(epoch=0, loader=runner.task_test_test_loader, name="First Test")
+    runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 
     runner.load_model()
     runner.feature_encoder.eval()
     runner.relation_network.eval()
-    runner.val_fsl(epoch=Config.train_epoch, loader=runner.task_test_train_loader, name="Final Train")
-    runner.val_fsl(epoch=Config.train_epoch, loader=runner.task_test_val_loader, name="Final Val")
-    runner.val_fsl_test(epoch=Config.train_epoch, test_avg_num=Config.test_avg_num)
+    runner.test_tool.val(episode=Config.train_epoch, is_print=True)
+    runner.test_tool.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
     pass

@@ -270,7 +270,7 @@ class Runner(object):
                 relations = self.compare_fsl(task_data)
 
                 # 2 loss
-                loss = self.fsl_loss(relations, task_labels)
+                loss = self.loss(relations, task_labels)
                 all_loss += loss.item()
 
                 # 3 backward
