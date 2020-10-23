@@ -21,9 +21,8 @@ from torch.utils.data import DataLoader, Dataset
 
 class MiniImageNetDataset(object):
 
-    def __init__(self, data_list, is_train, num_way, num_shot, episode_size=15):
-        self.data_list, self.is_train = data_list, is_train
-        self.num_way, self.num_shot, self.episode_size = num_way, num_shot, episode_size
+    def __init__(self, data_list, num_way, num_shot, episode_size=15):
+        self.data_list, self.num_way, self.num_shot, self.episode_size = data_list, num_way, num_shot, episode_size
 
         self.data_dict = {}
         for index, label, image_filename in self.data_list:
@@ -33,9 +32,8 @@ class MiniImageNetDataset(object):
             pass
 
         normalize = transforms.Normalize(mean=[0.92206, 0.92206, 0.92206], std=[0.08426, 0.08426, 0.08426])
-        self.transform_train = transforms.Compose([transforms.ToTensor(), normalize])
+        self.transform = transforms.Compose([transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
-        self.transform = self.transform_train if self.is_train else self.transform_test
         pass
 
     def __len__(self):
@@ -191,9 +189,11 @@ class Runner(object):
         self.best_accuracy = 0.0
 
         # all data
-        self.data_train, self.data_val, self.data_test = MiniImageNetDataset.get_data_all(Config.data_root)
-        self.task_train = MiniImageNetDataset(self.data_train, True, Config.num_way, Config.num_shot, episode_size=Config.episode_size)
-        self.task_train_loader = DataLoader(self.task_train, batch_size=Config.batch_size, shuffle=True, num_workers=Config.num_workers)
+        self.data_train = MiniImageNetDataset.get_data_all(Config.data_root)
+        self.task_train = MiniImageNetDataset(self.data_train, Config.num_way,
+                                              Config.num_shot, episode_size=Config.episode_size)
+        self.task_train_loader = DataLoader(self.task_train, batch_size=Config.batch_size,
+                                            shuffle=True, num_workers=Config.num_workers)
 
         # model
         self.feature_encoder = self.to_cuda(CNNEncoder())
@@ -212,7 +212,8 @@ class Runner(object):
 
         self.test_tool = TestTool(self.compare_fsl, data_root=Config.data_root,
                                   num_way=Config.num_way,  num_shot=Config.num_shot,
-                                  episode_size=Config.episode_size, test_episode=Config.test_episode)
+                                  episode_size=Config.episode_size, test_episode=Config.test_episode,
+                                  transform=self.task_train.transform_test)
         pass
 
     @staticmethod

@@ -156,16 +156,10 @@ class MiniImageNet(Dataset):
         return folders_train, folders_val, folders_test
 
     @staticmethod
-    def get_data_loader(task, num_per_class=1, split='train', sampler_test=False, shuffle=False):
-        normalize = transforms.Normalize(mean=[0.92206, 0.92206, 0.92206], std=[0.08426, 0.08426, 0.08426])
-        transform_train = transforms.Compose([transforms.ToTensor(), normalize])
-        transform_test = transforms.Compose([transforms.ToTensor(), normalize])
-
+    def get_data_loader(task, num_per_class=1, split='train', sampler_test=False, shuffle=False, transform=None):
         if split == 'train':
-            dataset = MiniImageNet(task, split=split, transform=transform_train)
             sampler = ClassBalancedSampler(num_per_class, task.num_classes, task.train_num, shuffle=shuffle)
         else:
-            dataset = MiniImageNet(task, split=split, transform=transform_test)
             if not sampler_test:
                 sampler = ClassBalancedSampler(num_per_class, task.num_classes, task.test_num, shuffle=shuffle)
             else:  # test
@@ -173,6 +167,11 @@ class MiniImageNet(Dataset):
                 pass
             pass
 
+        if transform is None:
+            normalize = transforms.Normalize(mean=[0.92206, 0.92206, 0.92206], std=[0.08426, 0.08426, 0.08426])
+            transform = transforms.Compose([transforms.ToTensor(), normalize])
+            pass
+        dataset = MiniImageNet(task, split=split, transform=transform)
         return DataLoader(dataset, batch_size=num_per_class * task.num_classes, sampler=sampler)
 
     pass
@@ -183,8 +182,9 @@ class MiniImageNet(Dataset):
 
 class TestTool(object):
 
-    def __init__(self, model_fn, data_root, num_way=5, num_shot=1, episode_size=15, test_episode=600):
+    def __init__(self, model_fn, data_root, num_way=5, num_shot=1, episode_size=15, test_episode=600, transform=None):
         self.model_fn = model_fn
+        self.transform = transform
 
         self.folders_train, self.folders_val, self.folders_test = MiniImageNet.folders(data_root)
 
@@ -243,8 +243,10 @@ class TestTool(object):
             counter = 0
             # 随机选5类，每类中取出1个作为训练样本，每类取出15个作为测试样本
             task = MiniImageNetTask(folders, self.num_way, self.num_shot, self.episode_size)
-            sample_data_loader = MiniImageNet.get_data_loader(task, 1, "train", sampler_test=sampler_test, shuffle=False)
-            batch_data_loader = MiniImageNet.get_data_loader(task, 3, "val", sampler_test=sampler_test, shuffle=True)
+            sample_data_loader = MiniImageNet.get_data_loader(task, 1, "train", sampler_test=sampler_test,
+                                                              shuffle=False, transform=self.transform)
+            batch_data_loader = MiniImageNet.get_data_loader(task, 3, "val", sampler_test=sampler_test,
+                                                             shuffle=True, transform=self.transform)
             samples, labels = sample_data_loader.__iter__().next()
 
             samples = self.to_cuda(samples)

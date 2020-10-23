@@ -62,6 +62,11 @@ class MiniImageNet(Dataset):
         self.transform = transforms.Compose([transforms.ToTensor(), normalize])
         pass
 
+    @staticmethod
+    def transform_test():
+        normalize = transforms.Normalize(mean=[0.92206, 0.92206, 0.92206], std=[0.08426, 0.08426, 0.08426])
+        return transforms.Compose([transforms.ToTensor(), normalize])
+
     def __len__(self):
         return len(self.image_roots)
 
@@ -238,7 +243,8 @@ class Runner(object):
         # Test
         self.test_tool = TestTool(self.compare_fsl, data_root=Config.data_root,
                                   num_way=Config.num_way,  num_shot=Config.num_shot,
-                                  episode_size=Config.episode_size, test_episode=Config.test_episode)
+                                  episode_size=Config.episode_size, test_episode=Config.test_episode,
+                                  transform=MiniImageNet.transform_test())
         pass
 
     @staticmethod
