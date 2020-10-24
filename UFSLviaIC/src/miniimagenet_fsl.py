@@ -32,7 +32,8 @@ class MiniImageNetDataset(object):
             self.data_dict[label].append((index, label, image_filename))
             pass
 
-        normalize = transforms.Normalize(mean=Config.MEAN_PIXEL, std=Config.STD_PIXEL)
+        normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
+                                         std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
         self.transform = transforms.Compose([
             transforms.RandomCrop(84, padding=8),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
@@ -310,6 +311,9 @@ class Runner(object):
         Tools.print("Training...")
 
         for epoch in range(Config.train_epoch):
+            self.feature_encoder.train()
+            self.relation_network.train()
+
             Tools.print()
             all_loss = 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
@@ -347,6 +351,9 @@ class Runner(object):
             if epoch % Config.val_freq == 0:
                 Tools.print()
                 Tools.print("Test {} .......".format(epoch))
+                self.feature_encoder.eval()
+                self.relation_network.eval()
+
                 val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
@@ -364,7 +371,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     train_epoch = 300
     learning_rate = 0.001
@@ -379,13 +386,10 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
-    # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
-    model_name = "2_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
-
-    MEAN_PIXEL = [x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]
-    STD_PIXEL = [x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]
+    model_name = "1_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -418,11 +422,15 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
+    runner.feature_encoder.eval()
+    runner.relation_network.eval()
     runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 
     runner.load_model()
+    runner.feature_encoder.eval()
+    runner.relation_network.eval()
     runner.test_tool.val(episode=Config.train_epoch, is_print=True)
     runner.test_tool.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
     pass
