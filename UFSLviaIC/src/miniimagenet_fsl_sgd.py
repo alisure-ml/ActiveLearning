@@ -8,13 +8,11 @@ from tqdm import tqdm
 import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
-import torchvision.utils as vutils
 from alisuretool.Tools import Tools
-from torch.optim import lr_scheduler
 import torchvision.transforms as transforms
-from torch.utils.data.sampler import Sampler
 from miniimagenet_fsl_test_tool import TestTool
 from torch.utils.data import DataLoader, Dataset
+from miniimagenet_tool import CNNEncoder, RelationNetwork, CNNEncoder1, RelationNetwork1, RunnerTool
 
 
 ##############################################################################################################
@@ -99,113 +97,6 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
-class CNNEncoder(nn.Module):
-
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out3 = self.layer3(out2)
-        out4 = self.layer4(out3)
-        return out4
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class RelationNetwork(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.fc1 = nn.Linear(64 * 3 * 3, 8)
-        self.fc2 = nn.Linear(8, 1)
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out = out2.view(out2.size(0), -1)
-        out = torch.relu(self.fc1(out))
-        out = torch.sigmoid(self.fc2(out))
-        return out
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-# Original --> MaxPool, FC input
-class CNNEncoder1(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out3 = self.layer3(out2)
-        out4 = self.layer4(out3)
-        return out4
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class RelationNetwork1(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.fc1 = nn.Linear(64 * 5 * 5, 64)  # 64
-        self.fc2 = nn.Linear(64, 1)  # 64
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out = out2.view(out2.size(0), -1)
-        out = torch.relu(self.fc1(out))
-        out = torch.sigmoid(self.fc2(out))
-        return out
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-##############################################################################################################
-
-
 class Runner(object):
 
     def __init__(self):
@@ -218,48 +109,24 @@ class Runner(object):
         self.task_train_loader = DataLoader(self.task_train, Config.batch_size, shuffle=True, num_workers=Config.num_workers)
 
         # model
-        self.feature_encoder = self.to_cuda(Config.feature_encoder)
-        self.relation_network = self.to_cuda(Config.relation_network)
-        self.to_cuda(self.feature_encoder.apply(self._weights_init))
-        self.to_cuda(self.relation_network.apply(self._weights_init))
+        self.feature_encoder = RunnerTool.to_cuda(Config.feature_encoder)
+        self.relation_network = RunnerTool.to_cuda(Config.relation_network)
+        RunnerTool.to_cuda(self.feature_encoder.apply(RunnerTool.weights_init))
+        RunnerTool.to_cuda(self.relation_network.apply(RunnerTool.weights_init))
 
         # optim
-        # self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
-        # self.relation_network_optim = torch.optim.Adam(self.relation_network.parameters(), lr=Config.learning_rate)
-
         self.feature_encoder_optim = torch.optim.SGD(
             self.feature_encoder.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
         self.relation_network_optim = torch.optim.SGD(
             self.relation_network.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
         # loss
-        self.loss = self.to_cuda(nn.MSELoss())
+        self.loss = RunnerTool.to_cuda(nn.MSELoss())
 
         self.test_tool = TestTool(self.compare_fsl_test, data_root=Config.data_root,
                                   num_way=Config.num_way,  num_shot=Config.num_shot,
                                   episode_size=Config.episode_size, test_episode=Config.test_episode,
                                   transform=self.task_train.transform_test)
-        pass
-
-    @staticmethod
-    def to_cuda(x):
-        return x.cuda() if torch.cuda.is_available() else x
-
-    @staticmethod
-    def _weights_init(m):
-        class_name = m.__class__.__name__
-        if class_name.find('Conv') != -1:
-            n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-            m.weight.data.normal_(0, math.sqrt(2. / n))
-            if m.bias is not None:
-                m.bias.data.zero_()
-        elif class_name.find('BatchNorm') != -1:
-            m.weight.data.fill_(1)
-            m.bias.data.zero_()
-        elif class_name.find('Linear') != -1:
-            m.weight.data.normal_(0, 0.01)
-            m.bias.data = torch.ones(m.bias.data.size())
-            pass
         pass
 
     def load_model(self):
@@ -271,65 +138,6 @@ class Runner(object):
             self.relation_network.load_state_dict(torch.load(Config.rn_dir))
             Tools.print("load relation network success from {}".format(Config.rn_dir))
         pass
-
-    @staticmethod
-    def adjust_learning_rate1(optimizer, epoch):
-
-        def _get_lr(_base_lr, now_epoch, _t_epoch=Config.t_epoch, _eta_min=1e-05):
-            return _eta_min + (_base_lr - _eta_min) * (1 + math.cos(math.pi * now_epoch / _t_epoch)) / 2
-
-        t_epoch = Config.t_epoch
-        first_epoch = Config.first_epoch
-        init_learning_rate = Config.learning_rate
-        if epoch < first_epoch + t_epoch * 0:  # 0-200
-            learning_rate = init_learning_rate
-        elif epoch < first_epoch + t_epoch * 1:  # 200-300
-            learning_rate = init_learning_rate / 2
-        elif epoch < first_epoch + t_epoch * 2:  # 300-400
-            learning_rate = init_learning_rate / 4
-        elif epoch < first_epoch + t_epoch * 3:  # 400-500
-            learning_rate = _get_lr(init_learning_rate / 2.0, epoch - first_epoch - t_epoch * 2)
-        elif epoch < first_epoch + t_epoch * 4:  # 500-600
-            learning_rate = _get_lr(init_learning_rate / 4.0, epoch - first_epoch - t_epoch * 3)
-        elif epoch < first_epoch + t_epoch * 5:  # 600-700
-            learning_rate = _get_lr(init_learning_rate / 8.0, epoch - first_epoch - t_epoch * 4)
-        elif epoch < first_epoch + t_epoch * 6:  # 700-800
-            learning_rate = _get_lr(init_learning_rate / 16., epoch - first_epoch - t_epoch * 5)
-        elif epoch < first_epoch + t_epoch * 7:  # 800-900
-            learning_rate = _get_lr(init_learning_rate / 32., epoch - first_epoch - t_epoch * 6)
-        else:  # 900-1000
-            learning_rate = _get_lr(init_learning_rate / 64., epoch - first_epoch - t_epoch * 7)
-            pass
-
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = learning_rate
-            pass
-
-        return learning_rate
-
-    @staticmethod
-    def adjust_learning_rate2(optimizer, epoch):
-
-        def _get_lr(_base_lr, now_epoch, _t_epoch=Config.t_epoch, _eta_min=1e-05):
-            return _eta_min + (_base_lr - _eta_min) * (1 + math.cos(math.pi * now_epoch / _t_epoch)) / 2
-
-        t_epoch = Config.t_epoch
-        first_epoch = Config.first_epoch
-        init_learning_rate = Config.learning_rate
-
-        if epoch < first_epoch + t_epoch * 0:  # 0-500
-            learning_rate = init_learning_rate
-        elif epoch < first_epoch + t_epoch * 1:  # 500-1000
-            learning_rate = init_learning_rate / 10
-        else:  # 1000-1500
-            learning_rate = init_learning_rate / 100
-            pass
-
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = learning_rate
-            pass
-
-        return learning_rate
 
     def compare_fsl(self, task_data):
         data_batch_size, data_image_num, data_num_channel, data_width, data_weight = task_data.shape
@@ -379,13 +187,15 @@ class Runner(object):
             self.relation_network.train()
 
             Tools.print()
-            fe_lr= self.adjust_learning_rate(self.feature_encoder_optim, epoch)
-            rn_lr = self.adjust_learning_rate(self.relation_network_optim, epoch)
+            fe_lr= self.adjust_learning_rate(self.feature_encoder_optim, epoch,
+                                             Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            rn_lr = self.adjust_learning_rate(self.relation_network_optim, epoch,
+                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
             Tools.print('Epoch: [{}] fe_lr={} rn_lr={}'.format(epoch, fe_lr, rn_lr))
 
             all_loss = 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
-                task_data, task_labels = self.to_cuda(task_data), self.to_cuda(task_labels)
+                task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
 
                 # 1 calculate features
                 relations = self.compare_fsl(task_data)
@@ -448,18 +258,14 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    # train_epoch = 600
-    # first_epoch, t_epoch = 200, 200
-    # adjust_learning_rate = Runner.adjust_learning_rate2
-
     train_epoch = 400
     first_epoch, t_epoch = 200, 100
-    adjust_learning_rate = Runner.adjust_learning_rate2
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
-    feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
-    model_name = "2_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
+    model_name = "2_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'

@@ -8,13 +8,12 @@ from tqdm import tqdm
 import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
-import torchvision.utils as vutils
 from alisuretool.Tools import Tools
 from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
-from torch.utils.data.sampler import Sampler
 from miniimagenet_fsl_test_tool import TestTool
 from torch.utils.data import DataLoader, Dataset
+from miniimagenet_tool import CNNEncoder, RelationNetwork, CNNEncoder1, RelationNetwork1, RunnerTool
 
 
 ##############################################################################################################
@@ -99,112 +98,6 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
-class CNNEncoder(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out3 = self.layer3(out2)
-        out4 = self.layer4(out3)
-        return out4
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class RelationNetwork(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.fc1 = nn.Linear(64 * 3 * 3, 8)
-        self.fc2 = nn.Linear(8, 1)
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out = out2.view(out2.size(0), -1)
-        out = torch.relu(self.fc1(out))
-        out = torch.sigmoid(self.fc2(out))
-        return out
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-# Original --> MaxPool, FC input
-class CNNEncoder1(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out3 = self.layer3(out2)
-        out4 = self.layer4(out3)
-        return out4
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class RelationNetwork1(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.fc1 = nn.Linear(64 * 5 * 5, 64)  # 64
-        self.fc2 = nn.Linear(64, 1)  # 64
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out = out2.view(out2.size(0), -1)
-        out = torch.relu(self.fc1(out))
-        out = torch.sigmoid(self.fc2(out))
-        return out
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-##############################################################################################################
-
-
 class Runner(object):
 
     def __init__(self):
@@ -216,10 +109,10 @@ class Runner(object):
         self.task_train_loader = DataLoader(self.task_train, Config.batch_size, shuffle=True, num_workers=Config.num_workers)
 
         # model
-        self.feature_encoder = self.to_cuda(Config.feature_encoder)
-        self.relation_network = self.to_cuda(Config.relation_network)
-        self.to_cuda(self.feature_encoder.apply(self._weights_init))
-        self.to_cuda(self.relation_network.apply(self._weights_init))
+        self.feature_encoder = RunnerTool.to_cuda(Config.feature_encoder)
+        self.relation_network = RunnerTool.to_cuda(Config.relation_network)
+        RunnerTool.to_cuda(self.feature_encoder.apply(RunnerTool.weights_init))
+        RunnerTool.to_cuda(self.relation_network.apply(RunnerTool.weights_init))
 
         # optim
         self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
@@ -228,33 +121,12 @@ class Runner(object):
         self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_epoch // 3, gamma=0.5)
 
         # loss
-        self.loss = self.to_cuda(nn.MSELoss())
+        self.loss = RunnerTool.to_cuda(nn.MSELoss())
 
         self.test_tool = TestTool(self.compare_fsl_test, data_root=Config.data_root,
                                   num_way=Config.num_way,  num_shot=Config.num_shot,
                                   episode_size=Config.episode_size, test_episode=Config.test_episode,
                                   transform=self.task_train.transform_test)
-        pass
-
-    @staticmethod
-    def to_cuda(x):
-        return x.cuda() if torch.cuda.is_available() else x
-
-    @staticmethod
-    def _weights_init(m):
-        class_name = m.__class__.__name__
-        if class_name.find('Conv') != -1:
-            n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-            m.weight.data.normal_(0, math.sqrt(2. / n))
-            if m.bias is not None:
-                m.bias.data.zero_()
-        elif class_name.find('BatchNorm') != -1:
-            m.weight.data.fill_(1)
-            m.bias.data.zero_()
-        elif class_name.find('Linear') != -1:
-            m.weight.data.normal_(0, 0.01)
-            m.bias.data = torch.ones(m.bias.data.size())
-            pass
         pass
 
     def load_model(self):
@@ -317,7 +189,7 @@ class Runner(object):
             Tools.print()
             all_loss = 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
-                task_data, task_labels = self.to_cuda(task_data), self.to_cuda(task_labels)
+                task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
 
                 # 1 calculate features
                 relations = self.compare_fsl(task_data)
@@ -350,9 +222,11 @@ class Runner(object):
             # Val
             if epoch % Config.val_freq == 0:
                 Tools.print()
-                Tools.print("Test {} .......".format(epoch))
-                self.feature_encoder.eval()
-                self.relation_network.eval()
+                Tools.print("Test {} {} .......".format(epoch, Config.model_name))
+
+                if Config.has_eval:
+                    self.feature_encoder.eval()
+                    self.relation_network.eval()
 
                 val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
                 if val_accuracy > self.best_accuracy:
@@ -371,7 +245,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
     train_epoch = 300
     learning_rate = 0.001
@@ -386,11 +260,12 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
-    feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
-    # model_name = "1_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
-    model_name = "3_{}_{}_{}".format(batch_size, num_way, num_shot)
+    # has_eval = True
+    has_eval = False
+    model_name = "1_{}_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot, has_eval)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -416,6 +291,8 @@ has feature_encoder.train() and feature_encoder.eval()
 2020-10-23 22:11:25 Test1 150 Accuracy: 0.49433333333333335
 2020-10-23 22:11:25 Test2 150 Accuracy: 0.49162222222222224
 2020-10-23 22:15:30 episode=4, Mean Test accuracy=0.49612888888888895
+
+
 """
 
 
@@ -423,15 +300,17 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    # runner.feature_encoder.eval()
-    # runner.relation_network.eval()
-    # runner.test_tool.val(episode=0, is_print=True)
+    if Config.has_eval:
+        runner.feature_encoder.eval()
+        runner.relation_network.eval()
+    runner.test_tool.val(episode=0, is_print=True)
 
-    # runner.train()
+    runner.train()
 
     runner.load_model()
-    runner.feature_encoder.eval()
-    runner.relation_network.eval()
+    if Config.has_eval:
+        runner.feature_encoder.eval()
+        runner.relation_network.eval()
     runner.test_tool.val(episode=Config.train_epoch, is_print=True)
     runner.test_tool.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
     pass
