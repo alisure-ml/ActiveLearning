@@ -448,18 +448,18 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    train_epoch = 600
-    first_epoch, t_epoch = 200, 200
+    # train_epoch = 600
+    # first_epoch, t_epoch = 200, 200
+    # adjust_learning_rate = Runner.adjust_learning_rate2
+
+    train_epoch = 400
+    first_epoch, t_epoch = 200, 100
     adjust_learning_rate = Runner.adjust_learning_rate2
 
-    # train_epoch = 2100
-    # first_epoch, t_epoch = 500, 200
-    # adjust_learning_rate = Runner.adjust_learning_rate1
+    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
-    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
-    # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
-
-    model_name = "1_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
+    model_name = "2_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -477,6 +477,14 @@ class Config(object):
 
 
 """
+1
+2020-10-24 18:26:20 load feature encoder success from ../models/fsl_sgd/1_600_64_5_1_fe_5way_1shot.pkl
+2020-10-24 18:26:20 load relation network success from ../models/fsl_sgd/1_600_64_5_1_rn_5way_1shot.pkl
+2020-10-24 18:28:17 Train 600 Accuracy: 0.7347777777777778
+2020-10-24 18:28:17 Val   600 Accuracy: 0.5202222222222223
+2020-10-24 18:28:17 Test1 600 Accuracy: 0.4984444444444444
+2020-10-24 18:28:17 Test2 600 Accuracy: 0.4980666666666667
+2020-10-24 18:32:35 episode=600, Mean Test accuracy=0.49725333333333327
 
 """
 

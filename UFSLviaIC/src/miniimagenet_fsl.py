@@ -389,7 +389,8 @@ class Config(object):
     # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
     feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
-    model_name = "1_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
+    # model_name = "1_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
+    model_name = "3_{}_{}_{}".format(batch_size, num_way, num_shot)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -422,11 +423,11 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    runner.feature_encoder.eval()
-    runner.relation_network.eval()
-    runner.test_tool.val(episode=0, is_print=True)
+    # runner.feature_encoder.eval()
+    # runner.relation_network.eval()
+    # runner.test_tool.val(episode=0, is_print=True)
 
-    runner.train()
+    # runner.train()
 
     runner.load_model()
     runner.feature_encoder.eval()
