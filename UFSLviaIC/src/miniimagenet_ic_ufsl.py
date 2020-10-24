@@ -345,7 +345,7 @@ class Runner(object):
         # IC
         self.produce_class = ProduceClass(len(self.data_train), Config.ic_out_dim, Config.ic_ratio)
         self.produce_class.init()
-        self.task_train.set_samples_class(np.asarray(self.produce_class.classes))
+        self.task_train.set_samples_class(self.produce_class.classes)
 
         # model
         self.feature_encoder = self.to_cuda(Config.feature_encoder)
