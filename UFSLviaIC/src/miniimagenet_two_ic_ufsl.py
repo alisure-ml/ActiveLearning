@@ -20,7 +20,6 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class MiniImageNetDataset(object):
-
     def __init__(self, data_list, num_way, num_shot):
         self.data_list, self.num_way, self.num_shot = data_list, num_way, num_shot
         self.classes = None
@@ -120,7 +119,6 @@ class MiniImageNetDataset(object):
 
 
 class CNNEncoder(nn.Module):
-
     def __init__(self):
         super().__init__()
         self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=0),
@@ -147,7 +145,6 @@ class CNNEncoder(nn.Module):
 
 
 class RelationNetwork(nn.Module):
-
     def __init__(self):
         super().__init__()
         self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=0),
@@ -228,7 +225,6 @@ class RelationNetwork1(nn.Module):
 
 
 class Normalize(nn.Module):
-
     def __init__(self, power=2):
         super(Normalize, self).__init__()
         self.power = power
@@ -246,7 +242,6 @@ class Normalize(nn.Module):
 
 
 class ICModel(nn.Module):
-
     def __init__(self, in_dim, out_dim):
         super().__init__()
         self.in_dim = in_dim
@@ -275,7 +270,6 @@ class ICModel(nn.Module):
 
 
 class ProduceClass(object):
-
     def __init__(self, n_sample, out_dim, ratio=1.0):
         super().__init__()
         self.out_dim = out_dim
@@ -283,8 +277,8 @@ class ProduceClass(object):
         self.class_per_num = self.n_sample // self.out_dim * ratio
         self.count = 0
         self.count_2 = 0
-        self.class_num = np.zeros(shape=(self.out_dim, ), dtype=np.int)
-        self.classes = np.zeros(shape=(self.n_sample, ), dtype=np.int)
+        self.class_num = np.zeros(shape=(self.out_dim,), dtype=np.int)
+        self.classes = np.zeros(shape=(self.n_sample,), dtype=np.int)
         pass
 
     def init(self):
@@ -333,7 +327,6 @@ class ProduceClass(object):
 
 
 class Runner(object):
-
     def __init__(self):
         self.best_accuracy = 0.0
 
@@ -562,9 +555,9 @@ old test
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-    train_epoch = 300
+    train_epoch = 900
     num_workers = 8
     batch_size = 64
     val_freq = 10
@@ -595,9 +588,9 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    fe_dir = Tools.new_dir("../models/ic_ufsl/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    rn_dir = Tools.new_dir("../models/ic_ufsl/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    ic_dir = Tools.new_dir("../models/ic_ufsl/{}_ic_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    fe_dir = Tools.new_dir("../models/two_ic_ufsl/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    rn_dir = Tools.new_dir("../models/two_ic_ufsl/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    ic_dir = Tools.new_dir("../models/two_ic_ufsl/{}_ic_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     pass
 
 
