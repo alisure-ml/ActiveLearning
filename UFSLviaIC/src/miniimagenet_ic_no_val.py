@@ -323,9 +323,8 @@ class Runner(object):
         Tools.print("Training...")
 
         for epoch in range(Config.train_epoch):
-            if Config.is_set_eval_train:
-                self.feature_encoder.train()
-                self.ic_model.train()
+            self.feature_encoder.train()
+            self.ic_model.train()
 
             Tools.print()
             fe_lr= self.adjust_learning_rate(self.feature_encoder_optim, epoch)
@@ -367,9 +366,8 @@ class Runner(object):
             ###########################################################################
             # Val
             if epoch % Config.val_freq == 0:
-                if Config.is_set_eval_train:
-                    self.feature_encoder.eval()
-                    self.ic_model.eval()
+                self.feature_encoder.eval()
+                self.ic_model.eval()
 
                 val_accuracy = self.test_tool_ic.val(epoch=epoch)
                 if val_accuracy > self.best_accuracy:
@@ -408,6 +406,11 @@ class Runner(object):
 2020-10-22 22:14:24 Epoch: [1450] Train 0.3422/0.6623
 2020-10-22 22:14:26 Epoch: [1450] Val 0.4956/0.8808
 2020-10-22 22:14:29 Epoch: [1450] Test 0.4669/0.8520
+
+1_64_512_1_500_200_0.01_fe
+2020-10-24 10:19:42 Epoch: [2100] Train 0.3457/0.6657
+2020-10-24 10:19:42 Epoch: [2100] Val   0.5081/0.8775
+2020-10-24 10:19:42 Epoch: [2100] Test  0.4746/0.8533
 """
 
 
@@ -439,11 +442,7 @@ class Config(object):
     ic_out_dim = 512
     ic_ratio = 1
 
-    # is_set_eval_train = True
-    is_set_eval_train = False
-
-    model_name = "1_{}_{}_{}_{}_{}_{}_{}".format(
-        batch_size, ic_out_dim, ic_ratio, first_epoch, t_epoch, learning_rate, is_set_eval_train)
+    model_name = "1_{}_{}_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, first_epoch, t_epoch, learning_rate)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -461,16 +460,14 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    if Config.is_set_eval_train:
-        runner.feature_encoder.eval()
-        runner.ic_model.eval()
+    runner.feature_encoder.eval()
+    runner.ic_model.eval()
     runner.test_tool_ic.val(epoch=0, is_print=True)
 
     runner.train()
 
     runner.load_model()
-    if Config.is_set_eval_train:
-        runner.feature_encoder.eval()
-        runner.ic_model.eval()
+    runner.feature_encoder.eval()
+    runner.ic_model.eval()
     runner.test_tool_ic.val(epoch=Config.train_epoch, is_print=True)
     pass

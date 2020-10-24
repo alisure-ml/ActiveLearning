@@ -280,8 +280,7 @@ class Runner(object):
         Tools.print("Training...")
 
         for epoch in range(Config.train_epoch):
-            if Config.is_set_eval_train:
-                self.ic_model.train()
+            self.ic_model.train()
 
             Tools.print()
             ic_lr = self.adjust_learning_rate(self.ic_model_optim, epoch)
@@ -320,8 +319,7 @@ class Runner(object):
             ###########################################################################
             # Val
             if epoch % Config.val_freq == 0:
-                if Config.is_set_eval_train:
-                    self.ic_model.eval()
+                self.ic_model.eval()
 
                 val_accuracy = self.test_tool_ic.val(epoch=epoch)
                 if val_accuracy > self.best_accuracy:
@@ -420,8 +418,8 @@ class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     num_workers = 8
-    # batch_size = 32
-    batch_size = 64
+    batch_size = 32
+    # batch_size = 64
     # batch_size = 256
     val_freq = 10
 
@@ -445,11 +443,7 @@ class Config(object):
     # ic_ratio = 2
     # ic_ratio = 3
 
-    # is_set_eval_train = True
-    is_set_eval_train = False
-
-    model_name = "1_{}_{}_{}_{}_{}_{}_{}".format(
-        batch_size, ic_out_dim, ic_ratio, first_epoch, t_epoch, learning_rate, is_set_eval_train)
+    model_name = "1_{}_{}_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, first_epoch, t_epoch, learning_rate)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -466,14 +460,12 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    if Config.is_set_eval_train:
-        runner.ic_model.eval()
-    runner.test_tool_ic.val(epoch=0, is_print=True)
+    # runner.ic_model.eval()
+    # runner.test_tool_ic.val(epoch=0, is_print=True)
 
-    runner.train()
+    # runner.train()
 
     runner.load_model()
-    if Config.is_set_eval_train:
-        runner.ic_model.eval()
+    runner.ic_model.eval()
     runner.test_tool_ic.val(epoch=Config.train_epoch, is_print=True)
     pass

@@ -2,6 +2,7 @@ import os
 import torch
 import numpy as np
 from PIL import Image
+from collections import Counter
 from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
@@ -113,6 +114,9 @@ class KNN(object):
             train_labels = cls.to_cuda(torch.LongTensor(train_loader.dataset.train_label))
             max_c = train_labels.max() + 1
 
+            # clustering 1
+            clustering = np.zeros(n_sample, dtype=np.int)
+
             out_list = []
             for batch_idx, (inputs, labels, indexes) in enumerate(train_loader):
                 inputs = cls.to_cuda(inputs)
@@ -123,6 +127,10 @@ class KNN(object):
                     features = feature_encoder(inputs)  # 5x64*19*19
                     _, out_l2norm = ic_model(features)
                     pass
+
+                # clustering 2
+                now_clustering = torch.argmax(out_l2norm, dim=1).cpu()
+                clustering[indexes] = now_clustering
 
                 out_list.append([out_l2norm, cls.to_cuda(labels)])
                 out_memory[:, batch_idx * inputs.size(0):(batch_idx + 1) * inputs.size(0)] = out_l2norm.data.t()
@@ -138,9 +146,25 @@ class KNN(object):
                 total += out[1].size(0)
                 pass
 
-            return top1 / total, top5 / total
+            # clustering 3
+            acc_cluster = cls.cluster_acc(clustering, train_labels.cpu().long())
+
+            return top1 / total, top5 / total, acc_cluster
 
         pass
+
+    @staticmethod
+    def cluster_acc(clustering, train_labels):
+        counter_dict = {}
+        for index, value in enumerate(clustering):
+            if value not in counter_dict:
+                counter_dict[value] = []
+            counter_dict[value].append(int(train_labels[index]))
+            pass
+        for key in counter_dict:
+            counter_dict[key] = dict(Counter(counter_dict[key]))
+            pass
+        return 0
 
     pass
 
@@ -167,8 +191,8 @@ class ICTestTool(object):
         return x.cuda() if torch.cuda.is_available() else x
 
     def val_ic(self, ic_loader):
-        acc_1, acc_2 = KNN.knn(self.feature_encoder, self.ic_model, self.ic_out_dim, ic_loader, 100)
-        return acc_1, acc_2
+        acc_1, acc_2, acc_3 = KNN.knn(self.feature_encoder, self.ic_model, self.ic_out_dim, ic_loader, 100)
+        return acc_1, acc_2, acc_3
 
     def val(self, epoch, is_print=True):
         if is_print:
@@ -176,14 +200,14 @@ class ICTestTool(object):
             Tools.print("Test {} .......".format(epoch))
             pass
 
-        acc_1_train, acc_2_train = self.val_ic(ic_loader=self.train_loader)
-        acc_1_val, acc_2_val = self.val_ic(ic_loader=self.val_loader)
-        acc_1_test, acc_2_test = self.val_ic(ic_loader=self.test_loader)
+        acc_1_train, acc_2_train, acc_3_train = self.val_ic(ic_loader=self.train_loader)
+        acc_1_val, acc_2_val, acc_3_val = self.val_ic(ic_loader=self.val_loader)
+        acc_1_test, acc_2_test, acc_3_test = self.val_ic(ic_loader=self.test_loader)
 
         if is_print:
-            Tools.print("Epoch: [{}] Train {:.4f}/{:.4f}".format(epoch, acc_1_train, acc_2_train))
-            Tools.print("Epoch: [{}] Val   {:.4f}/{:.4f}".format(epoch, acc_1_val, acc_2_val))
-            Tools.print("Epoch: [{}] Test  {:.4f}/{:.4f}".format(epoch, acc_1_test, acc_2_test))
+            Tools.print("Epoch: {} Train {:.4f}/{:.4f} {:.4f}".format(epoch, acc_1_train, acc_2_train, acc_3_train))
+            Tools.print("Epoch: {} Val   {:.4f}/{:.4f} {:.4f}".format(epoch, acc_1_val, acc_2_val, acc_3_val))
+            Tools.print("Epoch: {} Test  {:.4f}/{:.4f} {:.4f}".format(epoch, acc_1_test, acc_2_test, acc_3_test))
             pass
         return acc_1_val
 
