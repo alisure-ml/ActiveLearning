@@ -231,6 +231,7 @@ class Runner(object):
 
             Tools.print()
             self.produce_class.reset()
+            Tools.print(self.task_train.classes)
             all_loss, all_loss_fsl, all_loss_ic = 0.0, 0.0, 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
                 ic_labels = RunnerTool.to_cuda(task_index[:, -1])

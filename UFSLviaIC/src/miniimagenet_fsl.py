@@ -248,7 +248,8 @@ class Runner(object):
 class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-    train_epoch = 300
+    # train_epoch = 300
+    train_epoch = 180
     learning_rate = 0.001
     num_workers = 8
 
@@ -309,6 +310,10 @@ has feature_encoder.train() and feature_encoder.eval()
 2020-10-25 08:08:09 Val   300 Accuracy: 0.4682222222222222
 2020-10-25 08:12:15 episode=300, Mean Test accuracy=0.4641288888888889
 
+1_300_64_5_1_True_True_fe_5way_1shot
+2020-10-25 15:40:36 Train 300 Accuracy: 0.7224444444444444
+2020-10-25 15:40:36 Val   300 Accuracy: 0.5043333333333334
+2020-10-25 15:44:47 episode=300, Mean Test accuracy=0.49514222222222226
 """
 
 
