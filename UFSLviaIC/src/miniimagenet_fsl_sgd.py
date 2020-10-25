@@ -137,6 +137,8 @@ class Runner(object):
         if os.path.exists(Config.rn_dir):
             self.relation_network.load_state_dict(torch.load(Config.rn_dir))
             Tools.print("load relation network success from {}".format(Config.rn_dir))
+
+        Tools.print("load model over")
         pass
 
     def compare_fsl(self, task_data):
@@ -245,7 +247,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
     learning_rate = 0.01
     num_workers = 8
@@ -266,6 +268,7 @@ class Config(object):
     # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
     model_name = "2_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch)
+    # model_name = "2_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -283,15 +286,26 @@ class Config(object):
 
 
 """
-1
+1 feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
 2020-10-24 18:26:20 load feature encoder success from ../models/fsl_sgd/1_600_64_5_1_fe_5way_1shot.pkl
 2020-10-24 18:26:20 load relation network success from ../models/fsl_sgd/1_600_64_5_1_rn_5way_1shot.pkl
 2020-10-24 18:28:17 Train 600 Accuracy: 0.7347777777777778
 2020-10-24 18:28:17 Val   600 Accuracy: 0.5202222222222223
-2020-10-24 18:28:17 Test1 600 Accuracy: 0.4984444444444444
-2020-10-24 18:28:17 Test2 600 Accuracy: 0.4980666666666667
 2020-10-24 18:32:35 episode=600, Mean Test accuracy=0.49725333333333327
 
+2 feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+2020-10-25 10:09:40 load feature encoder success from ../models/fsl_sgd/2_400_64_5_1_200_100_fe_5way_1shot.pkl
+2020-10-25 10:09:41 load relation network success from ../models/fsl_sgd/2_400_64_5_1_200_100_rn_5way_1shot.pkl
+2020-10-25 10:11:13 Train 400 Accuracy: 0.7486666666666667
+2020-10-25 10:11:13 Val   400 Accuracy: 0.5175555555555555
+2020-10-25 10:15:04 episode=400, Mean Test accuracy=0.5044799999999999
+
+3 feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+2020-10-25 11:56:13 load feature encoder success from ../models/fsl_sgd/2_400_64_5_1_fe_5way_1shot.pkl
+2020-10-25 11:56:13 load relation network success from ../models/fsl_sgd/2_400_64_5_1_rn_5way_1shot.pkl
+2020-10-25 11:57:55 Train 400 Accuracy: 0.7193333333333334
+2020-10-25 11:57:55 Val   400 Accuracy: 0.5487777777777777
+2020-10-25 12:02:00 episode=400, Mean Test accuracy=0.5206977777777778
 """
 
 

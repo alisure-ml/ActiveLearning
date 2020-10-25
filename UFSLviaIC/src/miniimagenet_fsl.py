@@ -183,8 +183,9 @@ class Runner(object):
         Tools.print("Training...")
 
         for epoch in range(Config.train_epoch):
-            self.feature_encoder.train()
-            self.relation_network.train()
+            if Config.has_train:
+                self.feature_encoder.train()
+                self.relation_network.train()
 
             Tools.print()
             all_loss = 0.0
@@ -245,7 +246,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     train_epoch = 300
     learning_rate = 0.001
@@ -263,9 +264,11 @@ class Config(object):
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
     # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
-    # has_eval = True
-    has_eval = False
-    model_name = "1_{}_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot, has_eval)
+    has_train = True
+    # has_train = False
+    has_eval = True
+    # has_eval = False
+    model_name = "1_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot, has_eval, has_train)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -292,6 +295,19 @@ has feature_encoder.train() and feature_encoder.eval()
 2020-10-23 22:11:25 Test2 150 Accuracy: 0.49162222222222224
 2020-10-23 22:15:30 episode=4, Mean Test accuracy=0.49612888888888895
 
+1_300_64_5_1_True_fe_5way_1shot
+2020-10-25 08:05:50 load feature encoder success from ../models/fsl/1_300_64_5_1_True_fe_5way_1shot.pkl
+2020-10-25 08:05:50 load relation network success from ../models/fsl/1_300_64_5_1_True_rn_5way_1shot.pkl
+2020-10-25 08:07:30 Train 300 Accuracy: 0.7095555555555556
+2020-10-25 08:07:30 Val   300 Accuracy: 0.5056666666666666
+2020-10-25 08:11:32 episode=300, Mean Test accuracy=0.4931288888888889
+
+1_300_64_5_1_False_fe_5way_1shot
+2020-10-25 08:06:28 load feature encoder success from ../models/fsl/1_300_64_5_1_False_fe_5way_1shot.pkl
+2020-10-25 08:06:28 load relation network success from ../models/fsl/1_300_64_5_1_False_rn_5way_1shot.pkl
+2020-10-25 08:08:09 Train 300 Accuracy: 0.6257777777777778
+2020-10-25 08:08:09 Val   300 Accuracy: 0.4682222222222222
+2020-10-25 08:12:15 episode=300, Mean Test accuracy=0.4641288888888889
 
 """
 
