@@ -314,6 +314,11 @@ has feature_encoder.train() and feature_encoder.eval()
 2020-10-25 15:40:36 Train 300 Accuracy: 0.7224444444444444
 2020-10-25 15:40:36 Val   300 Accuracy: 0.5043333333333334
 2020-10-25 15:44:47 episode=300, Mean Test accuracy=0.49514222222222226
+
+1_180_64_5_1_True_True_fe_5way_1shot
+2020-10-25 22:58:56 Train 180 Accuracy: 0.7236666666666668
+2020-10-25 22:58:56 Val   180 Accuracy: 0.4995555555555556
+2020-10-25 23:02:57 episode=180, Mean Test accuracy=0.4944355555555555
 """
 
 
