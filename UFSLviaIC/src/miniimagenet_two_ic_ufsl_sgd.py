@@ -311,7 +311,17 @@ class Runner(object):
 
 
 """
-
+1_400_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-10-25 11:19:35 load feature encoder success from ../models/two_ic_ufsl_sgd/1_400_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-10-25 11:19:35 load relation network success from ../models/two_ic_ufsl_sgd/1_400_64_5_1_64_512_1_10.0_0.1_rn_5way_1shot.pkl
+2020-10-25 11:19:35 load ic model success from ../models/two_ic_ufsl_sgd/1_400_64_5_1_64_512_1_10.0_0.1_ic_5way_1shot.pkl
+2020-10-25 11:19:35 Test 400 .......
+2020-10-25 11:19:46 Epoch: 400 Train 0.2197/0.5211 0.0000
+2020-10-25 11:19:46 Epoch: 400 Val   0.3918/0.8025 0.0000
+2020-10-25 11:19:46 Epoch: 400 Test  0.3595/0.7749 0.0000
+2020-10-25 11:21:19 Train 400 Accuracy: 0.4102222222222222
+2020-10-25 11:21:19 Val   400 Accuracy: 0.3795555555555556
+2020-10-25 11:25:00 episode=400, Mean Test accuracy=0.40537333333333336
 """
 
 
@@ -337,15 +347,15 @@ class Config(object):
     loss_fsl_ratio = 10.0
     loss_ic_ratio = 0.1
 
-    train_epoch = 400
-    first_epoch, t_epoch = 200, 100
+    train_epoch = 1000
+    first_epoch, t_epoch = 500, 250
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
     # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
     model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        train_epoch, batch_size, num_way, num_shot, ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
+        train_epoch, batch_size, first_epoch, t_epoch, ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -364,11 +374,11 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    # runner.feature_encoder.eval()
-    # runner.relation_network.eval()
-    # runner.ic_model.eval()
-    # runner.test_tool_ic.val(epoch=0, is_print=True)
-    # runner.test_tool_fsl.val(episode=0, is_print=True)
+    runner.feature_encoder.eval()
+    runner.relation_network.eval()
+    runner.ic_model.eval()
+    runner.test_tool_ic.val(epoch=0, is_print=True)
+    runner.test_tool_fsl.val(episode=0, is_print=True)
 
     runner.train()
 

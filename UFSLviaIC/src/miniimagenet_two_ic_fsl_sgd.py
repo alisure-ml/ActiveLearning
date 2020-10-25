@@ -300,7 +300,13 @@ class Runner(object):
 
 
 """
-
+2020-10-25 10:37:00 Test 400 .......
+2020-10-25 10:37:12 Epoch: 400 Train 0.3092/0.6444 0.0000
+2020-10-25 10:37:12 Epoch: 400 Val   0.4568/0.8612 0.0000
+2020-10-25 10:37:12 Epoch: 400 Test  0.3971/0.8250 0.0000
+2020-10-25 10:38:43 Train 400 Accuracy: 0.676
+2020-10-25 10:38:43 Val   400 Accuracy: 0.5112222222222222
+2020-10-25 10:43:22 episode=400, Mean Test accuracy=0.5031288888888888
 """
 
 
@@ -326,15 +332,15 @@ class Config(object):
     loss_fsl_ratio = 10.0
     loss_ic_ratio = 0.1
 
-    train_epoch = 400
-    first_epoch, t_epoch = 200, 100
+    train_epoch = 600
+    first_epoch, t_epoch = 300, 150
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
     # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
     model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        train_epoch, batch_size, num_way, num_shot, ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
+        train_epoch, batch_size, first_epoch, t_epoch, ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'

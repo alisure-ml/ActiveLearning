@@ -14,6 +14,7 @@ import torchvision.transforms as transforms
 from miniimagenet_fsl_test_tool import TestTool
 from miniimagenet_ic_test_tool import ICTestTool
 from torch.utils.data import DataLoader, Dataset
+from miniimagenet_tool import ICModel, ProduceClass, ICModel, CNNEncoder, RelationNetwork, ProduceClass, RunnerTool
 
 
 ##############################################################################################################
@@ -109,214 +110,6 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
-class CNNEncoder(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out3 = self.layer3(out2)
-        out4 = self.layer4(out3)
-        return out4
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class RelationNetwork(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.fc1 = nn.Linear(64 * 3 * 3, 8)
-        self.fc2 = nn.Linear(8, 1)
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out = out2.view(out2.size(0), -1)
-        out = torch.relu(self.fc1(out))
-        out = torch.sigmoid(self.fc2(out))
-        return out
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-# Original --> MaxPool, FC input
-class CNNEncoder1(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU())
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out3 = self.layer3(out2)
-        out4 = self.layer4(out3)
-        return out4
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class RelationNetwork1(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, padding=1),
-                                    nn.BatchNorm2d(64, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.fc1 = nn.Linear(64 * 5 * 5, 64)  # 64
-        self.fc2 = nn.Linear(64, 1)  # 64
-        pass
-
-    def forward(self, x):
-        out1 = self.layer1(x)
-        out2 = self.layer2(out1)
-        out = out2.view(out2.size(0), -1)
-        out = torch.relu(self.fc1(out))
-        out = torch.sigmoid(self.fc2(out))
-        return out
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-##############################################################################################################
-
-
-class Normalize(nn.Module):
-    def __init__(self, power=2):
-        super(Normalize, self).__init__()
-        self.power = power
-        pass
-
-    def forward(self, x, dim=1):
-        norm = x.pow(self.power).sum(dim, keepdim=True).pow(1. / self.power)
-        out = x.div(norm)
-        return out
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class ICModel(nn.Module):
-    def __init__(self, in_dim, out_dim):
-        super().__init__()
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-        self.layer1 = nn.Sequential(nn.Conv2d(in_dim, in_dim, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(in_dim, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.layer2 = nn.Sequential(nn.Conv2d(in_dim, in_dim, kernel_size=3, padding=0),
-                                    nn.BatchNorm2d(in_dim, momentum=1, affine=True), nn.ReLU(), nn.MaxPool2d(2))
-        self.linear = nn.Linear(in_dim, out_dim, bias=False)
-        self.l2norm = Normalize(2)
-        pass
-
-    def forward(self, x):
-        out = self.layer1(x)
-        out = self.layer2(out)
-        out = F.adaptive_avg_pool2d(out, 1)
-        out = out.view(out.size(0), -1)
-        out_logits = self.linear(out)
-        out_l2norm = self.l2norm(out_logits)
-        return out_logits, out_l2norm
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class ProduceClass(object):
-    def __init__(self, n_sample, out_dim, ratio=1.0):
-        super().__init__()
-        self.out_dim = out_dim
-        self.n_sample = n_sample
-        self.class_per_num = self.n_sample // self.out_dim * ratio
-        self.count = 0
-        self.count_2 = 0
-        self.class_num = np.zeros(shape=(self.out_dim,), dtype=np.int)
-        self.classes = np.zeros(shape=(self.n_sample,), dtype=np.int)
-        pass
-
-    def init(self):
-        class_per_num = self.n_sample // self.out_dim
-        self.class_num += class_per_num
-        for i in range(self.out_dim):
-            self.classes[i * class_per_num: (i + 1) * class_per_num] = i
-            pass
-        np.random.shuffle(self.classes)
-        pass
-
-    def reset(self):
-        self.count = 0
-        self.count_2 = 0
-        self.class_num *= 0
-        pass
-
-    def cal_label(self, out, indexes):
-        top_k = out.data.topk(self.out_dim, dim=1)[1].cpu()
-        indexes_cpu = indexes.cpu()
-
-        batch_size = top_k.size(0)
-        class_labels = np.zeros(shape=(batch_size,), dtype=np.int)
-
-        for i in range(batch_size):
-            for j_index, j in enumerate(top_k[i]):
-                if self.class_per_num > self.class_num[j]:
-                    class_labels[i] = j
-                    self.class_num[j] += 1
-                    self.count += 1 if self.classes[indexes_cpu[i]] != j else 0
-                    self.classes[indexes_cpu[i]] = j
-                    self.count_2 += 1 if j_index != 0 else 0
-                    break
-                pass
-            pass
-        pass
-
-    def get_label(self, indexes):
-        _device = indexes.device
-        return torch.tensor(self.classes[indexes.cpu()]).long().to(_device)
-
-    pass
-
-
-##############################################################################################################
-
-
 class Runner(object):
 
     def __init__(self):
@@ -332,13 +125,13 @@ class Runner(object):
         self.produce_class.init()
 
         # model
-        self.feature_encoder = self.to_cuda(Config.feature_encoder)
-        self.relation_network = self.to_cuda(Config.relation_network)
-        self.ic_model = self.to_cuda(ICModel(in_dim=Config.ic_in_dim, out_dim=Config.ic_out_dim))
+        self.feature_encoder = RunnerTool.to_cuda(Config.feature_encoder)
+        self.relation_network = RunnerTool.to_cuda(Config.relation_network)
+        self.ic_model = RunnerTool.to_cuda(ICModel(in_dim=Config.ic_in_dim, out_dim=Config.ic_out_dim))
 
-        self.to_cuda(self.feature_encoder.apply(self._weights_init))
-        self.to_cuda(self.relation_network.apply(self._weights_init))
-        self.to_cuda(self.ic_model.apply(self._weights_init))
+        RunnerTool.to_cuda(self.feature_encoder.apply(RunnerTool.weights_init))
+        RunnerTool.to_cuda(self.relation_network.apply(RunnerTool.weights_init))
+        RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
 
         # optim
         self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
@@ -350,8 +143,8 @@ class Runner(object):
         self.ic_model_scheduler = StepLR(self.ic_model_optim, Config.train_epoch // 3, gamma=0.5)
 
         # loss
-        self.ic_loss = self.to_cuda(nn.CrossEntropyLoss())
-        self.fsl_loss = self.to_cuda(nn.MSELoss())
+        self.ic_loss = RunnerTool.to_cuda(nn.CrossEntropyLoss())
+        self.fsl_loss = RunnerTool.to_cuda(nn.MSELoss())
 
         # Eval
         self.test_tool_fsl = TestTool(self.compare_fsl_test, data_root=Config.data_root,
@@ -361,27 +154,6 @@ class Runner(object):
         self.test_tool_ic = ICTestTool(feature_encoder=self.feature_encoder, ic_model=self.ic_model,
                                        data_root=Config.data_root, batch_size=Config.batch_size,
                                        num_workers=Config.num_workers, ic_out_dim=Config.ic_out_dim)
-        pass
-
-    @staticmethod
-    def to_cuda(x):
-        return x.cuda() if torch.cuda.is_available() else x
-
-    @staticmethod
-    def _weights_init(m):
-        class_name = m.__class__.__name__
-        if class_name.find('Conv') != -1:
-            n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-            m.weight.data.normal_(0, math.sqrt(2. / n))
-            if m.bias is not None:
-                m.bias.data.zero_()
-        elif class_name.find('BatchNorm') != -1:
-            m.weight.data.fill_(1)
-            m.bias.data.zero_()
-        elif class_name.find('Linear') != -1:
-            m.weight.data.normal_(0, 0.01)
-            # m.bias.data = torch.ones(m.bias.data.size())
-            pass
         pass
 
     def load_model(self):
@@ -450,8 +222,8 @@ class Runner(object):
             self.produce_class.reset()
             all_loss, all_loss_fsl, all_loss_ic = 0.0, 0.0, 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
-                ic_labels = self.to_cuda(task_index[:, -1])
-                task_data, task_labels = self.to_cuda(task_data), self.to_cuda(task_labels)
+                ic_labels = RunnerTool.to_cuda(task_index[:, -1])
+                task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
 
                 ###########################################################################
                 # 1 calculate features
@@ -525,14 +297,20 @@ class Runner(object):
 
 
 """
-
+1_900_64_5_1_64_512_1_10.0_0.1_ic
+2020-10-25 12:00:32 Test 900 .......
+2020-10-25 12:00:55 Epoch: 900 Train 0.4024/0.7240 0.0000
+2020-10-25 12:00:55 Epoch: 900 Val   0.5155/0.8940 0.0000
+2020-10-25 12:00:55 Epoch: 900 Test  0.4948/0.8785 0.0000
+2020-10-25 12:02:21 Train 900 Accuracy: 0.6964444444444444
+2020-10-25 12:02:21 Val   900 Accuracy: 0.5076666666666667
+2020-10-25 12:05:49 episode=900, Mean Test accuracy=0.49832444444444446
 """
 
 
 class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
-    train_epoch = 900
     num_workers = 8
     batch_size = 64
     val_freq = 10
@@ -553,7 +331,9 @@ class Config(object):
     ic_out_dim = 512
     ic_ratio = 1
 
-    loss_fsl_ratio = 10.0
+    train_epoch = 600
+
+    loss_fsl_ratio = 20.0
     loss_ic_ratio = 0.1
 
     model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
