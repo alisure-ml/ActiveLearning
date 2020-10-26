@@ -199,6 +199,23 @@ class Runner(object):
         Tools.print()
         Tools.print("Training...")
 
+        # Init Update
+        try:
+            if Config.has_eval:
+                self.proto_net.eval()
+                self.ic_model.eval()
+            Tools.print("Init label {} .......")
+            self.produce_class.reset()
+            for task_data, task_labels, task_index in tqdm(self.task_train_loader):
+                task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
+                log_p_y, query_features = self.proto(task_data)
+                ic_out_logits, ic_out_l2norm = self.ic_model(query_features)
+                self.produce_class.cal_label(ic_out_l2norm, idx)
+                pass
+            Tools.print("Epoch: {}/{}".format(self.produce_class.count, self.produce_class.count_2))
+        finally:
+            pass
+
         for epoch in range(Config.train_epoch):
             if Config.has_train:
                 self.proto_net.train()

@@ -401,6 +401,22 @@ class Runner(object):
         Tools.print()
         Tools.print("Training...")
 
+        # Init Update
+        try:
+            self.feature_encoder.eval()
+            self.ic_model.eval()
+            Tools.print("Init label {} .......")
+            self.produce_class.reset()
+            for image, label, idx in tqdm(self.ic_train_loader):
+                image, label, idx = cuda(image), cuda(label), cuda(idx)
+                features = self.feature_encoder(image)  # 5x64*19*19
+                ic_out_logits, ic_out_l2norm = self.ic_model(features)
+                self.produce_class.cal_label(ic_out_l2norm, idx)
+                pass
+            Tools.print("Epoch: {}/{}".format(self.produce_class.count, self.produce_class.count_2))
+        finally:
+            pass
+
         for epoch in range(Config.train_epoch):
             self.feature_encoder.train()
             self.ic_model.train()
