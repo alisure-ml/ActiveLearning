@@ -383,82 +383,12 @@ class Runner(object):
 
 
 """
-2_64_128_2_0.001 no stand resnet18
-2020-10-21 08:12:53 Test 830 .......
-2020-10-21 10:19:59 load ic model success from ../models/ic/2_64_128_2_0.001_ic.pkl
-2020-10-21 10:20:15 Epoch: [1000] Final Train 0.3792/0.6978
-2020-10-21 10:20:19 Epoch: [1000] Final Val 0.5069/0.8831
-2020-10-21 10:20:24 Epoch: [1000] Final Test 0.4816/0.8652
 
-2_64_128_2_0.001 stand resnet18
-2020-10-22 05:41:30   1000 loss:1.109 lr:0.001
-2020-10-22 05:41:30 Train: [999] 12085/2720
-2020-10-22 05:41:30 load ic model success from ../models/ic/2_64_128_2_0.001_ic.pkl
-2020-10-22 05:41:41 Epoch: [1000] Final Train 0.3528/0.6679
-2020-10-22 05:41:44 Epoch: [1000] Final Val 0.4795/0.8682
-2020-10-22 05:41:48 Epoch: [1000] Final Test 0.4552/0.8438
-
-2_64_512_2_0.001 stand resnet18
-2020-10-22 06:17:58   1000 loss:1.244 lr:0.001
-2020-10-22 06:17:58 Train: [999] 10926/1860
-2020-10-22 06:17:58 load ic model success from ../models/ic/2_64_512_2_0.001_ic.pkl
-2020-10-22 06:18:05 Epoch: [1000] Final Train 0.3662/0.6720
-2020-10-22 06:18:08 Epoch: [1000] Final Val 0.4821/0.8674
-2020-10-22 06:18:10 Epoch: [1000] Final Test 0.4570/0.8373
-
-1_64_512_2_200_100_0.01 stand resnet18
-2020-10-22 20:33:53 Train: [999] 13294/2094
-2020-10-22 20:33:53 load ic model success from ../models/ic/1_64_512_2_200_100_0.01_ic.pkl
-2020-10-22 20:34:05 Epoch: [1000] Final Train 0.4563/0.7607
-2020-10-22 20:34:09 Epoch: [1000] Final Val 0.5566/0.9118
-2020-10-22 20:34:13 Epoch: [1000] Final Test 0.5407/0.8958
-
-1_64_512_2_500_500_0.01 stand resnet18
-2020-10-23 01:40:50 Train: [1499] 11522/1793
-2020-10-23 01:40:50 load ic model success from ../models/ic/1_64_512_2_500_500_0.01_ic.pkl
-2020-10-23 01:40:59 Epoch: [1500] Final Train 0.4722/0.7703
-2020-10-23 01:41:01 Epoch: [1500] Final Val 0.5675/0.9091
-2020-10-23 01:41:04 Epoch: [1500] Final Test 0.5453/0.9009
-
-1_64_512_1_500_200_0.01 stand resnet18
-2020-10-23 12:43:06 Train: [2099] 8892/1647
-2020-10-23 12:43:06 load ic model success from ../models/ic_res/1_64_512_1_500_200_0.01_ic.pkl
-2020-10-23 12:43:14 Epoch: [2100] Final Train 0.4959/0.7840
-2020-10-23 12:43:17 Epoch: [2100] Final Val 0.5796/0.9132
-2020-10-23 12:43:19 Epoch: [2100] Final Test 0.5544/0.9008
-
-1_64_512_2_500_200_0.01 stand resnet18
-2020-10-23 09:10:26 Train: [2099] 8755/1740
-2020-10-23 09:10:26 load ic model success from ../models/ic_res/1_64_512_2_500_200_0.01_ic.pkl
-2020-10-23 09:10:35 Epoch: [2100] Final Train 0.4848/0.7825
-2020-10-23 09:10:37 Epoch: [2100] Final Val 0.5739/0.9129
-2020-10-23 09:10:40 Epoch: [2100] Final Test 0.5520/0.9032
-
-1_64_512_3_500_200_0.01 stand resnet18
-2020-10-23 09:10:49 Train: [2099] 8481/1567
-2020-10-23 09:10:49 load ic model success from ../models/ic_res/1_64_512_3_500_200_0.01_ic.pkl
-2020-10-23 09:10:56 Epoch: [2100] Final Train 0.4790/0.7811
-2020-10-23 09:10:58 Epoch: [2100] Final Val 0.5698/0.9137
-2020-10-23 09:11:00 Epoch: [2100] Final Test 0.5463/0.9018
-
-1_256_512_1_500_200_0.01 stand resnet18
-2020-10-23 20:00:52 Train: [2099] 7335/1629
-2020-10-23 20:00:52 load ic model success from ../models/ic_res/1_256_512_1_500_200_0.01_ic.pkl
-2020-10-23 20:00:59 Epoch: [2100] Final Train 0.4366/0.7411
-2020-10-23 20:01:01 Epoch: [2100] Final Val 0.5459/0.8941
-2020-10-23 20:01:03 Epoch: [2100] Final Test 0.5059/0.8737
-
-1_64_512_1_500_200_0.01_2 stand resnet18 norm2
-2020-10-23 23:15:57 Train: [2099] 9191/1837
-2020-10-23 23:15:58 load ic model success from ../models/ic_res/1_64_512_1_500_200_0.01_2_ic.pkl
-2020-10-23 23:16:05 Epoch: [2100] Final Train 0.5005/0.7878
-2020-10-23 23:16:07 Epoch: [2100] Final Val 0.5781/0.9140
-2020-10-23 23:16:09 Epoch: [2100] Final Test 0.5600/0.9048
 """
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     num_workers = 8
     # batch_size = 32
@@ -486,7 +416,7 @@ class Config(object):
     # ic_ratio = 2
     # ic_ratio = 3
 
-    model_name = "1_{}_{}_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, first_epoch, t_epoch, learning_rate)
+    model_name = "2_{}_{}_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, first_epoch, t_epoch, learning_rate)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
