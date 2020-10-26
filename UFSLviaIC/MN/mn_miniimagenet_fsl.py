@@ -285,7 +285,11 @@ class Config(object):
 
 
 """
-
+1_180_64_64_64_True_True_mn_5way_1shot
+2020-10-26 23:27:01 load proto net success from ../models_mn/fsl/1_180_64_64_64_True_True_mn_5way_1shot.pkl
+2020-10-26 23:28:38 Train 180 Accuracy: 0.6912222222222223
+2020-10-26 23:28:38 Val   180 Accuracy: 0.5012222222222222
+2020-10-26 23:32:34 episode=180, Mean Test accuracy=0.5017288888888889
 """
 
 
