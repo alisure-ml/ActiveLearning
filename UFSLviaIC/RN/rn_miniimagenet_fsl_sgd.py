@@ -9,11 +9,10 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
-from miniimagenet_fsl_test_tool import TestTool
+from rn_miniimagenet_fsl_test_tool import TestTool
 from torch.utils.data import DataLoader, Dataset
-from miniimagenet_tool import CNNEncoder, RelationNetwork, CNNEncoder1, RelationNetwork1, RunnerTool
+from rn_miniimagenet_tool import CNNEncoder, RelationNetwork, CNNEncoder1, RelationNetwork1, RunnerTool
 
 
 ##############################################################################################################
@@ -102,6 +101,7 @@ class Runner(object):
 
     def __init__(self):
         self.best_accuracy = 0.0
+        self.adjust_learning_rate = Config.adjust_learning_rate
 
         # all data
         self.data_train = MiniImageNetDataset.get_data_all(Config.data_root)
@@ -115,10 +115,10 @@ class Runner(object):
         RunnerTool.to_cuda(self.relation_network.apply(RunnerTool.weights_init))
 
         # optim
-        self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
-        self.feature_encoder_scheduler = StepLR(self.feature_encoder_optim, Config.train_epoch // 3, gamma=0.5)
-        self.relation_network_optim = torch.optim.Adam(self.relation_network.parameters(), lr=Config.learning_rate)
-        self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_epoch // 3, gamma=0.5)
+        self.feature_encoder_optim = torch.optim.SGD(
+            self.feature_encoder.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
+        self.relation_network_optim = torch.optim.SGD(
+            self.relation_network.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
         # loss
         self.loss = RunnerTool.to_cuda(nn.MSELoss())
@@ -137,6 +137,8 @@ class Runner(object):
         if os.path.exists(Config.rn_dir):
             self.relation_network.load_state_dict(torch.load(Config.rn_dir))
             Tools.print("load relation network success from {}".format(Config.rn_dir))
+
+        Tools.print("load model over")
         pass
 
     def compare_fsl(self, task_data):
@@ -183,11 +185,16 @@ class Runner(object):
         Tools.print("Training...")
 
         for epoch in range(Config.train_epoch):
-            if Config.has_train:
-                self.feature_encoder.train()
-                self.relation_network.train()
+            self.feature_encoder.train()
+            self.relation_network.train()
 
             Tools.print()
+            fe_lr= self.adjust_learning_rate(self.feature_encoder_optim, epoch,
+                                             Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            rn_lr = self.adjust_learning_rate(self.relation_network_optim, epoch,
+                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            Tools.print('Epoch: [{}] fe_lr={} rn_lr={}'.format(epoch, fe_lr, rn_lr))
+
             all_loss = 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
@@ -212,23 +219,17 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f} lr:{}".format(
-                epoch + 1, all_loss / len(self.task_train_loader), self.feature_encoder_scheduler.get_last_lr()))
-
-            self.feature_encoder_scheduler.step()
-            self.relation_network_scheduler.step()
+            Tools.print("{:6} loss:{:.3f}".format(epoch + 1, all_loss / len(self.task_train_loader)))
             ###########################################################################
 
             ###########################################################################
             # Val
             if epoch % Config.val_freq == 0:
+                self.feature_encoder.eval()
+                self.relation_network.eval()
+
                 Tools.print()
-                Tools.print("Test {} {} .......".format(epoch, Config.model_name))
-
-                if Config.has_eval:
-                    self.feature_encoder.eval()
-                    self.relation_network.eval()
-
+                Tools.print("Test {} .......".format(epoch))
                 val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
@@ -246,30 +247,28 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
-    # train_epoch = 300
-    train_epoch = 180
-    learning_rate = 0.001
+    learning_rate = 0.01
     num_workers = 8
-
-    val_freq = 10
 
     num_way = 5
     num_shot = 1
     batch_size = 64
 
+    val_freq = 10
     episode_size = 15
     test_episode = 600
+
+    train_epoch = 400
+    first_epoch, t_epoch = 200, 100
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
     # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
-    has_train = True
-    # has_train = False
-    has_eval = True
-    # has_eval = False
-    model_name = "1_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot, has_eval, has_train)
+    model_name = "2_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch)
+    # model_name = "2_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -278,8 +277,8 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    fe_dir = Tools.new_dir("../models/fsl/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    rn_dir = Tools.new_dir("../models/fsl/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    fe_dir = Tools.new_dir("../models/fsl_sgd/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    rn_dir = Tools.new_dir("../models/fsl_sgd/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     pass
 
 
@@ -287,38 +286,26 @@ class Config(object):
 
 
 """
-has feature_encoder.train() and feature_encoder.eval()
-2020-10-23 22:09:45 load feature encoder success from ../models/fsl/1_64_5_1_fe_5way_1shot.pkl
-2020-10-23 22:09:45 load relation network success from ../models/fsl/1_64_5_1_rn_5way_1shot.pkl
-2020-10-23 22:11:25 Train 150 Accuracy: 0.7066666666666667
-2020-10-23 22:11:25 Val   150 Accuracy: 0.5073333333333333
-2020-10-23 22:11:25 Test1 150 Accuracy: 0.49433333333333335
-2020-10-23 22:11:25 Test2 150 Accuracy: 0.49162222222222224
-2020-10-23 22:15:30 episode=4, Mean Test accuracy=0.49612888888888895
+1 feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+2020-10-24 18:26:20 load feature encoder success from ../models/fsl_sgd/1_600_64_5_1_fe_5way_1shot.pkl
+2020-10-24 18:26:20 load relation network success from ../models/fsl_sgd/1_600_64_5_1_rn_5way_1shot.pkl
+2020-10-24 18:28:17 Train 600 Accuracy: 0.7347777777777778
+2020-10-24 18:28:17 Val   600 Accuracy: 0.5202222222222223
+2020-10-24 18:32:35 episode=600, Mean Test accuracy=0.49725333333333327
 
-1_300_64_5_1_True_fe_5way_1shot
-2020-10-25 08:05:50 load feature encoder success from ../models/fsl/1_300_64_5_1_True_fe_5way_1shot.pkl
-2020-10-25 08:05:50 load relation network success from ../models/fsl/1_300_64_5_1_True_rn_5way_1shot.pkl
-2020-10-25 08:07:30 Train 300 Accuracy: 0.7095555555555556
-2020-10-25 08:07:30 Val   300 Accuracy: 0.5056666666666666
-2020-10-25 08:11:32 episode=300, Mean Test accuracy=0.4931288888888889
+2 feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+2020-10-25 10:09:40 load feature encoder success from ../models/fsl_sgd/2_400_64_5_1_200_100_fe_5way_1shot.pkl
+2020-10-25 10:09:41 load relation network success from ../models/fsl_sgd/2_400_64_5_1_200_100_rn_5way_1shot.pkl
+2020-10-25 10:11:13 Train 400 Accuracy: 0.7486666666666667
+2020-10-25 10:11:13 Val   400 Accuracy: 0.5175555555555555
+2020-10-25 10:15:04 episode=400, Mean Test accuracy=0.5044799999999999
 
-1_300_64_5_1_False_fe_5way_1shot
-2020-10-25 08:06:28 load feature encoder success from ../models/fsl/1_300_64_5_1_False_fe_5way_1shot.pkl
-2020-10-25 08:06:28 load relation network success from ../models/fsl/1_300_64_5_1_False_rn_5way_1shot.pkl
-2020-10-25 08:08:09 Train 300 Accuracy: 0.6257777777777778
-2020-10-25 08:08:09 Val   300 Accuracy: 0.4682222222222222
-2020-10-25 08:12:15 episode=300, Mean Test accuracy=0.4641288888888889
-
-1_300_64_5_1_True_True_fe_5way_1shot
-2020-10-25 15:40:36 Train 300 Accuracy: 0.7224444444444444
-2020-10-25 15:40:36 Val   300 Accuracy: 0.5043333333333334
-2020-10-25 15:44:47 episode=300, Mean Test accuracy=0.49514222222222226
-
-1_180_64_5_1_True_True_fe_5way_1shot
-2020-10-25 22:58:56 Train 180 Accuracy: 0.7236666666666668
-2020-10-25 22:58:56 Val   180 Accuracy: 0.4995555555555556
-2020-10-25 23:02:57 episode=180, Mean Test accuracy=0.4944355555555555
+3 feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+2020-10-25 11:56:13 load feature encoder success from ../models/fsl_sgd/2_400_64_5_1_fe_5way_1shot.pkl
+2020-10-25 11:56:13 load relation network success from ../models/fsl_sgd/2_400_64_5_1_rn_5way_1shot.pkl
+2020-10-25 11:57:55 Train 400 Accuracy: 0.7193333333333334
+2020-10-25 11:57:55 Val   400 Accuracy: 0.5487777777777777
+2020-10-25 12:02:00 episode=400, Mean Test accuracy=0.5206977777777778
 """
 
 
@@ -326,17 +313,15 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    if Config.has_eval:
-        runner.feature_encoder.eval()
-        runner.relation_network.eval()
+    runner.feature_encoder.eval()
+    runner.relation_network.eval()
     runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 
     runner.load_model()
-    if Config.has_eval:
-        runner.feature_encoder.eval()
-        runner.relation_network.eval()
+    runner.feature_encoder.eval()
+    runner.relation_network.eval()
     runner.test_tool.val(episode=Config.train_epoch, is_print=True)
     runner.test_tool.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
     pass

@@ -12,7 +12,7 @@ from alisuretool.Tools import Tools
 from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
-from miniimagenet_fsl_test_tool import TestTool
+from rn_miniimagenet_fsl_test_tool import TestTool
 from torch.utils.data import DataLoader, Dataset
 
 

@@ -331,4 +331,25 @@ class ProtoNet(nn.Module):
     pass
 
 
+class ICProtoNet(nn.Module):
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+        self.linear = nn.Linear(in_dim, out_dim, bias=False)
+        self.l2norm = Normalize(2)
+        pass
+
+    def forward(self, x):
+        x = x.view(x.size(0), -1)
+        out_logits = self.linear(x)
+        out_l2norm = self.l2norm(out_logits)
+        return out_logits, out_l2norm
+
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    pass
+
+
 ##############################################################################################################

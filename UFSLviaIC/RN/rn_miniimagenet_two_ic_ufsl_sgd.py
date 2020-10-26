@@ -9,12 +9,12 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-from torch.optim.lr_scheduler import StepLR
+from torch.optim import lr_scheduler
 import torchvision.transforms as transforms
-from miniimagenet_fsl_test_tool import TestTool
-from miniimagenet_ic_test_tool import ICTestTool
+from rn_miniimagenet_fsl_test_tool import TestTool
+from rn_miniimagenet_ic_test_tool import ICTestTool
 from torch.utils.data import DataLoader, Dataset
-from miniimagenet_tool import ICModel, ProduceClass, ICModel, CNNEncoder, RelationNetwork, ProduceClass, RunnerTool
+from rn_miniimagenet_tool import ICModel, CNNEncoder, RelationNetwork, ProduceClass, RunnerTool
 
 
 ##############################################################################################################
@@ -24,6 +24,7 @@ class MiniImageNetDataset(object):
 
     def __init__(self, data_list, num_way, num_shot):
         self.data_list, self.num_way, self.num_shot = data_list, num_way, num_shot
+        self.classes = None
 
         self.data_dict = {}
         for index, label, image_filename in self.data_list:
@@ -47,27 +48,29 @@ class MiniImageNetDataset(object):
     def __len__(self):
         return len(self.data_list)
 
+    def set_samples_class(self, classes):
+        self.classes = classes
+        pass
+
     def __getitem__(self, item):
         # 当前样本
         now_label_image_tuple = self.data_list[item]
-        now_index, now_label, now_image_filename = now_label_image_tuple
-        now_label_k_shot_image_tuple = random.sample(self.data_dict[now_label], self.num_shot)
+        now_index, _, now_image_filename = now_label_image_tuple
+        _now_label = self.classes[item]
+        now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
 
         # 其他样本
-        other_label = list(self.data_dict.keys())
-        other_label.remove(now_label)
-        other_label = random.sample(other_label, self.num_way - 1)
-        other_label_k_shot_image_tuple_list = []
-        for _label in other_label:
-            other_label_k_shot_image_tuple = random.sample(self.data_dict[_label], self.num_shot)
-            other_label_k_shot_image_tuple_list.extend(other_label_k_shot_image_tuple)
-            pass
+        other_label_k_shot_index_list = self._get_samples_by_clustering_label(_now_label, False,
+                                                                              num=self.num_shot * (self.num_way - 1))
 
         # c_way_k_shot
-        c_way_k_shot_tuple_list = now_label_k_shot_image_tuple + other_label_k_shot_image_tuple_list
-        random.shuffle(c_way_k_shot_tuple_list)
+        c_way_k_shot_index_list = now_label_k_shot_index + other_label_k_shot_index_list
+        random.shuffle(c_way_k_shot_index_list)
 
-        task_list = c_way_k_shot_tuple_list + [now_label_image_tuple]
+        if len(c_way_k_shot_index_list) != self.num_shot * self.num_way:
+            return self._getitem_train(random.sample(list(range(0, len(self.data_list))), 1)[0])
+
+        task_list = [self.data_list[index] for index in c_way_k_shot_index_list] + [now_label_image_tuple]
 
         task_data = []
         for one in task_list:
@@ -76,9 +79,16 @@ class MiniImageNetDataset(object):
             pass
         task_data = torch.cat(task_data)
 
-        task_label = torch.Tensor([int(one_tuple[1] == now_label) for one_tuple in c_way_k_shot_tuple_list])
+        task_label = torch.Tensor([int(index in now_label_k_shot_index) for index in c_way_k_shot_index_list])
         task_index = torch.Tensor([one[0] for one in task_list]).long()
         return task_data, task_label, task_index
+
+    def _get_samples_by_clustering_label(self, label, is_same_label=False, num=1):
+        if is_same_label:
+            return random.sample(list(np.squeeze(np.argwhere(self.classes == label), axis=1)), num)
+        else:
+            return random.sample(list(np.squeeze(np.argwhere(self.classes != label))), num)
+        pass
 
     @staticmethod
     def read_image(image_path, transform=None):
@@ -114,6 +124,7 @@ class Runner(object):
 
     def __init__(self):
         self.best_accuracy = 0.0
+        self.adjust_learning_rate = Config.adjust_learning_rate
 
         # all data
         self.data_train = MiniImageNetDataset.get_data_all(Config.data_root)
@@ -123,6 +134,7 @@ class Runner(object):
         # IC
         self.produce_class = ProduceClass(len(self.data_train), Config.ic_out_dim, Config.ic_ratio)
         self.produce_class.init()
+        self.task_train.set_samples_class(self.produce_class.classes)
 
         # model
         self.feature_encoder = RunnerTool.to_cuda(Config.feature_encoder)
@@ -134,13 +146,12 @@ class Runner(object):
         RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
 
         # optim
-        self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
-        self.relation_network_optim = torch.optim.Adam(self.relation_network.parameters(), lr=Config.learning_rate)
-        self.ic_model_optim = torch.optim.Adam(self.ic_model.parameters(), lr=Config.learning_rate)
-
-        self.feature_encoder_scheduler = StepLR(self.feature_encoder_optim, Config.train_epoch // 3, gamma=0.5)
-        self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_epoch // 3, gamma=0.5)
-        self.ic_model_scheduler = StepLR(self.ic_model_optim, Config.train_epoch // 3, gamma=0.5)
+        self.feature_encoder_optim = torch.optim.SGD(
+            self.feature_encoder.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
+        self.relation_network_optim = torch.optim.SGD(
+            self.relation_network.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
+        self.ic_model_optim = torch.optim.SGD(
+            self.ic_model.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
         # loss
         self.ic_loss = RunnerTool.to_cuda(nn.CrossEntropyLoss())
@@ -219,6 +230,12 @@ class Runner(object):
             self.ic_model.train()
 
             Tools.print()
+            fe_lr= self.adjust_learning_rate(self.feature_encoder_optim, epoch,
+                                             Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            rn_lr = self.adjust_learning_rate(self.relation_network_optim, epoch,
+                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            Tools.print('Epoch: [{}] fe_lr={} rn_lr={}'.format(epoch, fe_lr, rn_lr))
+
             self.produce_class.reset()
             all_loss, all_loss_fsl, all_loss_ic = 0.0, 0.0, 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
@@ -258,13 +275,10 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f} fsl:{:.3f} ic:{:.3f} lr:{}".format(
-                epoch + 1, all_loss / len(self.task_train_loader), all_loss_fsl / len(self.task_train_loader),
-                all_loss_ic / len(self.task_train_loader), self.feature_encoder_scheduler.get_last_lr()))
+            Tools.print("{:6} loss:{:.3f} fsl:{:.3f} ic:{:.3f}".format(
+                epoch + 1, all_loss / len(self.task_train_loader),
+                all_loss_fsl / len(self.task_train_loader), all_loss_ic / len(self.task_train_loader)))
             Tools.print("Train: [{}] {}/{}".format(epoch, self.produce_class.count, self.produce_class.count_2))
-            self.feature_encoder_scheduler.step()
-            self.relation_network_scheduler.step()
-            self.ic_model_scheduler.step()
             ###########################################################################
 
             ###########################################################################
@@ -297,23 +311,29 @@ class Runner(object):
 
 
 """
-1_900_64_5_1_64_512_1_10.0_0.1_ic
-2020-10-25 12:00:32 Test 900 .......
-2020-10-25 12:00:55 Epoch: 900 Train 0.4024/0.7240 0.0000
-2020-10-25 12:00:55 Epoch: 900 Val   0.5155/0.8940 0.0000
-2020-10-25 12:00:55 Epoch: 900 Test  0.4948/0.8785 0.0000
-2020-10-25 12:02:21 Train 900 Accuracy: 0.6964444444444444
-2020-10-25 12:02:21 Val   900 Accuracy: 0.5076666666666667
-2020-10-25 12:05:49 episode=900, Mean Test accuracy=0.49832444444444446
+1_400_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-10-25 11:19:35 load feature encoder success from ../models/two_ic_ufsl_sgd/1_400_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-10-25 11:19:35 load relation network success from ../models/two_ic_ufsl_sgd/1_400_64_5_1_64_512_1_10.0_0.1_rn_5way_1shot.pkl
+2020-10-25 11:19:35 load ic model success from ../models/two_ic_ufsl_sgd/1_400_64_5_1_64_512_1_10.0_0.1_ic_5way_1shot.pkl
+2020-10-25 11:19:35 Test 400 .......
+2020-10-25 11:19:46 Epoch: 400 Train 0.2197/0.5211 0.0000
+2020-10-25 11:19:46 Epoch: 400 Val   0.3918/0.8025 0.0000
+2020-10-25 11:19:46 Epoch: 400 Test  0.3595/0.7749 0.0000
+2020-10-25 11:21:19 Train 400 Accuracy: 0.4102222222222222
+2020-10-25 11:21:19 Val   400 Accuracy: 0.3795555555555556
+2020-10-25 11:25:00 episode=400, Mean Test accuracy=0.40537333333333336
 
-1_600_64_5_1_64_512_1_20.0_0.1_ic_5way_1shot.pkl
-2020-10-26 06:32:54 Test 600 .......
-2020-10-26 06:33:07 Epoch: 600 Train 0.3914/0.7160 0.0000
-2020-10-26 06:33:07 Epoch: 600 Val   0.5058/0.8879 0.0000
-2020-10-26 06:33:07 Epoch: 600 Test  0.4782/0.8716 0.0000
-2020-10-26 06:35:05 Train 600 Accuracy: 0.6843333333333333
-2020-10-26 06:35:05 Val   600 Accuracy: 0.5312222222222223
-2020-10-26 06:39:55 episode=600, Mean Test accuracy=0.5076088888888889
+1_1000_64_500_250_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-10-26 18:06:34 load feature encoder success from ../models/two_ic_ufsl_sgd/1_1000_64_500_250_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-10-26 18:06:34 load relation network success from ../models/two_ic_ufsl_sgd/1_1000_64_500_250_64_512_1_10.0_0.1_rn_5way_1shot.pkl
+2020-10-26 18:06:34 load ic model success from ../models/two_ic_ufsl_sgd/1_1000_64_500_250_64_512_1_10.0_0.1_ic_5way_1shot.pkl
+2020-10-26 18:06:34 Test 1000 .......
+2020-10-26 18:06:45 Epoch: 1000 Train 0.2362/0.5422 0.0000
+2020-10-26 18:06:45 Epoch: 1000 Val   0.4108/0.8191 0.0000
+2020-10-26 18:06:45 Epoch: 1000 Test  0.3706/0.7893 0.0000
+2020-10-26 18:08:25 Train 1000 Accuracy: 0.4224444444444444
+2020-10-26 18:08:25 Val   1000 Accuracy: 0.39266666666666666
+2020-10-26 18:13:03 episode=1000, Mean Test accuracy=0.41152444444444447
 """
 
 
@@ -321,32 +341,40 @@ class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
     num_workers = 8
-    batch_size = 64
-    val_freq = 10
-
-    learning_rate = 0.001
 
     num_way = 5
     num_shot = 1
+    batch_size = 64
 
+    val_freq = 10
     episode_size = 15
     test_episode = 600
-
-    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
-    # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
     # ic
     ic_in_dim = 64
     ic_out_dim = 512
     ic_ratio = 1
 
-    train_epoch = 600
+    # learning_rate = 0.01
+    # loss_fsl_ratio = 10.0
+    # loss_ic_ratio = 0.1
+    # train_epoch = 1000
+    # first_epoch, t_epoch = 500, 250
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    loss_fsl_ratio = 20.0
+    learning_rate = 0.1
+    loss_fsl_ratio = 1.0
     loss_ic_ratio = 0.1
+    train_epoch = 500
+    first_epoch, t_epoch = 300, 100
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        train_epoch, batch_size, num_way, num_shot, ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
+    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+
+    model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
+        train_epoch, batch_size, first_epoch, t_epoch, ic_in_dim,
+        ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, learning_rate)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -355,9 +383,9 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    fe_dir = Tools.new_dir("../models/two_ic_fsl/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    rn_dir = Tools.new_dir("../models/two_ic_fsl/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    ic_dir = Tools.new_dir("../models/two_ic_fsl/{}_ic_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    fe_dir = Tools.new_dir("../models/two_ic_ufsl_sgd/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    rn_dir = Tools.new_dir("../models/two_ic_ufsl_sgd/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    ic_dir = Tools.new_dir("../models/two_ic_ufsl_sgd/{}_ic_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     pass
 
 

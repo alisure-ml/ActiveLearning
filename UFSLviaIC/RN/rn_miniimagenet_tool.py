@@ -11,8 +11,8 @@ import torch.nn.functional as F
 from alisuretool.Tools import Tools
 from torch.optim import lr_scheduler
 import torchvision.transforms as transforms
-from miniimagenet_fsl_test_tool import TestTool
-from miniimagenet_ic_test_tool import ICTestTool
+from rn_miniimagenet_fsl_test_tool import TestTool
+from rn_miniimagenet_ic_test_tool import ICTestTool
 from torch.utils.data import DataLoader, Dataset
 
 
