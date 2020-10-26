@@ -422,7 +422,7 @@ class ICRunner(object):
                 self.produce_class.cal_label(out_l2norm, indexes)
 
                 loss_cross = self.criterion(out_logits, targets)
-                loss_entropy = self._entropy_loss(out_logits) if Config.has_entropy else loss_cross * 0
+                loss_entropy = self._entropy_loss(out_logits)
                 loss = (loss_cross + loss_entropy) if Config.has_entropy else loss_cross
 
                 loss.backward()

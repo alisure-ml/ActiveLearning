@@ -326,6 +326,18 @@ old test
 2020-10-22 17:45:32 Val 0 Train Accuracy: 0.44966666666666666
 2020-10-22 17:45:49 Val 0 Accuracy: 0.40722222222222226
 2020-10-22 17:50:02 Final accuracy: 0.4325644444444444
+
+1_900_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-10-26 15:59:07 load feature encoder success from ../models/two_ic_ufsl/1_900_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-10-26 15:59:07 load relation network success from ../models/two_ic_ufsl/1_900_64_5_1_64_512_1_10.0_0.1_rn_5way_1shot.pkl
+2020-10-26 15:59:07 load ic model success from ../models/two_ic_ufsl/1_900_64_5_1_64_512_1_10.0_0.1_ic_5way_1shot.pkl
+2020-10-26 15:59:07 Test 900 .......
+2020-10-26 15:59:23 Epoch: 900 Train 0.3192/0.6340 0.0000
+2020-10-26 15:59:23 Epoch: 900 Val   0.4765/0.8617 0.0000
+2020-10-26 15:59:23 Epoch: 900 Test  0.4546/0.8434 0.0000
+2020-10-26 16:01:33 Train 900 Accuracy: 0.43788888888888894
+2020-10-26 16:01:33 Val   900 Accuracy: 0.40199999999999997
+2020-10-26 16:06:40 episode=900, Mean Test accuracy=0.42364000000000007
 """
 
 

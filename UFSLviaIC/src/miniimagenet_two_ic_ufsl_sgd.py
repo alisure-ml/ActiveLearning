@@ -322,13 +322,24 @@ class Runner(object):
 2020-10-25 11:21:19 Train 400 Accuracy: 0.4102222222222222
 2020-10-25 11:21:19 Val   400 Accuracy: 0.3795555555555556
 2020-10-25 11:25:00 episode=400, Mean Test accuracy=0.40537333333333336
+
+1_1000_64_500_250_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-10-26 18:06:34 load feature encoder success from ../models/two_ic_ufsl_sgd/1_1000_64_500_250_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-10-26 18:06:34 load relation network success from ../models/two_ic_ufsl_sgd/1_1000_64_500_250_64_512_1_10.0_0.1_rn_5way_1shot.pkl
+2020-10-26 18:06:34 load ic model success from ../models/two_ic_ufsl_sgd/1_1000_64_500_250_64_512_1_10.0_0.1_ic_5way_1shot.pkl
+2020-10-26 18:06:34 Test 1000 .......
+2020-10-26 18:06:45 Epoch: 1000 Train 0.2362/0.5422 0.0000
+2020-10-26 18:06:45 Epoch: 1000 Val   0.4108/0.8191 0.0000
+2020-10-26 18:06:45 Epoch: 1000 Test  0.3706/0.7893 0.0000
+2020-10-26 18:08:25 Train 1000 Accuracy: 0.4224444444444444
+2020-10-26 18:08:25 Val   1000 Accuracy: 0.39266666666666666
+2020-10-26 18:13:03 episode=1000, Mean Test accuracy=0.41152444444444447
 """
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
-    learning_rate = 0.01
     num_workers = 8
 
     num_way = 5
@@ -344,18 +355,26 @@ class Config(object):
     ic_out_dim = 512
     ic_ratio = 1
 
-    loss_fsl_ratio = 10.0
-    loss_ic_ratio = 0.1
+    # learning_rate = 0.01
+    # loss_fsl_ratio = 10.0
+    # loss_ic_ratio = 0.1
+    # train_epoch = 1000
+    # first_epoch, t_epoch = 500, 250
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    train_epoch = 1000
-    first_epoch, t_epoch = 500, 250
+    learning_rate = 0.1
+    loss_fsl_ratio = 1.0
+    loss_ic_ratio = 0.1
+    train_epoch = 500
+    first_epoch, t_epoch = 300, 100
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
     # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
-    model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        train_epoch, batch_size, first_epoch, t_epoch, ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
+    model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
+        train_epoch, batch_size, first_epoch, t_epoch, ic_in_dim,
+        ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, learning_rate)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
