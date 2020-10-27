@@ -223,7 +223,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
     # train_epoch = 300
     train_epoch = 180
@@ -248,7 +248,7 @@ class Config(object):
     has_eval = True
     # has_train = False
     # has_eval = False
-    model_name = "1_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, hid_dim, z_dim, has_eval, has_train)
+    model_name = "2_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, hid_dim, z_dim, has_eval, has_train)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
