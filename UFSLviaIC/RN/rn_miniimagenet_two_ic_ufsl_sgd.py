@@ -232,10 +232,11 @@ class Runner(object):
             Tools.print("Init label {} .......")
             self.produce_class.reset()
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
+                ic_labels = RunnerTool.to_cuda(task_index[:, -1])
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
                 relations, query_features = self.compare_fsl(task_data)
                 ic_out_logits, ic_out_l2norm = self.ic_model(query_features)
-                self.produce_class.cal_label(ic_out_l2norm, idx)
+                self.produce_class.cal_label(ic_out_l2norm, ic_labels)
                 pass
             Tools.print("Epoch: {}/{}".format(self.produce_class.count, self.produce_class.count_2))
         finally:
@@ -355,7 +356,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
     num_workers = 8
 
@@ -372,18 +373,11 @@ class Config(object):
     ic_out_dim = 512
     ic_ratio = 1
 
-    # learning_rate = 0.01
-    # loss_fsl_ratio = 10.0
-    # loss_ic_ratio = 0.1
-    # train_epoch = 1000
-    # first_epoch, t_epoch = 500, 250
-    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
-
-    learning_rate = 0.1
-    loss_fsl_ratio = 1.0
+    learning_rate = 0.01
+    loss_fsl_ratio = 100.0
     loss_ic_ratio = 0.1
     train_epoch = 500
-    first_epoch, t_epoch = 300, 100
+    first_epoch, t_epoch = 300, 150
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()

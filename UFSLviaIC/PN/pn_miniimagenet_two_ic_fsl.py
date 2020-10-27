@@ -207,10 +207,11 @@ class Runner(object):
             Tools.print("Init label {} .......")
             self.produce_class.reset()
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
+                ic_labels = RunnerTool.to_cuda(task_index[:, -1])
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
                 log_p_y, query_features = self.proto(task_data)
                 ic_out_logits, ic_out_l2norm = self.ic_model(query_features)
-                self.produce_class.cal_label(ic_out_l2norm, idx)
+                self.produce_class.cal_label(ic_out_l2norm, ic_labels)
                 pass
             Tools.print("Epoch: {}/{}".format(self.produce_class.count, self.produce_class.count_2))
         finally:
@@ -240,7 +241,9 @@ class Runner(object):
                 # 3 loss
                 loss_fsl = -(log_p_y * task_labels).sum() / task_labels.sum() * Config.loss_fsl_ratio
                 loss_ic = self.ic_loss(ic_out_logits, ic_targets) * Config.loss_ic_ratio
-                loss = loss_fsl + loss_ic
+                # loss = loss_fsl + loss_ic
+                loss = loss_fsl
+                # loss = loss_ic
                 all_loss += loss.item()
                 all_loss_fsl += loss_fsl.item()
                 all_loss_ic += loss_ic.item()
@@ -250,7 +253,7 @@ class Runner(object):
                 self.ic_model.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.proto_net.parameters(), 0.5)
-                torch.nn.utils.clip_grad_norm_(self.ic_model.parameters(), 0.5)
+                # torch.nn.utils.clip_grad_norm_(self.ic_model.parameters(), 0.5)
                 self.proto_net_optim.step()
                 self.ic_model_optim.step()
                 ###########################################################################
@@ -295,7 +298,14 @@ class Runner(object):
 
 
 """
-
+1_600_64_5_164_64_1600_512_1_10.0_0.1_True_True_ic_5way_1shot.pkl
+2020-10-27 07:35:03 Test 600 .......
+2020-10-27 07:35:14 Epoch: 600 Train 0.3724/0.7162 0.0000
+2020-10-27 07:35:14 Epoch: 600 Val   0.4770/0.8821 0.0000
+2020-10-27 07:35:14 Epoch: 600 Test  0.4375/0.8558 0.0000
+2020-10-27 07:36:37 Train 600 Accuracy: 0.5754444444444444
+2020-10-27 07:36:37 Val   600 Accuracy: 0.4755555555555556
+2020-10-27 07:40:02 episode=600, Mean Test accuracy=0.46810222222222225
 """
 
 
@@ -327,7 +337,7 @@ class Config(object):
 
     train_epoch = 600
 
-    loss_fsl_ratio = 1.0
+    loss_fsl_ratio = 10.0
     loss_ic_ratio = 0.1
 
     has_train = True
@@ -335,7 +345,7 @@ class Config(object):
     # has_train = False
     # has_eval = False
 
-    model_name = "1_{}_{}_{}_{}{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
+    model_name = "2_{}_{}_{}_{}{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
         train_epoch, batch_size, num_way, num_shot, hid_dim, z_dim, ic_in_dim,
         ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, has_train, has_eval)
 
