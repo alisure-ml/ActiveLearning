@@ -352,6 +352,18 @@ class Runner(object):
 2020-10-26 18:08:25 Train 1000 Accuracy: 0.4224444444444444
 2020-10-26 18:08:25 Val   1000 Accuracy: 0.39266666666666666
 2020-10-26 18:13:03 episode=1000, Mean Test accuracy=0.41152444444444447
+
+1_500_64_300_150_64_512_1_100.0_0.1_0.01_fe_5way_1shot.pkl
+2020-10-27 23:15:52 Test 500 .......
+2020-10-27 23:16:03 Epoch: 500 Train 0.2214/0.5247 0.0000
+2020-10-27 23:16:03 Epoch: 500 Val   0.3993/0.8113 0.0000
+2020-10-27 23:16:03 Epoch: 500 Test  0.3702/0.7847 0.0000
+2020-10-27 23:17:46 Train 500 Accuracy: 0.41055555555555556
+2020-10-27 23:17:46 Val   500 Accuracy: 0.39355555555555555
+2020-10-27 23:17:46 Test1 500 Accuracy: 0.4242222222222222
+2020-10-27 23:17:46 Test2 500 Accuracy: 0.42382222222222227
+2020-10-27 23:21:47 episode=500, Mean Test accuracy=0.4117111111111111
+
 """
 
 
@@ -374,7 +386,7 @@ class Config(object):
     ic_ratio = 1
 
     learning_rate = 0.01
-    loss_fsl_ratio = 100.0
+    loss_fsl_ratio = 10.0
     loss_ic_ratio = 0.1
     train_epoch = 500
     first_epoch, t_epoch = 300, 150

@@ -74,11 +74,11 @@ class MiniImageNetDataset(object):
         if len(c_way_k_shot_index_list) != self.num_shot * self.num_way:
             return self._getitem_train(random.sample(list(range(0, len(self.data_list))), 1)[0])
 
+        #######################################################################################
         query_list = [now_label_image_tuple]
         support_list = [self.data_list[index] for index in c_way_k_shot_index_list]
         task_list = support_list + query_list
 
-        #######################################################################################
         support_data = [torch.unsqueeze(self.read_image(one[2], self.transform_train_fsl), dim=0) for one in support_list]
         query_data = [torch.unsqueeze(self.read_image(one[2], self.transform_train_ic), dim=0) for one in query_list]
         task_data = torch.cat(support_data + query_data)
