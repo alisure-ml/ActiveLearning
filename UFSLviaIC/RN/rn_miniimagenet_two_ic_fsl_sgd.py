@@ -221,10 +221,11 @@ class Runner(object):
             Tools.print("Init label {} .......")
             self.produce_class.reset()
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
+                ic_labels = RunnerTool.to_cuda(task_index[:, -1])
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
                 relations, query_features = self.compare_fsl(task_data)
                 ic_out_logits, ic_out_l2norm = self.ic_model(query_features)
-                self.produce_class.cal_label(ic_out_l2norm, idx)
+                self.produce_class.cal_label(ic_out_l2norm, ic_labels)
                 pass
             Tools.print("Epoch: {}/{}".format(self.produce_class.count, self.produce_class.count_2))
         finally:
@@ -240,7 +241,9 @@ class Runner(object):
                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
             rn_lr = self.adjust_learning_rate(self.relation_network_optim, epoch,
                                               Config.first_epoch, Config.t_epoch, Config.learning_rate)
-            Tools.print('Epoch: [{}] fe_lr={} rn_lr={}'.format(epoch, fe_lr, rn_lr))
+            ic_lr = self.adjust_learning_rate(self.ic_model_optim, epoch,
+                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            Tools.print('Epoch: [{}] fe_lr={} rn_lr={} ic_lr={}'.format(epoch, fe_lr, rn_lr, ic_lr))
 
             self.produce_class.reset()
             all_loss, all_loss_fsl, all_loss_ic = 0.0, 0.0, 0.0
@@ -366,7 +369,7 @@ class Config(object):
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
     # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
 
-    model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
+    model_name = "2_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
         train_epoch, batch_size, first_epoch, t_epoch, ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
 
     if "Linux" in platform.platform():

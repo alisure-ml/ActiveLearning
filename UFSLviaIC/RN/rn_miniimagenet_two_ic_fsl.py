@@ -221,10 +221,11 @@ class Runner(object):
             Tools.print("Init label {} .......")
             self.produce_class.reset()
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
+                ic_labels = RunnerTool.to_cuda(task_index[:, -1])
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
                 relations, query_features = self.compare_fsl(task_data)
                 ic_out_logits, ic_out_l2norm = self.ic_model(query_features)
-                self.produce_class.cal_label(ic_out_l2norm, idx)
+                self.produce_class.cal_label(ic_out_l2norm, ic_labels)
                 pass
             Tools.print("Epoch: {}/{}".format(self.produce_class.count, self.produce_class.count_2))
         finally:

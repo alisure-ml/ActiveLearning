@@ -252,7 +252,9 @@ class Runner(object):
                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
             rn_lr = self.adjust_learning_rate(self.relation_network_optim, epoch,
                                               Config.first_epoch, Config.t_epoch, Config.learning_rate)
-            Tools.print('Epoch: [{}] fe_lr={} rn_lr={}'.format(epoch, fe_lr, rn_lr))
+            ic_lr = self.adjust_learning_rate(self.ic_model_optim, epoch,
+                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            Tools.print('Epoch: [{}] fe_lr={} rn_lr={} ic_lr={}'.format(epoch, fe_lr, rn_lr, ic_lr))
 
             self.produce_class.reset()
             all_loss, all_loss_fsl, all_loss_ic = 0.0, 0.0, 0.0
@@ -368,7 +370,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
     num_workers = 8
 

@@ -9,12 +9,12 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-from torch.optim.lr_scheduler import StepLR
+from torchvision.models import resnet18
 import torchvision.transforms as transforms
+from torch.utils.data import DataLoader, Dataset
 from rn_miniimagenet_fsl_test_tool import TestTool
 from rn_miniimagenet_ic_test_tool import ICTestTool
-from torch.utils.data import DataLoader, Dataset
-from rn_miniimagenet_tool import ICModel, ProduceClass, CNNEncoder, RelationNetwork, RunnerTool
+from rn_miniimagenet_tool import ICModel, ProduceClass, Normalize, CNNEncoder, RelationNetwork, RunnerTool
 
 
 ##############################################################################################################
@@ -120,10 +120,33 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
+class ICResNet(nn.Module):
+
+    def __init__(self, low_dim=512):
+        super().__init__()
+        self.resnet = resnet18(num_classes=low_dim)
+        self.l2norm = Normalize(2)
+        pass
+
+    def forward(self, x):
+        out_logits = self.resnet(x)
+        out_l2norm = self.l2norm(out_logits)
+        return out_logits, out_l2norm
+
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    pass
+
+
+##############################################################################################################
+
+
 class Runner(object):
 
     def __init__(self):
         self.best_accuracy = 0.0
+        self.adjust_learning_rate = Config.adjust_learning_rate
 
         # all data
         self.data_train = MiniImageNetDataset.get_data_all(Config.data_root)
@@ -137,25 +160,20 @@ class Runner(object):
 
         # model
         self.feature_encoder = RunnerTool.to_cuda(Config.feature_encoder)
-        self.feature_encoder_ic = RunnerTool.to_cuda(Config.feature_encoder_ic)
         self.relation_network = RunnerTool.to_cuda(Config.relation_network)
-        self.ic_model = RunnerTool.to_cuda(ICModel(in_dim=Config.ic_in_dim, out_dim=Config.ic_out_dim))
+        self.ic_model = RunnerTool.to_cuda(ICResNet(low_dim=Config.ic_out_dim))
 
         RunnerTool.to_cuda(self.feature_encoder.apply(RunnerTool.weights_init))
-        RunnerTool.to_cuda(self.feature_encoder_ic.apply(RunnerTool.weights_init))
         RunnerTool.to_cuda(self.relation_network.apply(RunnerTool.weights_init))
         RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
 
         # optim
-        self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate)
-        self.feature_encoder_ic_optim = torch.optim.Adam(self.feature_encoder_ic.parameters(), lr=Config.learning_rate)
-        self.relation_network_optim = torch.optim.Adam(self.relation_network.parameters(), lr=Config.learning_rate)
-        self.ic_model_optim = torch.optim.Adam(self.ic_model.parameters(), lr=Config.learning_rate)
-
-        self.feature_encoder_scheduler = StepLR(self.feature_encoder_optim, Config.train_epoch // 3, gamma=0.5)
-        self.feature_encoder_ic_scheduler = StepLR(self.feature_encoder_ic_optim, Config.train_epoch // 3, gamma=0.5)
-        self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_epoch // 3, gamma=0.5)
-        self.ic_model_scheduler = StepLR(self.ic_model_optim, Config.train_epoch // 3, gamma=0.5)
+        self.feature_encoder_optim = torch.optim.SGD(
+            self.feature_encoder.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
+        self.relation_network_optim = torch.optim.SGD(
+            self.relation_network.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
+        self.ic_model_optim = torch.optim.SGD(
+            self.ic_model.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
         # loss
         self.ic_loss = RunnerTool.to_cuda(nn.CrossEntropyLoss())
@@ -166,7 +184,7 @@ class Runner(object):
                                       num_way=Config.num_way, num_shot=Config.num_shot,
                                       episode_size=Config.episode_size, test_episode=Config.test_episode,
                                       transform=self.task_train.transform_test)
-        self.test_tool_ic = ICTestTool(feature_encoder=self.feature_encoder_ic, ic_model=self.ic_model,
+        self.test_tool_ic = ICTestTool(feature_encoder=None, ic_model=self.ic_model,
                                        data_root=Config.data_root, batch_size=Config.batch_size,
                                        num_workers=Config.num_workers, ic_out_dim=Config.ic_out_dim)
         pass
@@ -175,10 +193,6 @@ class Runner(object):
         if os.path.exists(Config.fe_dir):
             self.feature_encoder.load_state_dict(torch.load(Config.fe_dir))
             Tools.print("load feature encoder success from {}".format(Config.fe_dir))
-
-        if os.path.exists(Config.fe_ic_dir):
-            self.feature_encoder_ic.load_state_dict(torch.load(Config.fe_ic_dir))
-            Tools.print("load feature encoder ic success from {}".format(Config.fe_ic_dir))
 
         if os.path.exists(Config.rn_dir):
             self.relation_network.load_state_dict(torch.load(Config.rn_dir))
@@ -236,7 +250,6 @@ class Runner(object):
         # Init Update
         try:
             self.feature_encoder.eval()
-            self.feature_encoder_ic.eval()
             self.relation_network.eval()
             self.ic_model.eval()
             Tools.print("Init label {} .......")
@@ -244,8 +257,7 @@ class Runner(object):
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
                 ic_labels = RunnerTool.to_cuda(task_index[:, -1])
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
-                ic_features = self.feature_encoder_ic(task_data[:, -1])
-                ic_out_logits, ic_out_l2norm = self.ic_model(ic_features)
+                ic_out_logits, ic_out_l2norm = self.ic_model(task_data[:, -1])
                 self.produce_class.cal_label(ic_out_l2norm, ic_labels)
                 pass
             Tools.print("Epoch: {}/{}".format(self.produce_class.count, self.produce_class.count_2))
@@ -254,11 +266,18 @@ class Runner(object):
 
         for epoch in range(Config.train_epoch):
             self.feature_encoder.train()
-            self.feature_encoder_ic.train()
             self.relation_network.train()
             self.ic_model.train()
 
             Tools.print()
+            fe_lr= self.adjust_learning_rate(self.feature_encoder_optim, epoch,
+                                             Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            rn_lr = self.adjust_learning_rate(self.relation_network_optim, epoch,
+                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            ic_lr = self.adjust_learning_rate(self.ic_model_optim, epoch,
+                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            Tools.print('Epoch: [{}] fe_lr={} rn_lr={} ic_lr={}'.format(epoch, fe_lr, rn_lr, ic_lr))
+
             self.produce_class.reset()
             Tools.print(self.task_train.classes)
             all_loss, all_loss_fsl, all_loss_ic = 0.0, 0.0, 0.0
@@ -269,8 +288,7 @@ class Runner(object):
                 ###########################################################################
                 # 1 calculate features
                 relations = self.compare_fsl(task_data)
-                ic_features = self.feature_encoder_ic(task_data[:, -1])
-                ic_out_logits, ic_out_l2norm = self.ic_model(ic_features)
+                ic_out_logits, ic_out_l2norm = self.ic_model(task_data[:, -1])
 
                 # 2
                 ic_targets = self.produce_class.get_label(ic_labels)
@@ -286,16 +304,13 @@ class Runner(object):
 
                 # 4 backward
                 self.feature_encoder.zero_grad()
-                self.feature_encoder_ic.zero_grad()
                 self.relation_network.zero_grad()
                 self.ic_model.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.feature_encoder.parameters(), 0.5)
-                torch.nn.utils.clip_grad_norm_(self.feature_encoder_ic.parameters(), 0.5)
                 torch.nn.utils.clip_grad_norm_(self.relation_network.parameters(), 0.5)
                 torch.nn.utils.clip_grad_norm_(self.ic_model.parameters(), 0.5)
                 self.feature_encoder_optim.step()
-                self.feature_encoder_ic_optim.step()
                 self.relation_network_optim.step()
                 self.ic_model_optim.step()
                 ###########################################################################
@@ -303,21 +318,16 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f} fsl:{:.3f} ic:{:.3f} lr:{}".format(
-                epoch + 1, all_loss / len(self.task_train_loader), all_loss_fsl / len(self.task_train_loader),
-                all_loss_ic / len(self.task_train_loader), self.feature_encoder_scheduler.get_last_lr()))
+            Tools.print("{:6} loss:{:.3f} fsl:{:.3f} ic:{:.3f}".format(
+                epoch + 1, all_loss / len(self.task_train_loader),
+                all_loss_fsl / len(self.task_train_loader), all_loss_ic / len(self.task_train_loader)))
             Tools.print("Train: [{}] {}/{}".format(epoch, self.produce_class.count, self.produce_class.count_2))
-            self.feature_encoder_scheduler.step()
-            self.feature_encoder_ic_scheduler.step()
-            self.relation_network_scheduler.step()
-            self.ic_model_scheduler.step()
             ###########################################################################
 
             ###########################################################################
             # Val
             if epoch % Config.val_freq == 0:
                 self.feature_encoder.eval()
-                self.feature_encoder_ic.eval()
                 self.relation_network.eval()
                 self.ic_model.eval()
 
@@ -327,7 +337,6 @@ class Runner(object):
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
                     torch.save(self.feature_encoder.state_dict(), Config.fe_dir)
-                    torch.save(self.feature_encoder_ic.state_dict(), Config.fe_dir)
                     torch.save(self.relation_network.state_dict(), Config.rn_dir)
                     torch.save(self.ic_model.state_dict(), Config.ic_dir)
                     Tools.print("Save networks for epoch: {}".format(epoch))
@@ -350,34 +359,34 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
     num_workers = 8
-    batch_size = 64
-    val_freq = 10
-
-    learning_rate = 0.001
 
     num_way = 5
     num_shot = 1
+    batch_size = 64
 
+    val_freq = 10
     episode_size = 15
     test_episode = 600
 
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
-    feature_encoder_ic = CNNEncoder()
 
     # ic
-    ic_in_dim = 64
     ic_out_dim = 512
     ic_ratio = 1
 
-    train_epoch = 900
+    learning_rate = 0.01
     loss_fsl_ratio = 10.0
     loss_ic_ratio = 0.1
+    train_epoch = 500
+    first_epoch, t_epoch = 300, 150
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        train_epoch, batch_size, num_way, num_shot, ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
+    model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
+        train_epoch, batch_size, num_way, num_shot, first_epoch,
+        t_epoch, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -386,9 +395,8 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    _root_path = "../models/two_ic_ufsl_2net"
+    _root_path = "../models/two_ic_ufsl_2net_res_sgd"
     fe_dir = Tools.new_dir("{}/{}_fe_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
-    fe_ic_dir = Tools.new_dir("{}/{}_fe_ic_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
     rn_dir = Tools.new_dir("{}/{}_rn_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
     ic_dir = Tools.new_dir("{}/{}_ic_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
     pass
@@ -399,7 +407,6 @@ if __name__ == '__main__':
     # runner.load_model()
 
     # runner.feature_encoder.eval()
-    # runner.feature_encoder_ic.eval()
     # runner.relation_network.eval()
     # runner.ic_model.eval()
     # runner.test_tool_ic.val(epoch=0, is_print=True)
@@ -409,7 +416,6 @@ if __name__ == '__main__':
 
     runner.load_model()
     runner.feature_encoder.eval()
-    runner.feature_encoder_ic.eval()
     runner.relation_network.eval()
     runner.ic_model.eval()
     runner.test_tool_ic.val(epoch=Config.train_epoch, is_print=True)
