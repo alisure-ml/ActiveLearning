@@ -244,7 +244,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     # train_epoch = 300
     train_epoch = 180
@@ -260,7 +260,7 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    z_dim = 64
+    z_dim = 512
 
     proto_net = ProtoResNet(low_dim=z_dim)
 
