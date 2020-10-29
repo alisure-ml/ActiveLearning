@@ -72,7 +72,7 @@ class MiniImageNetDataset(object):
         random.shuffle(c_way_k_shot_index_list)
 
         if len(c_way_k_shot_index_list) != self.num_shot * self.num_way:
-            return self._getitem_train(random.sample(list(range(0, len(self.data_list))), 1)[0])
+            return self.__getitem__(random.sample(list(range(0, len(self.data_list))), 1)[0])
 
         #######################################################################################
         query_list = [now_label_image_tuple]
@@ -280,15 +280,24 @@ class Config(object):
     pass
 
 
+"""
+2020-10-28 17:38:04 load feature encoder success from ../models/ufsl_baseline/1_900_64_5_1_fe_5way_1shot.pkl
+2020-10-28 17:38:04 load relation network success from ../models/ufsl_baseline/1_900_64_5_1_rn_5way_1shot.pkl
+2020-10-28 17:39:48 Train 900 Accuracy: 0.3557777777777778
+2020-10-28 17:39:48 Val   900 Accuracy: 0.33366666666666667
+2020-10-28 17:43:52 episode=900, Mean Test accuracy=0.3588177777777778
+"""
+
+
 if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    runner.feature_encoder.eval()
-    runner.relation_network.eval()
-    runner.test_tool.val(episode=0, is_print=True)
+    # runner.feature_encoder.eval()
+    # runner.relation_network.eval()
+    # runner.test_tool.val(episode=0, is_print=True)
 
-    runner.train()
+    # runner.train()
 
     runner.load_model()
     runner.feature_encoder.eval()

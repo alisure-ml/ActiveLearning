@@ -68,7 +68,7 @@ class MiniImageNetDataset(object):
         random.shuffle(c_way_k_shot_index_list)
 
         if len(c_way_k_shot_index_list) != self.num_shot * self.num_way:
-            return self._getitem_train(random.sample(list(range(0, len(self.data_list))), 1)[0])
+            return self.__getitem__(random.sample(list(range(0, len(self.data_list))), 1)[0])
 
         task_list = [self.data_list[index] for index in c_way_k_shot_index_list] + [now_label_image_tuple]
 

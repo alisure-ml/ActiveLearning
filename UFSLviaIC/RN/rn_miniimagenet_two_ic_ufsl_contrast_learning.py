@@ -69,7 +69,7 @@ class MiniImageNetDataset(object):
         random.shuffle(c_way_k_shot_index_list)
 
         if len(c_way_k_shot_index_list) != self.num_shot * self.num_way:
-            return self._getitem_train(random.sample(list(range(0, len(self.data_list))), 1)[0])
+            return self.__getitem__(random.sample(list(range(0, len(self.data_list))), 1)[0])
 
         #######################################################################################
         query_list = [now_label_image_tuple]
@@ -329,7 +329,13 @@ class Runner(object):
 
 
 """
-
+2020-10-28 13:28:21 Epoch: 720 Train 0.3133/0.6264 0.0000
+2020-10-28 13:28:21 Epoch: 720 Val   0.4637/0.8550 0.0000
+2020-10-28 13:28:21 Epoch: 720 Test  0.4506/0.8370 0.0000
+2020-10-28 13:30:02 Train 720 Accuracy: 0.37977777777777777
+2020-10-28 13:30:02 Val   720 Accuracy: 0.3665555555555556
+2020-10-28 13:30:02 Test1 720 Accuracy: 0.37855555555555553
+2020-10-28 13:30:02 Test2 720 Accuracy: 0.37275555555555556
 """
 
 
@@ -385,7 +391,7 @@ if __name__ == '__main__':
     # runner.test_tool_ic.val(epoch=0, is_print=True)
     # runner.test_tool_fsl.val(episode=0, is_print=True)
 
-    runner.train()
+    # runner.train()
 
     runner.load_model()
     runner.feature_encoder.eval()

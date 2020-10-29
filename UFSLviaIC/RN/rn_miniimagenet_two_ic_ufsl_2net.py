@@ -68,7 +68,7 @@ class MiniImageNetDataset(object):
         random.shuffle(c_way_k_shot_index_list)
 
         if len(c_way_k_shot_index_list) != self.num_shot * self.num_way:
-            return self._getitem_train(random.sample(list(range(0, len(self.data_list))), 1)[0])
+            return self.__getitem__(random.sample(list(range(0, len(self.data_list))), 1)[0])
 
         task_list = [self.data_list[index] for index in c_way_k_shot_index_list] + [now_label_image_tuple]
 
@@ -327,8 +327,8 @@ class Runner(object):
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
                     torch.save(self.feature_encoder.state_dict(), Config.fe_dir)
-                    torch.save(self.feature_encoder_ic.state_dict(), Config.fe_dir)
                     torch.save(self.relation_network.state_dict(), Config.rn_dir)
+                    torch.save(self.feature_encoder_ic.state_dict(), Config.fe_ic_dir)
                     torch.save(self.ic_model.state_dict(), Config.ic_dir)
                     Tools.print("Save networks for epoch: {}".format(epoch))
                     pass
@@ -345,7 +345,15 @@ class Runner(object):
 
 
 """
-
+2020-10-28 22:28:31 Test 790 .......
+2020-10-28 22:28:44 Epoch: 790 Train 0.3160/0.6274 0.0000
+2020-10-28 22:28:44 Epoch: 790 Val   0.4699/0.8591 0.0000
+2020-10-28 22:28:44 Epoch: 790 Test  0.4587/0.8403 0.0000
+2020-10-28 22:30:41 Train 790 Accuracy: 0.4448888888888889
+2020-10-28 22:30:41 Val   790 Accuracy: 0.4188888888888889
+2020-10-28 22:30:41 Test1 790 Accuracy: 0.4295555555555556
+2020-10-28 22:30:41 Test2 790 Accuracy: 0.42331111111111114
+2020-10-28 22:30:41 Save networks for epoch: 790
 """
 
 
@@ -405,12 +413,12 @@ if __name__ == '__main__':
     # runner.test_tool_ic.val(epoch=0, is_print=True)
     # runner.test_tool_fsl.val(episode=0, is_print=True)
 
-    runner.train()
+    # runner.train()
 
     runner.load_model()
     runner.feature_encoder.eval()
-    runner.feature_encoder_ic.eval()
     runner.relation_network.eval()
+    runner.feature_encoder_ic.eval()
     runner.ic_model.eval()
     runner.test_tool_ic.val(epoch=Config.train_epoch, is_print=True)
     runner.test_tool_fsl.val(episode=Config.train_epoch, is_print=True)

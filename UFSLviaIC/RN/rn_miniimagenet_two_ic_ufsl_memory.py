@@ -11,10 +11,10 @@ import torch.nn.functional as F
 from alisuretool.Tools import Tools
 from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
+from torch.utils.data import DataLoader, Dataset
 from rn_miniimagenet_fsl_test_tool import TestTool
 from rn_miniimagenet_ic_test_tool import ICTestTool
-from torch.utils.data import DataLoader, Dataset
-from rn_miniimagenet_tool import ICModel, ProduceClass, ICModel, CNNEncoder, RelationNetwork, ProduceClass, RunnerTool
+from rn_miniimagenet_tool import ICModel, CNNEncoder, RelationNetwork, RunnerTool
 
 
 ##############################################################################################################
@@ -22,9 +22,11 @@ from rn_miniimagenet_tool import ICModel, ProduceClass, ICModel, CNNEncoder, Rel
 
 class MiniImageNetDataset(object):
 
-    def __init__(self, data_list, num_way, num_shot):
+    def __init__(self, data_list, num_way, num_shot, sample_type=1):
         self.data_list, self.num_way, self.num_shot = data_list, num_way, num_shot
         self.classes = None
+        self.features = None
+        self.sample_type = sample_type
 
         self.data_dict = {}
         for index, label, image_filename in self.data_list:
@@ -52,16 +54,39 @@ class MiniImageNetDataset(object):
         self.classes = classes
         pass
 
+    def set_samples_feature(self, features):
+        self.features = features
+        pass
+
     def __getitem__(self, item):
         # 当前样本
         now_label_image_tuple = self.data_list[item]
         now_index, _, now_image_filename = now_label_image_tuple
         _now_label = self.classes[item]
-        now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
+
+        # 簇内随机选
+        if self.sample_type == 1:
+            now_label_k_shot_index = random.sample(list(np.squeeze(np.argwhere(
+                self.classes == _now_label), axis=1)), self.num_shot)
+            pass
+        elif self.sample_type == 2:
+            # 簇内选最相似的
+            _now_clustering_label = np.squeeze(np.argwhere(self.classes == _now_label))
+            _now_clustering_label = _now_clustering_label[_now_clustering_label != item]
+            _now_clustering_distance = np.matmul(self.features[_now_clustering_label], self.features[now_index])
+            now_label_k_shot_index = list(_now_clustering_label[np.argsort(_now_clustering_distance)[::-1][:self.num_shot]])
+        elif self.sample_type == 3:
+            # 整体前100随机选
+            _all_distance = np.matmul(self.features, self.features[now_index])
+            _all_distance_sort = np.argsort(_all_distance)[::-1][1:101]
+            now_label_k_shot_index = random.sample(list(_all_distance_sort), self.num_shot)
+        else:
+            raise Exception("sample_type={}".format(self.sample_type))
+            pass
 
         # 其他样本
-        other_label_k_shot_index_list = self._get_samples_by_clustering_label(_now_label, False,
-                                                                              num=self.num_shot * (self.num_way - 1))
+        other_label_k_shot_index_list = random.sample(list(np.squeeze(np.argwhere(self.classes != _now_label))),
+                                                      self.num_shot * (self.num_way - 1))
 
         # c_way_k_shot
         c_way_k_shot_index_list = now_label_k_shot_index + other_label_k_shot_index_list
@@ -82,13 +107,6 @@ class MiniImageNetDataset(object):
         task_label = torch.Tensor([int(index in now_label_k_shot_index) for index in c_way_k_shot_index_list])
         task_index = torch.Tensor([one[0] for one in task_list]).long()
         return task_data, task_label, task_index
-
-    def _get_samples_by_clustering_label(self, label, is_same_label=False, num=1):
-        if is_same_label:
-            return random.sample(list(np.squeeze(np.argwhere(self.classes == label), axis=1)), num)
-        else:
-            return random.sample(list(np.squeeze(np.argwhere(self.classes != label))), num)
-        pass
 
     @staticmethod
     def read_image(image_path, transform=None):
@@ -120,6 +138,67 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
+class ProduceClass(object):
+
+    def __init__(self, n_sample, out_dim, ratio=1.0):
+        super().__init__()
+        self.out_dim = out_dim
+        self.n_sample = n_sample
+        self.class_per_num = self.n_sample // self.out_dim * ratio
+        self.count = 0
+        self.count_2 = 0
+        self.class_num = np.zeros(shape=(self.out_dim,), dtype=np.int)
+        self.classes = np.zeros(shape=(self.n_sample,), dtype=np.int)
+        self.features = np.random.random((self.n_sample, out_dim))
+        pass
+
+    def init(self):
+        class_per_num = self.n_sample // self.out_dim
+        self.class_num += class_per_num
+        for i in range(self.out_dim):
+            self.classes[i * class_per_num: (i + 1) * class_per_num] = i
+            pass
+        np.random.shuffle(self.classes)
+        pass
+
+    def reset(self):
+        self.count = 0
+        self.count_2 = 0
+        self.class_num *= 0
+        pass
+
+    def cal_label(self, out, indexes):
+        top_k = out.data.topk(self.out_dim, dim=1)[1].cpu()
+        indexes_cpu = indexes.cpu()
+
+        self.features[indexes_cpu] = out.data.cpu()
+
+        batch_size = top_k.size(0)
+        class_labels = np.zeros(shape=(batch_size,), dtype=np.int)
+
+        for i in range(batch_size):
+            for j_index, j in enumerate(top_k[i]):
+                if self.class_per_num > self.class_num[j]:
+                    class_labels[i] = j
+                    self.class_num[j] += 1
+                    self.count += 1 if self.classes[indexes_cpu[i]] != j else 0
+                    self.classes[indexes_cpu[i]] = j
+                    self.count_2 += 1 if j_index != 0 else 0
+                    break
+                pass
+            pass
+        pass
+
+    def get_label(self, indexes):
+        _device = indexes.device
+        return torch.tensor(self.classes[indexes.cpu()]).long().to(_device)
+
+    pass
+
+
+##############################################################################################################
+
+
 class Runner(object):
 
     def __init__(self):
@@ -127,13 +206,15 @@ class Runner(object):
 
         # all data
         self.data_train = MiniImageNetDataset.get_data_all(Config.data_root)
-        self.task_train = MiniImageNetDataset(self.data_train, Config.num_way, Config.num_shot)
+        self.task_train = MiniImageNetDataset(self.data_train, Config.num_way,
+                                              Config.num_shot, sample_type=Config.sample_type)
         self.task_train_loader = DataLoader(self.task_train, Config.batch_size, True, num_workers=Config.num_workers)
 
         # IC
         self.produce_class = ProduceClass(len(self.data_train), Config.ic_out_dim, Config.ic_ratio)
         self.produce_class.init()
         self.task_train.set_samples_class(self.produce_class.classes)
+        self.task_train.set_samples_feature(self.produce_class.features)
 
         # model
         self.feature_encoder = RunnerTool.to_cuda(Config.feature_encoder)
@@ -232,10 +313,11 @@ class Runner(object):
             Tools.print("Init label {} .......")
             self.produce_class.reset()
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
+                ic_labels = RunnerTool.to_cuda(task_index[:, -1])
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
                 relations, query_features = self.compare_fsl(task_data)
                 ic_out_logits, ic_out_l2norm = self.ic_model(query_features)
-                self.produce_class.cal_label(ic_out_l2norm, idx)
+                self.produce_class.cal_label(ic_out_l2norm, ic_labels)
                 pass
             Tools.print("Epoch: {}/{}".format(self.produce_class.count, self.produce_class.count_2))
         finally:
@@ -248,6 +330,7 @@ class Runner(object):
 
             Tools.print()
             self.produce_class.reset()
+            Tools.print(Config.model_name)
             Tools.print(self.task_train.classes)
             all_loss, all_loss_fsl, all_loss_ic = 0.0, 0.0, 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
@@ -326,40 +409,17 @@ class Runner(object):
 
 
 """
-2020-10-22 17:40:35 load feature encoder success from ../models/ic_ufsl/2_64_5_1_fe_5way_1shot.pkl
-2020-10-22 17:40:35 load relation network success from ../models/ic_ufsl/2_64_5_1_rn_5way_1shot.pkl
-2020-10-22 17:40:35 load ic model success from ../models/ic_ufsl/2_64_5_1_ic_5way_1shot.pkl
-2020-10-22 17:40:42 Epoch: [1000] Final Train 0.3321/0.6445
-2020-10-22 17:40:44 Epoch: [1000] Final Val 0.4809/0.8696
-2020-10-22 17:40:47 Epoch: [1000] Final Test 0.4617/0.8492
-my test
-2020-10-22 17:41:17 Val 1000 Final Train Accuracy: 0.46069554316547445
-2020-10-22 17:41:26 Val 1000 Final Val Accuracy: 0.47446542204646336
-2020-10-22 17:41:46 Final Test accuracy: 0.41218151313835116
-2020-10-22 19:25:02 Val 1000 Final Train Accuracy: 0.44598512336185026
-2020-10-22 19:25:09 Val 1000 Final Val Accuracy: 0.4731252974778569
-2020-10-22 19:25:28 Final Test accuracy: 0.42150961229322936
-old test
-2020-10-22 17:45:32 Val 0 Train Accuracy: 0.44966666666666666
-2020-10-22 17:45:49 Val 0 Accuracy: 0.40722222222222226
-2020-10-22 17:50:02 Final accuracy: 0.4325644444444444
-
-1_900_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
-2020-10-26 15:59:07 load feature encoder success from ../models/two_ic_ufsl/1_900_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
-2020-10-26 15:59:07 load relation network success from ../models/two_ic_ufsl/1_900_64_5_1_64_512_1_10.0_0.1_rn_5way_1shot.pkl
-2020-10-26 15:59:07 load ic model success from ../models/two_ic_ufsl/1_900_64_5_1_64_512_1_10.0_0.1_ic_5way_1shot.pkl
-2020-10-26 15:59:07 Test 900 .......
-2020-10-26 15:59:23 Epoch: 900 Train 0.3192/0.6340 0.0000
-2020-10-26 15:59:23 Epoch: 900 Val   0.4765/0.8617 0.0000
-2020-10-26 15:59:23 Epoch: 900 Test  0.4546/0.8434 0.0000
-2020-10-26 16:01:33 Train 900 Accuracy: 0.43788888888888894
-2020-10-26 16:01:33 Val   900 Accuracy: 0.40199999999999997
-2020-10-26 16:06:40 episode=900, Mean Test accuracy=0.42364000000000007
+无效
 """
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # sample_type = 1
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    sample_type = 2
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    # sample_type = 3
 
     num_workers = 8
     batch_size = 64
@@ -380,12 +440,13 @@ class Config(object):
     ic_out_dim = 512
     ic_ratio = 1
 
-    train_epoch = 900
+    train_epoch = 600
     loss_fsl_ratio = 10.0
     loss_ic_ratio = 0.1
 
-    model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        train_epoch, batch_size, num_way, num_shot, ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
+        train_epoch, sample_type, batch_size, num_way, num_shot,
+        ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -394,9 +455,10 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    fe_dir = Tools.new_dir("../models/two_ic_ufsl/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    rn_dir = Tools.new_dir("../models/two_ic_ufsl/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
-    ic_dir = Tools.new_dir("../models/two_ic_ufsl/{}_ic_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    root_name = "../models/two_ic_ufsl_memory"
+    fe_dir = Tools.new_dir("{}/{}_fe_{}way_{}shot.pkl".format(root_name, model_name, num_way, num_shot))
+    rn_dir = Tools.new_dir("{}/{}_rn_{}way_{}shot.pkl".format(root_name, model_name, num_way, num_shot))
+    ic_dir = Tools.new_dir("{}/{}_ic_{}way_{}shot.pkl".format(root_name, model_name, num_way, num_shot))
     pass
 
 
@@ -404,11 +466,11 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    runner.feature_encoder.eval()
-    runner.relation_network.eval()
-    runner.ic_model.eval()
-    runner.test_tool_ic.val(epoch=0, is_print=True)
-    runner.test_tool_fsl.val(episode=0, is_print=True)
+    # runner.feature_encoder.eval()
+    # runner.relation_network.eval()
+    # runner.ic_model.eval()
+    # runner.test_tool_ic.val(epoch=0, is_print=True)
+    # runner.test_tool_fsl.val(episode=0, is_print=True)
 
     runner.train()
 

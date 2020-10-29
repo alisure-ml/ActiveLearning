@@ -69,7 +69,7 @@ class MiniImageNetDataset(object):
         random.shuffle(c_way_k_shot_index_list)
 
         if len(c_way_k_shot_index_list) != self.num_shot * self.num_way:
-            return self._getitem_train(random.sample(list(range(0, len(self.data_list))), 1)[0])
+            return self.__getitem__(random.sample(list(range(0, len(self.data_list))), 1)[0])
 
         task_list = [self.data_list[index] for index in c_way_k_shot_index_list] + [now_label_image_tuple]
 
@@ -347,7 +347,14 @@ class Runner(object):
 
 
 """
-
+1_900_64_5_1_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-10-29 04:20:54 Test 900 .......
+2020-10-29 04:21:07 Epoch: 900 Train 0.3735/0.6796 0.0000
+2020-10-29 04:21:07 Epoch: 900 Val   0.4946/0.8709 0.0000
+2020-10-29 04:21:07 Epoch: 900 Test  0.4814/0.8526 0.0000
+2020-10-29 04:22:52 Train 900 Accuracy: 0.42933333333333334
+2020-10-29 04:22:52 Val   900 Accuracy: 0.4002222222222222
+2020-10-29 04:27:03 episode=900, Mean Test accuracy=0.4115511111111111
 """
 
 
