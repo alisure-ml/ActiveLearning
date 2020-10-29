@@ -307,9 +307,9 @@ class Runner(object):
                 self.relation_network.zero_grad()
                 self.ic_model.zero_grad()
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.feature_encoder.parameters(), 0.5)
-                torch.nn.utils.clip_grad_norm_(self.relation_network.parameters(), 0.5)
-                torch.nn.utils.clip_grad_norm_(self.ic_model.parameters(), 0.5)
+                # torch.nn.utils.clip_grad_norm_(self.feature_encoder.parameters(), 0.5)
+                # torch.nn.utils.clip_grad_norm_(self.relation_network.parameters(), 0.5)
+                # torch.nn.utils.clip_grad_norm_(self.ic_model.parameters(), 0.5)
                 self.feature_encoder_optim.step()
                 self.relation_network_optim.step()
                 self.ic_model_optim.step()
@@ -359,7 +359,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     num_workers = 8
 
@@ -380,9 +380,14 @@ class Config(object):
     learning_rate = 0.01
     loss_fsl_ratio = 10.0
     loss_ic_ratio = 0.1
-    train_epoch = 500
-    first_epoch, t_epoch = 300, 150
-    adjust_learning_rate = RunnerTool.adjust_learning_rate2
+
+    # train_epoch = 500
+    # first_epoch, t_epoch = 300, 150
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
+
+    train_epoch = 2100
+    first_epoch, t_epoch = 500, 200
+    adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
     model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
         train_epoch, batch_size, num_way, num_shot, first_epoch,
