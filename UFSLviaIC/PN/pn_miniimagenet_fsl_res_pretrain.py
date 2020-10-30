@@ -9,6 +9,7 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
+from torchvision.models import resnet18
 from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
@@ -34,8 +35,13 @@ class MiniImageNetDataset(object):
         normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
                                          std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
         self.transform = transforms.Compose([
-            transforms.RandomCrop(84, padding=8),
+            transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
+            transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+
+        # self.transform = transforms.Compose([
+        #     transforms.RandomCrop(84, padding=8),
+        #     transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
         pass
 
@@ -98,6 +104,20 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
+class ProtoResNet(nn.Module):
+
+    def __init__(self, low_dim):
+        super().__init__()
+        self.resnet = resnet18(num_classes=low_dim)
+        pass
+
+    def forward(self, x):
+        out = self.resnet(x)
+        return out
+
+    pass
+
+
 class Runner(object):
 
     def __init__(self):
@@ -123,9 +143,15 @@ class Runner(object):
         pass
 
     def load_model(self):
+        if os.path.exists(Config.pn_pretrain):
+            self.proto_net.load_state_dict(torch.load(Config.pn_pretrain))
+            Tools.print("load proto net success from {}".format(Config.pn_pretrain))
+            pass
+
         if os.path.exists(Config.pn_dir):
             self.proto_net.load_state_dict(torch.load(Config.pn_dir))
             Tools.print("load proto net success from {}".format(Config.pn_dir))
+            pass
         pass
 
     def proto(self, task_data):
@@ -167,8 +193,7 @@ class Runner(object):
         Tools.print("Training...")
 
         for epoch in range(Config.train_epoch):
-            if Config.has_train:
-                self.proto_net.train()
+            self.proto_net.train()
 
             Tools.print()
             all_loss = 0.0
@@ -204,9 +229,7 @@ class Runner(object):
                 Tools.print()
                 Tools.print("Test {} {} .......".format(epoch, Config.model_name))
 
-                if Config.has_eval:
-                    self.proto_net.eval()
-
+                self.proto_net.eval()
                 val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
@@ -223,11 +246,11 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
     # train_epoch = 300
     train_epoch = 180
-    learning_rate = 0.001
+    learning_rate = 0.00001
     num_workers = 8
 
     val_freq = 10
@@ -239,16 +262,12 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    hid_dim = 64
-    z_dim = 64
+    z_dim = 512
 
-    proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim)
+    proto_net = ProtoResNet(low_dim=z_dim)
+    pn_pretrain = "../models/ic_res_no_val/1_32_512_1_500_200_0.01_ic.pkl"
 
-    has_train = True
-    has_eval = True
-    # has_train = False
-    # has_eval = False
-    model_name = "2_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, hid_dim, z_dim, has_eval, has_train)
+    model_name = "3_{}_{}_{}_{}".format(train_epoch, batch_size, z_dim, learning_rate)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -257,7 +276,7 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    pn_dir = Tools.new_dir("../models_pn/fsl/{}_pn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    pn_dir = Tools.new_dir("../models_pn/fsl_res_pretrain/{}_pn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     pass
 
 
@@ -265,40 +284,25 @@ class Config(object):
 
 
 """
-1_180_64_64_64_True_True_pn_5way_1shot
-2020-10-26 16:03:50 load proto net success from ../models_pn/fsl/1_180_64_64_64_True_True_pn_5way_1shot.pkl
-2020-10-26 16:05:20 Train 180 Accuracy: 0.6492222222222221
-2020-10-26 16:05:20 Val   180 Accuracy: 0.48955555555555547
-2020-10-26 16:08:59 episode=180, Mean Test accuracy=0.4939555555555556
-
-2_180_64_64_64_True_True_pn_5way_1shot
-2020-10-27 23:31:16 load proto net success from ../models_pn/fsl/2_180_64_64_64_True_True_pn_5way_1shot.pkl
-2020-10-27 23:32:56 Train 180 Accuracy: 0.6503333333333333
-2020-10-27 23:32:56 Val   180 Accuracy: 0.49388888888888893
-2020-10-27 23:37:00 episode=180, Mean Test accuracy=0.48993777777777775
-
-2_180_64_64_64_True_True_pn_5way_1shot.pkl
-2020-10-29 15:26:04 load proto net success from ../models_pn/fsl/2_180_64_64_64_True_True_pn_5way_1shot.pkl
-2020-10-29 15:27:39 Train 180 Accuracy: 0.643888888888889
-2020-10-29 15:27:39 Val   180 Accuracy: 0.49644444444444447
-2020-10-29 15:31:20 episode=180, Mean Test accuracy=0.4945288888888889
-
+2020-10-30 04:13:23 load proto net success from ../models/ic_res_no_val/1_32_512_1_500_200_0.01_ic.pkl
+2020-10-30 04:13:23 load proto net success from ../models_pn/fsl_res_pretrain/3_180_64_512_1e-05_pn_5way_1shot.pkl
+2020-10-30 04:15:55 Train 180 Accuracy: 0.8291111111111111
+2020-10-30 04:15:55 Val   180 Accuracy: 0.5368888888888889
+2020-10-30 04:23:12 episode=180, Mean Test accuracy=0.5208666666666667
 """
 
 
 if __name__ == '__main__':
     runner = Runner()
-    # runner.load_model()
+    runner.load_model()
 
-    if Config.has_eval:
-        runner.proto_net.eval()
+    runner.proto_net.eval()
     runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 
     runner.load_model()
-    if Config.has_eval:
-        runner.proto_net.eval()
+    runner.proto_net.eval()
     runner.test_tool.val(episode=Config.train_epoch, is_print=True)
     runner.test_tool.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
     pass

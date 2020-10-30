@@ -9,12 +9,12 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-from torchvision.models import resnet18
+from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
-from torch.utils.data import DataLoader, Dataset
 from rn_miniimagenet_fsl_test_tool import TestTool
 from rn_miniimagenet_ic_test_tool import ICTestTool
-from rn_miniimagenet_tool import ICModel, ProduceClass, Normalize, CNNEncoder, RelationNetwork, RunnerTool
+from torch.utils.data import DataLoader, Dataset
+from rn_miniimagenet_tool import ICModel, ProduceClass, ICModel, CNNEncoder, RelationNetwork, ProduceClass, RunnerTool
 
 
 ##############################################################################################################
@@ -120,33 +120,10 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
-class ICResNet(nn.Module):
-
-    def __init__(self, low_dim=512):
-        super().__init__()
-        self.resnet = resnet18(num_classes=low_dim)
-        self.l2norm = Normalize(2)
-        pass
-
-    def forward(self, x):
-        out_logits = self.resnet(x)
-        out_l2norm = self.l2norm(out_logits)
-        return out_logits, out_l2norm
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-##############################################################################################################
-
-
 class Runner(object):
 
     def __init__(self):
         self.best_accuracy = 0.0
-        self.adjust_learning_rate = Config.adjust_learning_rate
 
         # all data
         self.data_train = MiniImageNetDataset.get_data_all(Config.data_root)
@@ -161,19 +138,20 @@ class Runner(object):
         # model
         self.feature_encoder = RunnerTool.to_cuda(Config.feature_encoder)
         self.relation_network = RunnerTool.to_cuda(Config.relation_network)
-        self.ic_model = RunnerTool.to_cuda(ICResNet(low_dim=Config.ic_out_dim))
+        self.ic_model = RunnerTool.to_cuda(ICModel(in_dim=Config.ic_in_dim, out_dim=Config.ic_out_dim))
 
         RunnerTool.to_cuda(self.feature_encoder.apply(RunnerTool.weights_init))
         RunnerTool.to_cuda(self.relation_network.apply(RunnerTool.weights_init))
         RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
 
         # optim
-        self.feature_encoder_optim = torch.optim.SGD(
-            self.feature_encoder.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
-        self.relation_network_optim = torch.optim.SGD(
-            self.relation_network.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
-        self.ic_model_optim = torch.optim.SGD(
-            self.ic_model.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
+        self.feature_encoder_optim = torch.optim.Adam(self.feature_encoder.parameters(), lr=Config.learning_rate_small)
+        self.relation_network_optim = torch.optim.Adam(self.relation_network.parameters(), lr=Config.learning_rate)
+        self.ic_model_optim = torch.optim.Adam(self.ic_model.parameters(), lr=Config.learning_rate_small)
+
+        self.feature_encoder_scheduler = StepLR(self.feature_encoder_optim, Config.train_epoch // 3, gamma=0.5)
+        self.relation_network_scheduler = StepLR(self.relation_network_optim, Config.train_epoch // 3, gamma=0.5)
+        self.ic_model_scheduler = StepLR(self.ic_model_optim, Config.train_epoch // 3, gamma=0.5)
 
         # loss
         self.ic_loss = RunnerTool.to_cuda(nn.CrossEntropyLoss())
@@ -184,12 +162,20 @@ class Runner(object):
                                       num_way=Config.num_way, num_shot=Config.num_shot,
                                       episode_size=Config.episode_size, test_episode=Config.test_episode,
                                       transform=self.task_train.transform_test)
-        self.test_tool_ic = ICTestTool(feature_encoder=None, ic_model=self.ic_model,
+        self.test_tool_ic = ICTestTool(feature_encoder=self.feature_encoder, ic_model=self.ic_model,
                                        data_root=Config.data_root, batch_size=Config.batch_size,
                                        num_workers=Config.num_workers, ic_out_dim=Config.ic_out_dim)
         pass
 
     def load_model(self):
+        if os.path.exists(Config.fe_pretrain):
+            self.feature_encoder.load_state_dict(torch.load(Config.fe_pretrain))
+            Tools.print("load feature encoder success from {}".format(Config.fe_pretrain))
+
+        if os.path.exists(Config.ic_pretrain):
+            self.ic_model.load_state_dict(torch.load(Config.ic_pretrain))
+            Tools.print("load ic model success from {}".format(Config.ic_pretrain))
+
         if os.path.exists(Config.fe_dir):
             self.feature_encoder.load_state_dict(torch.load(Config.fe_dir))
             Tools.print("load feature encoder success from {}".format(Config.fe_dir))
@@ -222,8 +208,7 @@ class Runner(object):
 
         relations = self.relation_network(relation_pairs)
         relations = relations.view(-1, Config.num_way * Config.num_shot)
-
-        return relations
+        return relations, data_features_query.squeeze()
 
     def compare_fsl_test(self, samples, batches):
         # calculate features
@@ -254,11 +239,14 @@ class Runner(object):
             self.ic_model.eval()
             Tools.print("Init label {} .......")
             self.produce_class.reset()
-            for task_data, task_labels, task_index in tqdm(self.task_train_loader):
-                ic_labels = RunnerTool.to_cuda(task_index[:, -1])
-                task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
-                ic_out_logits, ic_out_l2norm = self.ic_model(task_data[:, -1])
-                self.produce_class.cal_label(ic_out_l2norm, ic_labels)
+            with torch.no_grad():
+                for task_data, task_labels, task_index in tqdm(self.task_train_loader):
+                    ic_labels = RunnerTool.to_cuda(task_index[:, -1])
+                    task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
+                    relations, query_features = self.compare_fsl(task_data)
+                    ic_out_logits, ic_out_l2norm = self.ic_model(query_features)
+                    self.produce_class.cal_label(ic_out_l2norm, ic_labels)
+                    pass
                 pass
             Tools.print("Epoch: {}/{}".format(self.produce_class.count, self.produce_class.count_2))
         finally:
@@ -270,14 +258,6 @@ class Runner(object):
             self.ic_model.train()
 
             Tools.print()
-            fe_lr= self.adjust_learning_rate(self.feature_encoder_optim, epoch,
-                                             Config.first_epoch, Config.t_epoch, Config.learning_rate)
-            rn_lr = self.adjust_learning_rate(self.relation_network_optim, epoch,
-                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
-            ic_lr = self.adjust_learning_rate(self.ic_model_optim, epoch,
-                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
-            Tools.print('Epoch: [{}] fe_lr={} rn_lr={} ic_lr={}'.format(epoch, fe_lr, rn_lr, ic_lr))
-
             self.produce_class.reset()
             Tools.print(self.task_train.classes)
             all_loss, all_loss_fsl, all_loss_ic = 0.0, 0.0, 0.0
@@ -287,8 +267,8 @@ class Runner(object):
 
                 ###########################################################################
                 # 1 calculate features
-                relations = self.compare_fsl(task_data)
-                ic_out_logits, ic_out_l2norm = self.ic_model(task_data[:, -1])
+                relations, query_features = self.compare_fsl(task_data)
+                ic_out_logits, ic_out_l2norm = self.ic_model(query_features)
 
                 # 2
                 ic_targets = self.produce_class.get_label(ic_labels)
@@ -307,9 +287,9 @@ class Runner(object):
                 self.relation_network.zero_grad()
                 self.ic_model.zero_grad()
                 loss.backward()
-                # torch.nn.utils.clip_grad_norm_(self.feature_encoder.parameters(), 0.5)
-                # torch.nn.utils.clip_grad_norm_(self.relation_network.parameters(), 0.5)
-                # torch.nn.utils.clip_grad_norm_(self.ic_model.parameters(), 0.5)
+                torch.nn.utils.clip_grad_norm_(self.feature_encoder.parameters(), 0.5)
+                torch.nn.utils.clip_grad_norm_(self.relation_network.parameters(), 0.5)
+                torch.nn.utils.clip_grad_norm_(self.ic_model.parameters(), 0.5)
                 self.feature_encoder_optim.step()
                 self.relation_network_optim.step()
                 self.ic_model_optim.step()
@@ -318,10 +298,13 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f} fsl:{:.3f} ic:{:.3f}".format(
-                epoch + 1, all_loss / len(self.task_train_loader),
-                all_loss_fsl / len(self.task_train_loader), all_loss_ic / len(self.task_train_loader)))
+            Tools.print("{:6} loss:{:.3f} fsl:{:.3f} ic:{:.3f} lr:{}".format(
+                epoch + 1, all_loss / len(self.task_train_loader), all_loss_fsl / len(self.task_train_loader),
+                all_loss_ic / len(self.task_train_loader), self.feature_encoder_scheduler.get_last_lr()))
             Tools.print("Train: [{}] {}/{}".format(epoch, self.produce_class.count, self.produce_class.count_2))
+            self.feature_encoder_scheduler.step()
+            self.relation_network_scheduler.step()
+            self.ic_model_scheduler.step()
             ###########################################################################
 
             ###########################################################################
@@ -354,24 +337,38 @@ class Runner(object):
 
 
 """
-2020-10-30 02:56:11 load feature encoder success from ../models/two_ic_ufsl_2net_res_sgd/1_500_64_5_1_300_150_512_1_10.0_0.1_fe_5way_1shot.pkl
-2020-10-30 02:56:11 load relation network success from ../models/two_ic_ufsl_2net_res_sgd/1_500_64_5_1_300_150_512_1_10.0_0.1_rn_5way_1shot.pkl
-2020-10-30 02:56:11 load ic model success from ../models/two_ic_ufsl_2net_res_sgd/1_500_64_5_1_300_150_512_1_10.0_0.1_ic_5way_1shot.pkl
+two_ic_ufsl_pretrain/3_300_64_5_1_64_512_100_10.0_0.1_ic_5way_1shot.pkl
+2020-10-30 11:44:36 load feature encoder success from ../models/ic/1_64_512_1_500_200_0.01_fe.pkl
+2020-10-30 11:44:36 load ic model success from ../models/ic/1_64_512_1_500_200_0.01_ic.pkl
+2020-10-30 11:44:36 Test 300 .......
+2020-10-30 11:44:47 Epoch: 300 Train 0.3072/0.6157 0.0000
+2020-10-30 11:44:47 Epoch: 300 Val   0.4546/0.8554 0.0000
+2020-10-30 11:44:47 Epoch: 300 Test  0.4286/0.8273 0.0000
+2020-10-30 11:46:20 Train 300 Accuracy: 0.4142222222222222
+2020-10-30 11:46:20 Val   300 Accuracy: 0.37522222222222223
+2020-10-30 11:50:05 episode=300, Mean Test accuracy=0.40342666666666666
 
-2020-10-30 02:56:11 Test 500 .......
-2020-10-30 02:56:25 Epoch: 500 Train 0.2992/0.6143 0.0000
-2020-10-30 02:56:25 Epoch: 500 Val   0.4539/0.8554 0.0000
-2020-10-30 02:56:25 Epoch: 500 Test  0.4066/0.8147 0.0000
-2020-10-30 02:58:03 Train 500 Accuracy: 0.44377777777777777
-2020-10-30 02:58:03 Val   500 Accuracy: 0.4174444444444444
-2020-10-30 02:58:03 Test1 500 Accuracy: 0.41544444444444445
-2020-10-30 02:58:03 Test2 500 Accuracy: 0.42151111111111117
-2020-10-30 03:02:04 episode=500, Test accuracy=0.41426666666666667
-2020-10-30 03:02:04 episode=500, Test accuracy=0.4197111111111111
-2020-10-30 03:02:04 episode=500, Test accuracy=0.42457777777777783
-2020-10-30 03:02:04 episode=500, Test accuracy=0.41842222222222225
-2020-10-30 03:02:04 episode=500, Test accuracy=0.4243777777777778
-2020-10-30 03:02:04 episode=500, Mean Test accuracy=0.42027111111111115
+two_ic_ufsl_pretrain/1_300_64_5_1_64_512_100_10.0_0.1_ic_5way_1shot.pkl
+2020-10-30 06:55:03 load feature encoder success from ../models/ic/1_64_512_1_500_200_0.01_fe.pkl
+2020-10-30 06:55:03 load ic model success from ../models/ic/1_64_512_1_500_200_0.01_ic.pkl
+2020-10-30 06:55:03 Test 300 .......
+2020-10-30 06:55:14 Epoch: 300 Train 0.3376/0.6585 0.0000
+2020-10-30 06:55:14 Epoch: 300 Val   0.4809/0.8662 0.0000
+2020-10-30 06:55:14 Epoch: 300 Test  0.4627/0.8489 0.0000
+2020-10-30 06:57:05 Train 300 Accuracy: 0.43588888888888894
+2020-10-30 06:57:05 Val   300 Accuracy: 0.3997777777777778
+2020-10-30 07:01:25 episode=300, Mean Test accuracy=0.43359555555555557
+
+two_ic_ufsl_pretrain/3_300_64_5_1_64_512_2_10.0_0.1_fe_5way_1shot.pkl
+2020-10-30 12:22:41 load feature encoder success from ../models/ic/1_64_512_1_500_200_0.01_fe.pkl
+2020-10-30 12:22:41 load ic model success from ../models/ic/1_64_512_1_500_200_0.01_ic.pkl
+2020-10-30 12:22:41 Test 300 .......
+2020-10-30 12:22:51 Epoch: 300 Train 0.3424/0.6595 0.0000
+2020-10-30 12:22:51 Epoch: 300 Val   0.4932/0.8759 0.0000
+2020-10-30 12:22:51 Epoch: 300 Test  0.4741/0.8570 0.0000
+2020-10-30 12:24:19 Train 300 Accuracy: 0.46644444444444444
+2020-10-30 12:24:19 Val   300 Accuracy: 0.4245555555555556
+2020-10-30 12:27:54 episode=300, Mean Test accuracy=0.4384088888888889
 """
 
 
@@ -379,36 +376,34 @@ class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
     num_workers = 8
+    batch_size = 64
+    val_freq = 2
+
+    learning_rate = 0.001
+    learning_rate_small = 0.001
 
     num_way = 5
     num_shot = 1
-    batch_size = 64
 
-    val_freq = 10
     episode_size = 15
     test_episode = 600
 
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
 
-    # ic
-    ic_out_dim = 512
-    ic_ratio = 1
+    fe_pretrain = "../models/ic/1_64_512_1_500_200_0.01_fe.pkl"
+    ic_pretrain = "../models/ic/1_64_512_1_500_200_0.01_ic.pkl"
 
-    learning_rate = 0.01
+    # ic
+    ic_in_dim = 64
+    ic_out_dim = 512
+    ic_ratio = 2
+
+    train_epoch = 300
     loss_fsl_ratio = 10.0
     loss_ic_ratio = 0.1
 
-    train_epoch = 500
-    first_epoch, t_epoch = 300, 150
-    adjust_learning_rate = RunnerTool.adjust_learning_rate2
-
-    # train_epoch = 2100
-    # first_epoch, t_epoch = 500, 200
-    # adjust_learning_rate = RunnerTool.adjust_learning_rate1
-
-    model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        train_epoch, batch_size, num_way, num_shot, first_epoch,
-        t_epoch, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
+    model_name = "4_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
+        train_epoch, batch_size, num_way, num_shot, ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -417,22 +412,22 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    _root_path = "../models/two_ic_ufsl_2net_res_sgd"
-    fe_dir = Tools.new_dir("{}/{}_fe_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
-    rn_dir = Tools.new_dir("{}/{}_rn_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
-    ic_dir = Tools.new_dir("{}/{}_ic_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
+    root_path = "../models/two_ic_ufsl_pretrain"
+    fe_dir = Tools.new_dir("{}/{}_fe_{}way_{}shot.pkl".format(root_path, model_name, num_way, num_shot))
+    rn_dir = Tools.new_dir("{}/{}_rn_{}way_{}shot.pkl".format(root_path, model_name, num_way, num_shot))
+    ic_dir = Tools.new_dir("{}/{}_ic_{}way_{}shot.pkl".format(root_path, model_name, num_way, num_shot))
     pass
 
 
 if __name__ == '__main__':
     runner = Runner()
-    # runner.load_model()
+    runner.load_model()
 
-    # runner.feature_encoder.eval()
-    # runner.relation_network.eval()
-    # runner.ic_model.eval()
-    # runner.test_tool_ic.val(epoch=0, is_print=True)
-    # runner.test_tool_fsl.val(episode=0, is_print=True)
+    runner.feature_encoder.eval()
+    runner.relation_network.eval()
+    runner.ic_model.eval()
+    runner.test_tool_ic.val(epoch=0, is_print=True)
+    runner.test_tool_fsl.val(episode=0, is_print=True)
 
     runner.train()
 
