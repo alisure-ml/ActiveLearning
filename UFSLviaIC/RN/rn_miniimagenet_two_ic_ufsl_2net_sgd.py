@@ -9,7 +9,6 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from rn_miniimagenet_fsl_test_tool import TestTool
@@ -356,7 +355,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
     num_workers = 8
 
@@ -373,8 +372,22 @@ class Config(object):
 
     # ic
     ic_in_dim = 64
+
+    # 0
+    # ic_out_dim = 512
+    # ic_ratio = 1
+
+    # 1
+    # ic_out_dim = 128
+    # ic_ratio = 1
+
+    # 2
+    # ic_out_dim = 128
+    # ic_ratio = 3
+
+    # 3
     ic_out_dim = 512
-    ic_ratio = 1
+    ic_ratio = 3
 
     learning_rate = 0.01
     loss_fsl_ratio = 10.0
@@ -388,7 +401,7 @@ class Config(object):
     first_epoch, t_epoch = 500, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
-    model_name = "1_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
+    model_name = "3_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
         train_epoch, batch_size, first_epoch, t_epoch, num_way, num_shot,
         ic_in_dim, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
 
