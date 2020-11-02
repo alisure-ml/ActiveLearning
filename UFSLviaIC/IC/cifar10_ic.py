@@ -412,8 +412,10 @@ class ICRunner(object):
 
                 out_logits, out_l2norm = self.net(inputs)
 
-                self.produce_class1.cal_label(out_l2norm, indexes)
-                targets = self.produce_class2.get_label(indexes)
+                # self.produce_class1.cal_label(out_l2norm, indexes)
+                # targets = self.produce_class2.get_label(indexes)
+                targets = self.produce_class.get_label(indexes)
+                self.produce_class.cal_label(out_l2norm, indexes)
 
                 loss = self.criterion(out_logits, targets)
                 loss.backward()
