@@ -534,7 +534,7 @@ class MixUpRunner(object):
 
 
 class Config(object):
-    gpu_id = "3"
+    gpu_id = "0"
 
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
 
@@ -545,17 +545,17 @@ class Config(object):
     low_dim = 512
     ratio = 2
 
-    mix_ratio = 1.0
+    mix_ratio = 100.0
 
     if gpu_id == "0":
         has_mix = False
-        has_ic_2 = False
-    elif gpu_id == "1":
-        has_mix = False
         has_ic_2 = True
-    elif gpu_id == "2":
+    elif gpu_id == "1":
         has_mix = True
         has_ic_2 = True
+    elif gpu_id == "2":
+        has_mix = False
+        has_ic_2 = False
     elif gpu_id == "3":
         has_mix = True
         has_ic_2 = False
