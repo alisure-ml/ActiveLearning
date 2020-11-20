@@ -26,13 +26,16 @@ class MiniImageNetDataset(object):
 
         normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
                                          std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
+
         self.transform_train_ic = transforms.Compose([
             transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+
         self.transform_train_fsl = transforms.Compose([
             transforms.RandomCrop(84, padding=8),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+
         self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
         pass
 
