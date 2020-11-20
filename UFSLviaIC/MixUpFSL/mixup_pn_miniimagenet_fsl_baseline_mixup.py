@@ -80,14 +80,26 @@ class MiniImageNetDataset(object):
         random.shuffle(c_way_k_shot_tuple_list)
 
         task_list = c_way_k_shot_tuple_list + [now_label_image_tuple]
-        task_data = torch.cat([torch.unsqueeze(self.read_image(one[2], self.transform), dim=0) for one in task_list])
+
+        task_data = torch.cat([torch.unsqueeze(self.read_image(
+            one[2], self.transform, random.sample(self.data_list, 1)[0][2]), dim=0) for one in task_list])
+        # task_data = torch.cat([torch.unsqueeze(self.read_image(one[2], self.transform), dim=0) for one in task_list])
+
         task_label = torch.Tensor([int(one_tuple[1] == now_label) for one_tuple in c_way_k_shot_tuple_list])
         task_index = torch.Tensor([one[0] for one in task_list]).long()
         return task_data, task_label, task_index
 
     @staticmethod
-    def read_image(image_path, transform=None):
+    def read_image(image_path, transform=None, image_path_2=None):
         image = Image.open(image_path).convert('RGB')
+
+        if image_path_2 is not None:
+            image_2 = Image.open(image_path_2).convert("RGB")
+            rand_n = np.random.rand(1) / 3
+            data_2 = rand_n * np.asarray(image_2) + (1 - rand_n) * np.asarray(image)
+            image = Image.fromarray(np.asarray(data_2, dtype=np.uint8))
+            pass
+
         if transform is not None:
             image = transform(image)
         return image
@@ -220,7 +232,8 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    gpu_id = 2
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     # train_epoch = 300
     train_epoch = 180
@@ -241,7 +254,7 @@ class Config(object):
 
     proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim)
 
-    model_name = "1_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, hid_dim, z_dim, has_eval, has_train)
+    model_name = "{}_{}_{}_{}_{}".format(gpu_id, train_epoch, batch_size, hid_dim, z_dim)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -260,10 +273,11 @@ class Config(object):
 
 
 """
-2020-11-20 17:19:15 load proto net success from ../models_pn/mixup_fsl/1_180_64_64_64_pn_5way_1shot.pkl
-2020-11-20 17:21:02 Train 180 Accuracy: 0.6443333333333334
-2020-11-20 17:21:02 Val   180 Accuracy: 0.4992222222222222
-2020-11-20 17:25:08 episode=180, Mean Test accuracy=0.4986711111111111
+1 / 3
+2020-11-20 17:34:03 load proto net success from ../models_pn/mixup_fsl/2_180_64_64_64_pn_5way_1shot.pkl
+2020-11-20 17:35:25 Train 180 Accuracy: 0.615111111111111
+2020-11-20 17:35:25 Val   180 Accuracy: 0.485
+2020-11-20 17:38:45 episode=180, Mean Test accuracy=0.49184
 """
 
 

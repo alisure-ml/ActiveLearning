@@ -132,6 +132,7 @@ class Runner(object):
                                   transform=self.task_train.transform_test)
 
         # loss
+        self.cosine_loss = torch.nn.CosineEmbeddingLoss()
         self.triple_margin_loss = torch.nn.TripletMarginLoss()
         pass
 
@@ -141,22 +142,54 @@ class Runner(object):
             Tools.print("load proto net success from {}".format(Config.pn_dir))
         pass
 
+    def mixup_loss2(self, z, beta_lambda):
+        batch_size, num, c, w, h = z.shape
+        z = z.view(batch_size, num, -1)
+        x_a, x_1, x_2, x_a1, x_12, x_a2 = [torch.squeeze(one) for one in z.split(split_size=1, dim=1)]
+
+        bl_tile = RunnerTool.to_cuda(torch.tensor(np.tile(beta_lambda[..., None], [c * w * h])))
+        p_1_1, p_2_1, p_3_1, p_1_2, p_2_2, p_3_2 = [torch.squeeze(one) for one in bl_tile.split(split_size=1, dim=1)]
+
+        targets_0 = RunnerTool.to_cuda(torch.tensor(-np.ones(batch_size)))
+        targets_1 = RunnerTool.to_cuda(torch.tensor(np.ones(batch_size)))
+
+        cosine_1 = self.cosine_loss(x_1, x_a, targets_1)
+        cosine_2 = self.cosine_loss(x_1, x_2, targets_0)
+        cosine_3 = self.cosine_loss(x_a, x_2, targets_0)
+        cosine_4 = self.cosine_loss(x_a1, x_a, targets_1)
+        cosine_5 = self.cosine_loss(x_a1, x_1, targets_1)
+        cosine_6 = self.cosine_loss(x_a1, x_2, targets_0)
+        loss_cosine = cosine_1 + cosine_2 + cosine_3 + cosine_4 + cosine_5 + cosine_6
+
+        cosine_7 = self.cosine_loss(p_1_1 * x_a + p_1_2 * x_1, x_a1, targets_1)
+        cosine_8 = self.cosine_loss(p_2_1 * x_1 + p_2_2 * x_2, x_12, targets_1)
+        cosine_9 = self.cosine_loss(p_3_1 * x_2 + p_3_2 * x_a, x_a2, targets_1)
+
+        loss_mixup = cosine_7 + cosine_8 + cosine_9
+        loss_mixup = loss_mixup * Config.mix_ratio
+
+        # 2 loss
+        loss = loss_cosine + loss_mixup
+
+        return loss, loss_cosine, loss_mixup
+
     def mixup_loss(self, z, beta_lambda):
         batch_size, num, c, w, h = z.shape
-        x_a, x_1, x_2, x_a1, x_12, x_a2 = z.split(split_size=1, dim=1)
+        z = z.view(batch_size, num, -1)
+        x_a, x_1, x_2, x_a1, x_12, x_a2 = [torch.squeeze(one) for one in z.split(split_size=1, dim=1)]
 
-        beta_lambda_tile = torch.tensor(np.tile(beta_lambda[..., None, None, None], [c, w, h]))
-        beta_lambda_tile = RunnerTool.to_cuda(beta_lambda_tile)
-        p_1_1, p_2_1, p_3_1, p_1_2, p_2_2, p_3_2 = beta_lambda_tile.split(split_size=1, dim=1)
+        bl_tile = RunnerTool.to_cuda(torch.tensor(np.tile(beta_lambda[..., None], [c * w * h])))
+        p_1_1, p_2_1, p_3_1, p_1_2, p_2_2, p_3_2 = [torch.squeeze(one) for one in bl_tile.split(split_size=1, dim=1)]
 
         triple_1 = self.triple_margin_loss(x_1, x_a, x_2) + self.triple_margin_loss(x_a, x_1, x_2)
         triple_2 = self.triple_margin_loss(x_a1, x_a, x_2) + self.triple_margin_loss(x_a1, x_1, x_2)
         loss_triple = triple_1 + triple_2
 
-        mixup_1 = torch.mean(torch.sum(torch.pow(p_1_1 * x_a + p_1_2 * x_1 - x_a1, 2), dim=1)) * Config.mix_ratio
-        mixup_2 = torch.mean(torch.sum(torch.pow(p_2_1 * x_1 + p_2_2 * x_2 - x_12, 2), dim=1)) * Config.mix_ratio
-        mixup_3 = torch.mean(torch.sum(torch.pow(p_3_1 * x_2 + p_3_2 * x_a - x_a2, 2), dim=1)) * Config.mix_ratio
+        mixup_1 = torch.mean(torch.sum(torch.pow(p_1_1 * x_a + p_1_2 * x_1 - x_a1, 2), dim=1))
+        mixup_2 = torch.mean(torch.sum(torch.pow(p_2_1 * x_1 + p_2_2 * x_2 - x_12, 2), dim=1))
+        mixup_3 = torch.mean(torch.sum(torch.pow(p_3_1 * x_2 + p_3_2 * x_a - x_a2, 2), dim=1))
         loss_mixup = mixup_1 + mixup_2 + mixup_3
+        loss_mixup = loss_mixup  * Config.mix_ratio
 
         # 2 loss
         loss = loss_triple + loss_mixup
@@ -195,7 +228,10 @@ class Runner(object):
             all_loss, all_loss_triple, all_loss_mixup = 0.0, 0.0, 0.0
             for task_tuple, inputs, task_index in tqdm(self.task_train_loader):
                 batch_size, num, c, w, h = inputs.shape
-                beta = np.random.beta(1, 1, [batch_size, num])  # 64, 3
+
+                # beta = np.random.beta(1, 1, [batch_size, num])  # 64, 3
+                beta = np.zeros([batch_size, num]) + 0.5  # 64, 3
+
                 beta_lambda = np.hstack([beta, 1 - beta])  # 64, 6
                 beta_lambda_tile = np.tile(beta_lambda[..., None, None, None], [c, w, h])
 
@@ -257,7 +293,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     train_epoch = 1000
