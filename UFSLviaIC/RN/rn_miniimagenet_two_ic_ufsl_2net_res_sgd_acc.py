@@ -14,7 +14,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from rn_miniimagenet_fsl_test_tool import TestTool
 from rn_miniimagenet_ic_test_tool import ICTestTool
-from rn_miniimagenet_tool import ICModel, ProduceClass, Normalize, CNNEncoder, RelationNetwork, RunnerTool
+from rn_miniimagenet_tool import ICModel, Normalize, CNNEncoder, RelationNetwork, RunnerTool
 
 
 ##############################################################################################################
@@ -24,7 +24,10 @@ class MiniImageNetDataset(object):
 
     def __init__(self, data_list, num_way, num_shot):
         self.data_list, self.num_way, self.num_shot = data_list, num_way, num_shot
+        self.data_id = np.asarray(range(len(self.data_list)))
+
         self.classes = None
+        self.features = None
 
         self.data_dict = {}
         for index, label, image_filename in self.data_list:
@@ -52,12 +55,17 @@ class MiniImageNetDataset(object):
         self.classes = classes
         pass
 
+    def set_samples_feature(self, features):
+        self.features = features
+        pass
+
     def __getitem__(self, item):
         # 当前样本
         now_label_image_tuple = self.data_list[item]
         now_index, _, now_image_filename = now_label_image_tuple
         _now_label = self.classes[item]
-        now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
+        now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True,
+                                                                       num=self.num_shot, now_index=now_index)
         is_ok_list = [self.data_list[one][1] == now_label_image_tuple[1] for one in now_label_k_shot_index]
 
         # 其他样本
@@ -84,8 +92,24 @@ class MiniImageNetDataset(object):
         task_index = torch.Tensor([one[0] for one in task_list]).long()
         return task_data, task_label, task_index, is_ok_list
 
-    def _get_samples_by_clustering_label(self, label, is_same_label=False, num=1):
+    def _get_samples_by_clustering_label(self, label, is_same_label=False, num=1, now_index=None, k=1):
         if is_same_label:
+            if now_index:
+                now_feature = self.features[now_index]
+
+                if k == 1:
+                    search_index = self.data_id[self.classes == label]
+                else:
+                    top_k_class = np.argpartition(now_feature, -k)[-k:]
+                    search_index = np.hstack([self.data_id[self.classes == one] for one in top_k_class])
+                    pass
+
+                search_index_list = list(search_index)
+                search_index_list.remove(now_index)
+                other_feature = self.features[search_index_list]
+                sim_result = np.matmul(other_feature, now_feature)
+                sort_result = np.argsort(sim_result)[::-1]
+                return list(search_index[sort_result][0: num])
             return random.sample(list(np.squeeze(np.argwhere(self.classes == label), axis=1)), num)
         else:
             return random.sample(list(np.squeeze(np.argwhere(self.classes != label))), num)
@@ -140,6 +164,64 @@ class ICResNet(nn.Module):
     pass
 
 
+class ProduceClass(object):
+    def __init__(self, n_sample, out_dim, ratio=1.0):
+        super().__init__()
+        self.out_dim = out_dim
+        self.n_sample = n_sample
+        self.class_per_num = self.n_sample // self.out_dim * ratio
+        self.count = 0
+        self.count_2 = 0
+        self.class_num = np.zeros(shape=(self.out_dim,), dtype=np.int)
+        self.classes = np.zeros(shape=(self.n_sample,), dtype=np.int)
+        self.features = np.random.random(size=(self.n_sample, self.out_dim))
+        pass
+
+    def init(self):
+        class_per_num = self.n_sample // self.out_dim
+        self.class_num += class_per_num
+        for i in range(self.out_dim):
+            self.classes[i * class_per_num: (i + 1) * class_per_num] = i
+            pass
+        np.random.shuffle(self.classes)
+        pass
+
+    def reset(self):
+        self.count = 0
+        self.count_2 = 0
+        self.class_num *= 0
+        pass
+
+    def cal_label(self, out, indexes):
+        out_data = out.data.cpu()
+        top_k = out_data.topk(self.out_dim, dim=1)[1].cpu()
+        indexes_cpu = indexes.cpu()
+
+        self.features[indexes_cpu] = out_data
+
+        batch_size = top_k.size(0)
+        class_labels = np.zeros(shape=(batch_size,), dtype=np.int)
+
+        for i in range(batch_size):
+            for j_index, j in enumerate(top_k[i]):
+                if self.class_per_num > self.class_num[j]:
+                    class_labels[i] = j
+                    self.class_num[j] += 1
+                    self.count += 1 if self.classes[indexes_cpu[i]] != j else 0
+                    self.classes[indexes_cpu[i]] = j
+                    self.count_2 += 1 if j_index != 0 else 0
+                    break
+                pass
+            pass
+        pass
+
+    def get_label(self, indexes):
+        _device = indexes.device
+        return torch.tensor(self.classes[indexes.cpu()]).long().to(_device)
+
+    pass
+
+
 ##############################################################################################################
 
 
@@ -158,6 +240,7 @@ class Runner(object):
         self.produce_class = ProduceClass(len(self.data_train), Config.ic_out_dim, Config.ic_ratio)
         self.produce_class.init()
         self.task_train.set_samples_class(self.produce_class.classes)
+        self.task_train.set_samples_feature(self.produce_class.features)
 
         # model
         self.feature_encoder = RunnerTool.to_cuda(Config.feature_encoder)
@@ -377,7 +460,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -393,7 +476,8 @@ class Config(object):
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
 
     # ic
-    ic_out_dim = 512
+    # ic_out_dim = 512
+    ic_out_dim = 2560
     ic_ratio = 1
 
     learning_rate = 0.01
