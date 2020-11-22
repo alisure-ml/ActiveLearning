@@ -105,9 +105,14 @@ class MiniImageNetDataset(object):
                     pass
 
                 search_index_list = list(search_index)
-                search_index_list.remove(now_index)
-                other_feature = self.features[search_index_list]
-                sim_result = np.matmul(other_feature, now_feature)
+                if now_index in search_index_list:
+                    search_index_list.remove(now_index)
+                other_features = self.features[search_index_list]
+
+                # sim_result = np.matmul(other_features, now_feature)
+                now_features = np.tile(now_feature[None, ...], reps=[other_features.shape[0], 1])
+                sim_result = np.sum(now_features * other_features, axis=-1)
+
                 sort_result = np.argsort(sim_result)[::-1]
                 return list(search_index[sort_result][0: num])
             return random.sample(list(np.squeeze(np.argwhere(self.classes == label), axis=1)), num)
@@ -463,7 +468,7 @@ class Config(object):
     gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    num_workers = 8
+    num_workers = 16
 
     num_way = 5
     num_shot = 1
@@ -476,8 +481,8 @@ class Config(object):
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
 
     # ic
-    # ic_out_dim = 512
-    ic_out_dim = 2560
+    ic_out_dim = 512
+    # ic_out_dim = 2560
     ic_ratio = 1
 
     learning_rate = 0.01
