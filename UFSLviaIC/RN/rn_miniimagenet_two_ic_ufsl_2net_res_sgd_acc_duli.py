@@ -64,9 +64,10 @@ class MiniImageNetDataset(object):
         now_label_image_tuple = self.data_list[item]
         now_index, _, now_image_filename = now_label_image_tuple
         _now_label = self.classes[item]
+
         now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
-        # now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True,
-        #                                                                num=self.num_shot, now_index=now_index)
+        # now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot, now_index=now_index)
+
         is_ok_list = [self.data_list[one][1] == now_label_image_tuple[1] for one in now_label_k_shot_index]
 
         # 其他样本
@@ -171,6 +172,7 @@ class ICResNet(nn.Module):
 
 
 class ProduceClass(object):
+
     def __init__(self, n_sample, out_dim, ratio=1.0):
         super().__init__()
         self.out_dim = out_dim
@@ -386,24 +388,23 @@ class Runner(object):
                 self.produce_class.cal_label(ic_out_l2norm, ic_labels)
 
                 # 3 loss
-                loss_fsl = self.fsl_loss(relations, task_labels) * Config.loss_fsl_ratio
-                loss_ic = self.ic_loss(ic_out_logits, ic_targets) * Config.loss_ic_ratio
-                loss = loss_fsl + loss_ic
+                loss_fsl = self.fsl_loss(relations, task_labels)
+                loss_ic = self.ic_loss(ic_out_logits, ic_targets)
+                loss = loss_fsl * Config.loss_fsl_ratio + loss_ic * Config.loss_ic_ratio
                 all_loss += loss.item()
                 all_loss_fsl += loss_fsl.item()
                 all_loss_ic += loss_ic.item()
 
                 # 4 backward
+                self.ic_model.zero_grad()
+                loss_ic.backward()
+                self.ic_model_optim.step()
+
                 self.feature_encoder.zero_grad()
                 self.relation_network.zero_grad()
-                self.ic_model.zero_grad()
-                loss.backward()
-                # torch.nn.utils.clip_grad_norm_(self.feature_encoder.parameters(), 0.5)
-                # torch.nn.utils.clip_grad_norm_(self.relation_network.parameters(), 0.5)
-                # torch.nn.utils.clip_grad_norm_(self.ic_model.parameters(), 0.5)
+                loss_fsl.backward()
                 self.feature_encoder_optim.step()
                 self.relation_network_optim.step()
-                self.ic_model_optim.step()
 
                 # is ok
                 is_ok_acc += torch.sum(torch.cat(task_ok))
@@ -466,7 +467,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
@@ -487,8 +488,6 @@ class Config(object):
     ic_ratio = 1
 
     learning_rate = 0.01
-    # loss_fsl_ratio = 10.0
-    # loss_ic_ratio = 0.1
     loss_fsl_ratio = 1.0
     loss_ic_ratio = 1.0
 
@@ -511,7 +510,7 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    _root_path = "../models/two_ic_ufsl_2net_res_sgd_acc"
+    _root_path = "../models/two_ic_ufsl_2net_res_sgd_acc_duli"
     fe_dir = Tools.new_dir("{}/{}_fe_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
     rn_dir = Tools.new_dir("{}/{}_rn_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
     ic_dir = Tools.new_dir("{}/{}_ic_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
