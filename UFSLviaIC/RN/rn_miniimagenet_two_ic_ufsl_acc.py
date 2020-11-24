@@ -92,7 +92,7 @@ class MiniImageNetDataset(object):
         task_index = torch.Tensor([one[0] for one in task_list]).long()
         return task_data, task_label, task_index, is_ok_list
 
-    def _get_samples_by_clustering_label(self, label, is_same_label=False, num=1, now_index=None, k=1):
+    def _get_samples_by_clustering_label(self, label, is_same_label=False, num=1, now_index=None, k=3):
         if is_same_label:
             if now_index:
                 now_feature = self.features[now_index]
@@ -105,9 +105,14 @@ class MiniImageNetDataset(object):
                     pass
 
                 search_index_list = list(search_index)
-                search_index_list.remove(now_index)
-                other_feature = self.features[search_index_list]
-                sim_result = np.matmul(other_feature, now_feature)
+                if now_index in search_index_list:
+                    search_index_list.remove(now_index)
+                other_features = self.features[search_index_list]
+
+                # sim_result = np.matmul(other_features, now_feature)
+                now_features = np.tile(now_feature[None, ...], reps=[other_features.shape[0], 1])
+                sim_result = np.sum(now_features * other_features, axis=-1)
+
                 sort_result = np.argsort(sim_result)[::-1]
                 return list(search_index[sort_result][0: num])
             return random.sample(list(np.squeeze(np.argwhere(self.classes == label), axis=1)), num)
@@ -428,6 +433,84 @@ class Runner(object):
 2020-10-26 16:01:33 Train 900 Accuracy: 0.43788888888888894
 2020-10-26 16:01:33 Val   900 Accuracy: 0.40199999999999997
 2020-10-26 16:06:40 episode=900, Mean Test accuracy=0.42364000000000007
+
+3_900_64_5_1_64_128_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-22 00:11:14 load feature encoder success from ../models/two_ic_ufsl_acc/3_900_64_5_1_64_128_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-22 00:11:14 load relation network success from ../models/two_ic_ufsl_acc/3_900_64_5_1_64_128_1_10.0_0.1_rn_5way_1shot.pkl
+2020-11-22 00:11:14 load ic model success from ../models/two_ic_ufsl_acc/3_900_64_5_1_64_128_1_10.0_0.1_ic_5way_1shot.pkl
+2020-11-22 00:11:14 Test 900 .......
+2020-11-22 00:11:26 Epoch: 900 Train 0.3021/0.6212 0.0000
+2020-11-22 00:11:26 Epoch: 900 Val   0.4526/0.8548 0.0000
+2020-11-22 00:11:26 Epoch: 900 Test  0.4257/0.8303 0.0000
+2020-11-22 00:13:09 Train 900 Accuracy: 0.43788888888888894
+2020-11-22 00:13:09 Val   900 Accuracy: 0.4021111111111111
+2020-11-22 00:17:20 episode=900, Mean Test accuracy=0.42380000000000007
+
+2_900_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-21 23:56:51 load feature encoder success from ../models/two_ic_ufsl_acc/2_900_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-21 23:56:51 load relation network success from ../models/two_ic_ufsl_acc/2_900_64_5_1_64_512_1_10.0_0.1_rn_5way_1shot.pkl
+2020-11-21 23:56:51 load ic model success from ../models/two_ic_ufsl_acc/2_900_64_5_1_64_512_1_10.0_0.1_ic_5way_1shot.pkl
+2020-11-21 23:56:51 Test 900 .......
+2020-11-21 23:57:03 Epoch: 900 Train 0.3172/0.6312 0.0000
+2020-11-21 23:57:03 Epoch: 900 Val   0.4694/0.8592 0.0000
+2020-11-21 23:57:03 Epoch: 900 Test  0.4462/0.8398 0.0000
+2020-11-21 23:58:46 Train 900 Accuracy: 0.42411111111111105
+2020-11-21 23:58:46 Val   900 Accuracy: 0.3952222222222222
+2020-11-22 00:03:06 episode=900, Mean Test accuracy=0.42153777777777773
+
+0_900_64_5_1_64_1024_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-22 00:18:45 load feature encoder success from ../models/two_ic_ufsl_acc/0_900_64_5_1_64_1024_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-22 00:18:45 load relation network success from ../models/two_ic_ufsl_acc/0_900_64_5_1_64_1024_1_10.0_0.1_rn_5way_1shot.pkl
+2020-11-22 00:18:45 load ic model success from ../models/two_ic_ufsl_acc/0_900_64_5_1_64_1024_1_10.0_0.1_ic_5way_1shot.pkl
+2020-11-22 00:18:45 Test 900 .......
+2020-11-22 00:18:56 Epoch: 900 Train 0.3194/0.6347 0.0000
+2020-11-22 00:18:56 Epoch: 900 Val   0.4756/0.8606 0.0000
+2020-11-22 00:18:56 Epoch: 900 Test  0.4571/0.8434 0.0000
+2020-11-22 00:20:29 Train 900 Accuracy: 0.43377777777777776
+2020-11-22 00:20:29 Val   900 Accuracy: 0.3945555555555556
+2020-11-22 00:24:19 episode=900, Mean Test accuracy=0.4266399999999999
+
+1_900_64_5_1_64_2560_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-22 11:20:18    900 loss:1.100 fsl:0.758 ic:0.342 ok:0.192(7377/38400) lr:[0.00025]
+2020-11-22 11:20:18 Train: [899] 26335/5026
+2020-11-22 11:20:18 load feature encoder success from ../models/two_ic_ufsl_acc/1_900_64_5_1_64_2560_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-22 11:20:18 load relation network success from ../models/two_ic_ufsl_acc/1_900_64_5_1_64_2560_1_10.0_0.1_rn_5way_1shot.pkl
+2020-11-22 11:20:18 load ic model success from ../models/two_ic_ufsl_acc/1_900_64_5_1_64_2560_1_10.0_0.1_ic_5way_1shot.pkl
+2020-11-22 11:20:18 Test 900 .......
+2020-11-22 11:20:32 Epoch: 900 Train 0.3159/0.6299 0.0000
+2020-11-22 11:20:32 Epoch: 900 Val   0.4779/0.8608 0.0000
+2020-11-22 11:20:32 Epoch: 900 Test  0.4566/0.8367 0.0000
+2020-11-22 11:22:35 Train 900 Accuracy: 0.43477777777777776
+2020-11-22 11:22:35 Val   900 Accuracy: 0.40688888888888886
+2020-11-22 11:27:36 episode=900, Mean Test accuracy=0.4233511111111111
+
+k=1
+1_900_64_5_1_64_2560_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-23 15:23:47    900 loss:0.994 fsl:0.653 ic:0.341 ok:0.229(8793/38400) lr:[0.00025]
+2020-11-23 15:23:47 Train: [899] 26307/5132
+2020-11-23 15:23:47 load feature encoder success from ../models/two_ic_ufsl_acc/1_900_64_5_1_64_2560_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-23 15:23:47 load relation network success from ../models/two_ic_ufsl_acc/1_900_64_5_1_64_2560_1_10.0_0.1_rn_5way_1shot.pkl
+2020-11-23 15:23:47 load ic model success from ../models/two_ic_ufsl_acc/1_900_64_5_1_64_2560_1_10.0_0.1_ic_5way_1shot.pkl
+2020-11-23 15:23:47 Test 900 .......
+2020-11-23 15:24:05 Epoch: 900 Train 0.3177/0.6277 0.0000
+2020-11-23 15:24:05 Epoch: 900 Val   0.4804/0.8643 0.0000
+2020-11-23 15:24:05 Epoch: 900 Test  0.4577/0.8431 0.0000
+2020-11-23 15:25:49 Train 900 Accuracy: 0.41888888888888887
+2020-11-23 15:25:49 Val   900 Accuracy: 0.40344444444444444
+2020-11-23 15:29:57 episode=900, Mean Test accuracy=0.42432888888888887
+
+3_900_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-23 17:02:53 load feature encoder success from ../models/two_ic_ufsl_acc/3_900_64_5_1_64_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-23 17:02:53 load relation network success from ../models/two_ic_ufsl_acc/3_900_64_5_1_64_512_1_10.0_0.1_rn_5way_1shot.pkl
+2020-11-23 17:02:53 load ic model success from ../models/two_ic_ufsl_acc/3_900_64_5_1_64_512_1_10.0_0.1_ic_5way_1shot.pkl
+2020-11-23 17:02:53 Test 900 .......
+2020-11-23 17:03:11 Epoch: 900 Train 0.3198/0.6318 0.0000
+2020-11-23 17:03:11 Epoch: 900 Val   0.4701/0.8594 0.0000
+2020-11-23 17:03:11 Epoch: 900 Test  0.4507/0.8447 0.0000
+2020-11-23 17:05:15 Train 900 Accuracy: 0.4303333333333333
+2020-11-23 17:05:15 Val   900 Accuracy: 0.40377777777777774
+2020-11-23 17:10:13 episode=900, Mean Test accuracy=0.42716000000000004
+
 """
 
 
@@ -435,7 +518,7 @@ class Config(object):
     gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    num_workers = 8
+    num_workers = 24
     batch_size = 64
     val_freq = 10
 
@@ -451,7 +534,7 @@ class Config(object):
 
     # ic
     ic_in_dim = 64
-    ic_out_dim = 2560
+    ic_out_dim = 512
     ic_ratio = 1
 
     train_epoch = 900

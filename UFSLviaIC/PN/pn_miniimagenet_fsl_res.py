@@ -35,13 +35,8 @@ class MiniImageNetDataset(object):
         normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
                                          std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
         self.transform = transforms.Compose([
-            transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
-            transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
+            transforms.RandomCrop(84, padding=8),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-
-        # self.transform = transforms.Compose([
-        #     transforms.RandomCrop(84, padding=8),
-        #     transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
         pass
 
@@ -188,8 +183,7 @@ class Runner(object):
         Tools.print("Training...")
 
         for epoch in range(Config.train_epoch):
-            if Config.has_train:
-                self.proto_net.train()
+            self.proto_net.train()
 
             Tools.print()
             all_loss = 0.0
@@ -225,8 +219,7 @@ class Runner(object):
                 Tools.print()
                 Tools.print("Test {} {} .......".format(epoch, Config.model_name))
 
-                if Config.has_eval:
-                    self.proto_net.eval()
+                self.proto_net.eval()
 
                 val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
                 if val_accuracy > self.best_accuracy:
@@ -244,7 +237,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     # train_epoch = 300
     train_epoch = 180
@@ -264,11 +257,7 @@ class Config(object):
 
     proto_net = ProtoResNet(low_dim=z_dim)
 
-    has_train = True
-    has_eval = True
-    # has_train = False
-    # has_eval = False
-    model_name = "2_{}_{}_{}_{}_{}".format(train_epoch, batch_size, z_dim, has_eval, has_train)
+    model_name = "new_1_{}_{}_{}".format(train_epoch, batch_size, z_dim)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -301,15 +290,13 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    if Config.has_eval:
-        runner.proto_net.eval()
+    runner.proto_net.eval()
     runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 
     runner.load_model()
-    if Config.has_eval:
-        runner.proto_net.eval()
+    runner.proto_net.eval()
     runner.test_tool.val(episode=Config.train_epoch, is_print=True)
     runner.test_tool.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
     pass

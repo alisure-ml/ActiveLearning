@@ -167,8 +167,7 @@ class Runner(object):
         Tools.print("Training...")
 
         for epoch in range(Config.train_epoch):
-            if Config.has_train:
-                self.proto_net.train()
+            self.proto_net.train()
 
             Tools.print()
             all_loss = 0.0
@@ -204,8 +203,7 @@ class Runner(object):
                 Tools.print()
                 Tools.print("Test {} {} .......".format(epoch, Config.model_name))
 
-                if Config.has_eval:
-                    self.proto_net.eval()
+                self.proto_net.eval()
 
                 val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
                 if val_accuracy > self.best_accuracy:
@@ -244,11 +242,7 @@ class Config(object):
 
     proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim)
 
-    has_train = True
-    has_eval = True
-    # has_train = False
-    # has_eval = False
-    model_name = "2_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, hid_dim, z_dim, has_eval, has_train)
+    model_name = "2_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, hid_dim, z_dim)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -290,15 +284,13 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    if Config.has_eval:
-        runner.proto_net.eval()
+    runner.proto_net.eval()
     runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 
     runner.load_model()
-    if Config.has_eval:
-        runner.proto_net.eval()
+    runner.proto_net.eval()
     runner.test_tool.val(episode=Config.train_epoch, is_print=True)
     runner.test_tool.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
     pass

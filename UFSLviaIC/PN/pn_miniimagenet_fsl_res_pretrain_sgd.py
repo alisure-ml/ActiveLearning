@@ -35,13 +35,8 @@ class MiniImageNetDataset(object):
         normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
                                          std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
         self.transform = transforms.Compose([
-            transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
-            transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
+            transforms.RandomCrop(84, padding=8),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-
-        # self.transform = transforms.Compose([
-        #     transforms.RandomCrop(84, padding=8),
-        #     transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
         pass
 
@@ -252,7 +247,7 @@ class Config(object):
 
     # train_epoch = 300
     train_epoch = 180
-    learning_rate = 0.001
+    learning_rate = 0.0005
     num_workers = 8
 
     val_freq = 10
@@ -269,7 +264,7 @@ class Config(object):
     proto_net = ProtoResNet(low_dim=z_dim)
     pn_pretrain = "../models/ic_res_no_val/1_32_512_1_500_200_0.01_ic.pkl"
 
-    model_name = "2_{}_{}_{}_{}".format(train_epoch, batch_size, z_dim, learning_rate)
+    model_name = "new_0_{}_{}_{}_{}".format(train_epoch, batch_size, z_dim, learning_rate)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -278,7 +273,7 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    root_path = "../models_pn/fsl_res_pretrain"
+    root_path = "../models_pn/fsl_res_pretrain_sgd"
     pn_dir = Tools.new_dir("{}/{}_pn_{}way_{}shot.pkl".format(root_path, model_name, num_way, num_shot))
     pass
 
@@ -287,11 +282,23 @@ class Config(object):
 
 
 """
-2020-10-30 03:51:52 load proto net success from ../models/ic_res_no_val/1_32_512_1_500_200_0.01_ic.pkl
-2020-10-30 03:51:52 load proto net success from ../models_pn/fsl_res_pretrain/2_180_64_512_0.001_pn_5way_1shot.pkl
-2020-10-30 03:54:42 Train 180 Accuracy: 0.7715555555555556
-2020-10-30 03:54:42 Val   180 Accuracy: 0.5512222222222223
-2020-10-30 04:02:43 episode=180, Mean Test accuracy=0.5314222222222222
+2020-11-23 22:37:48 load proto net success from ../models/ic_res_no_val/1_32_512_1_500_200_0.01_ic.pkl
+2020-11-23 22:39:54 Train 0 Accuracy: 0.49644444444444447
+2020-11-23 22:39:54 Val   0 Accuracy: 0.45322222222222225
+2020-11-23 22:39:54 Test1 0 Accuracy: 0.46144444444444443
+2020-11-23 22:39:54 Test2 0 Accuracy: 0.4721333333333333
+2020-11-24 03:02:30 load proto net success from ../models/ic_res_no_val/1_32_512_1_500_200_0.01_ic.pkl
+2020-11-24 03:02:30 load proto net success from ../models_pn/fsl_res_pretrain_sgd/new_0_180_64_512_0.0005_pn_5way_1shot.pkl
+2020-11-24 03:04:36 Train 180 Accuracy: 0.759
+2020-11-24 03:04:36 Val   180 Accuracy: 0.5451111111111112
+2020-11-24 03:04:36 Test1 180 Accuracy: 0.5443333333333332
+2020-11-24 03:04:36 Test2 180 Accuracy: 0.5339555555555555
+2020-11-24 03:10:11 episode=180, Test accuracy=0.5414222222222222
+2020-11-24 03:10:11 episode=180, Test accuracy=0.5379777777777778
+2020-11-24 03:10:11 episode=180, Test accuracy=0.5361333333333334
+2020-11-24 03:10:11 episode=180, Test accuracy=0.5337777777777778
+2020-11-24 03:10:11 episode=180, Test accuracy=0.5299555555555556
+2020-11-24 03:10:11 episode=180, Mean Test accuracy=0.5358533333333334
 """
 
 

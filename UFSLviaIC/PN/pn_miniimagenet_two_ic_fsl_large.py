@@ -220,9 +220,8 @@ class Runner(object):
 
         # Init Update
         # try:
-        #     if Config.has_eval:
-        #         self.proto_net.eval()
-        #         self.ic_model.eval()
+        #     self.proto_net.eval()
+        #     self.ic_model.eval()
         #     Tools.print("Init label {} .......")
         #     self.produce_class.reset()
         #     with torch.no_grad():
@@ -239,9 +238,8 @@ class Runner(object):
         #     pass
 
         for epoch in range(Config.train_epoch):
-            if Config.has_train:
-                self.proto_net.train()
-                self.ic_model.train()
+            self.proto_net.train()
+            self.ic_model.train()
 
             Tools.print()
             self.produce_class.reset()
@@ -291,9 +289,8 @@ class Runner(object):
             ###########################################################################
             # Val
             if epoch % Config.val_freq == 0:
-                if Config.has_eval:
-                    self.proto_net.eval()
-                    self.ic_model.eval()
+                self.proto_net.eval()
+                self.ic_model.eval()
 
                 self.test_tool_ic.val(epoch=epoch)
                 val_accuracy = self.test_tool_fsl.val(episode=epoch, is_print=True)
@@ -358,12 +355,9 @@ class Config(object):
     loss_fsl_ratio = 10.0
     loss_ic_ratio = 0.1
 
-    has_train = True
-    has_eval = True
-
     model_name = "2_{}_{}_{}_{}{}_{}_{}_{}_{}_{}_{}_{}".format(
         train_epoch, batch_size, num_way, num_shot, z_dim, ic_in_dim,
-        ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, has_train, has_eval)
+        ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -381,18 +375,16 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    # if Config.has_eval:
-    #     runner.proto_net.eval()
-    #     runner.ic_model.eval()
+    # runner.proto_net.eval()
+    # runner.ic_model.eval()
     # runner.test_tool_ic.val(epoch=0, is_print=True)
     # runner.test_tool_fsl.val(episode=0, is_print=True)
 
     runner.train()
 
     runner.load_model()
-    if Config.has_eval:
-        runner.proto_net.eval()
-        runner.ic_model.eval()
+    runner.proto_net.eval()
+    runner.ic_model.eval()
     runner.test_tool_ic.val(epoch=Config.train_epoch, is_print=True)
     runner.test_tool_fsl.val(episode=Config.train_epoch, is_print=True)
     runner.test_tool_fsl.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)

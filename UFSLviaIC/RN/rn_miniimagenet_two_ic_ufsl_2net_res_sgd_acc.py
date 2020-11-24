@@ -454,7 +454,6 @@ class Runner(object):
 2020-10-31 22:11:06 load feature encoder success from ../models/two_ic_ufsl_2net_res_sgd/1_2100_64_5_1_500_200_512_1_10.0_0.1_fe_5way_1shot.pkl
 2020-10-31 22:11:06 load relation network success from ../models/two_ic_ufsl_2net_res_sgd/1_2100_64_5_1_500_200_512_1_10.0_0.1_rn_5way_1shot.pkl
 2020-10-31 22:11:06 load ic model success from ../models/two_ic_ufsl_2net_res_sgd/1_2100_64_5_1_500_200_512_1_10.0_0.1_ic_5way_1shot.pkl
-
 2020-10-31 22:11:06 Test 2100 .......
 2020-10-31 22:11:19 Epoch: 2100 Train 0.4134/0.7137 0.0000
 2020-10-31 22:11:19 Epoch: 2100 Val   0.5223/0.8888 0.0000
@@ -462,11 +461,25 @@ class Runner(object):
 2020-10-31 22:12:57 Train 2100 Accuracy: 0.4908888888888888
 2020-10-31 22:12:57 Val   2100 Accuracy: 0.4351111111111111
 2020-10-31 22:17:21 episode=2100, Mean Test accuracy=0.45217777777777785
+
+1_2100_64_5_1_500_200_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-23 22:57:15   2100 loss:0.909 fsl:0.726 ic:0.183 ok:0.224(8594/38400)
+2020-11-23 22:57:15 Train: [2099] 17323/3192
+2020-11-23 22:57:15 load feature encoder success from ../models/two_ic_ufsl_2net_res_sgd_acc/1_2100_64_5_1_500_200_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-23 22:57:15 load relation network success from ../models/two_ic_ufsl_2net_res_sgd_acc/1_2100_64_5_1_500_200_512_1_10.0_0.1_rn_5way_1shot.pkl
+2020-11-23 22:57:15 load ic model success from ../models/two_ic_ufsl_2net_res_sgd_acc/1_2100_64_5_1_500_200_512_1_10.0_0.1_ic_5way_1shot.pkl
+2020-11-23 22:57:15 Test 2100 .......
+2020-11-23 22:57:29 Epoch: 2100 Train 0.4131/0.7117 0.0000
+2020-11-23 22:57:29 Epoch: 2100 Val   0.5249/0.8845 0.0000
+2020-11-23 22:57:29 Epoch: 2100 Test  0.4738/0.8666 0.0000
+2020-11-23 22:59:14 Train 2100 Accuracy: 0.5006666666666666
+2020-11-23 22:59:14 Val   2100 Accuracy: 0.4467777777777778
+2020-11-23 23:03:34 episode=2100, Mean Test accuracy=0.4520444444444444
 """
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
