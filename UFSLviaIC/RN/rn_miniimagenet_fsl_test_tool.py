@@ -243,11 +243,12 @@ class TestTool(object):
         for i in range(all_episode):
             total_rewards = 0
             counter = 0
-            # 随机选5类，每类中取出1个作为训练样本，每类取出15个作为测试样本
+            # 随机选5类，每类中取出num_shot个作为训练样本，总共取出15个作为测试样本
             task = MiniImageNetTask(folders, self.num_way, self.num_shot, self.episode_size)
-            sample_data_loader = MiniImageNet.get_data_loader(task, 1, "train", sampler_test=sampler_test,
+            sample_data_loader = MiniImageNet.get_data_loader(task, self.num_shot, "train", sampler_test=sampler_test,
                                                               shuffle=False, transform=self.transform)
-            batch_data_loader = MiniImageNet.get_data_loader(task, 3, "val", sampler_test=sampler_test,
+            num_per_class = 5 if self.num_shot > 1 else 3
+            batch_data_loader = MiniImageNet.get_data_loader(task, num_per_class, "val", sampler_test=sampler_test,
                                                              shuffle=True, transform=self.transform)
             samples, labels = sample_data_loader.__iter__().next()
 
