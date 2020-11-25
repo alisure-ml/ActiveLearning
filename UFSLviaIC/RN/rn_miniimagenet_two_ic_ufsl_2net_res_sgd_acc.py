@@ -462,6 +462,7 @@ class Runner(object):
 2020-10-31 22:12:57 Val   2100 Accuracy: 0.4351111111111111
 2020-10-31 22:17:21 episode=2100, Mean Test accuracy=0.45217777777777785
 
+random sample=1
 1_2100_64_5_1_500_200_512_1_10.0_0.1_fe_5way_1shot.pkl
 2020-11-23 22:57:15   2100 loss:0.909 fsl:0.726 ic:0.183 ok:0.224(8594/38400)
 2020-11-23 22:57:15 Train: [2099] 17323/3192
@@ -475,6 +476,21 @@ class Runner(object):
 2020-11-23 22:59:14 Train 2100 Accuracy: 0.5006666666666666
 2020-11-23 22:59:14 Val   2100 Accuracy: 0.4467777777777778
 2020-11-23 23:03:34 episode=2100, Mean Test accuracy=0.4520444444444444
+
+k=1
+3_2100_64_5_1_500_200_512_1_10.0_0.1_fe_5way_1shot.pkl
+020-11-25 06:36:51   2100 loss:0.768 fsl:0.587 ic:0.181 ok:0.316(12145/38400)
+2020-11-25 06:36:51 Train: [2099] 16954/3057
+2020-11-25 06:36:51 load feature encoder success from ../models/two_ic_ufsl_2net_res_sgd_acc/3_2100_64_5_1_500_200_512_1_10.0_0.1_fe_5way_1shot.pkl
+2020-11-25 06:36:51 load relation network success from ../models/two_ic_ufsl_2net_res_sgd_acc/3_2100_64_5_1_500_200_512_1_10.0_0.1_rn_5way_1shot.pkl
+2020-11-25 06:36:51 load ic model success from ../models/two_ic_ufsl_2net_res_sgd_acc/3_2100_64_5_1_500_200_512_1_10.0_0.1_ic_5way_1shot.pkl
+2020-11-25 06:36:51 Test 2100 .......
+2020-11-25 06:37:05 Epoch: 2100 Train 0.4142/0.7152 0.0000
+2020-11-25 06:37:05 Epoch: 2100 Val   0.5202/0.8861 0.0000
+2020-11-25 06:37:05 Epoch: 2100 Test  0.4805/0.8709 0.0000
+2020-11-25 06:38:53 Train 2100 Accuracy: 0.49366666666666653
+2020-11-25 06:38:53 Val   2100 Accuracy: 0.4396666666666667
+2020-11-25 06:43:16 episode=2100, Mean Test accuracy=0.453333333333333
 """
 
 

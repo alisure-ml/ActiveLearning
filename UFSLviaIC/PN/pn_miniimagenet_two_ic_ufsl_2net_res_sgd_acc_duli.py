@@ -326,7 +326,6 @@ class Runner(object):
 
         # Init Update
         try:
-            self.proto_net.eval()
             self.ic_model.eval()
             Tools.print("Init label {} .......")
             self.produce_class.reset()
