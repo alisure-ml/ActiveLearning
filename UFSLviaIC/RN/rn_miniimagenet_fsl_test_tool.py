@@ -215,7 +215,7 @@ class TestTool(object):
             acc_list.append(acc)
             pass
 
-        mean_acc = np.mean(acc_list)
+        mean_acc = np.mean(acc_list, axis=0)
         if is_print:
             for acc in acc_list:
                 Tools.print("episode={}, Test accuracy={}".format(episode, acc))
@@ -241,8 +241,7 @@ class TestTool(object):
     def _val(self, folders, sampler_test, all_episode):
         accuracies = []
         for i in range(all_episode):
-            total_rewards = 0
-            counter = 0
+            total_rewards_1, total_rewards_2, counter = 0, 0, 0
             # 随机选5类，每类中取出num_shot个作为训练样本，总共取出15个作为测试样本
             task = MiniImageNetTask(folders, self.num_way, self.num_shot, self.episode_size)
             sample_data_loader = MiniImageNet.get_data_loader(task, self.num_shot, "train", sampler_test=sampler_test,
@@ -254,20 +253,31 @@ class TestTool(object):
 
             samples = self.to_cuda(samples)
             for batches, batch_labels in batch_data_loader:
+                batch_size = batch_labels.shape[0]
+                counter += batch_size
+
                 relations = self.model_fn(samples, self.to_cuda(batches))
 
-                _, predict_labels = torch.max(relations.data, 1)
-                final_predict_labels = [int(labels[predict]) for predict in predict_labels]
-                batch_size = batch_labels.shape[0]
-                rewards = [1 if final_predict_labels[j] == batch_labels[j] else 0 for j in range(batch_size)]
-                total_rewards += np.sum(rewards)
+                # method 1
+                relations_sum = np.zeros((batch_size, self.num_way))
+                for _i1, relation in enumerate(relations.data):
+                    for _i2, r in enumerate(relation):
+                        relations_sum[_i1][labels[_i2]] += r
+                    pass
+                final_predict_labels_1 = list(np.argmax(relations_sum, -1))
+                rewards_1 = [1 if final_predict_labels_1[j] == batch_labels[j] else 0 for j in range(batch_size)]
+                total_rewards_1 += np.sum(rewards_1)
 
-                counter += batch_size
+                # method 2
+                _, predict_labels = torch.max(relations.data, 1)
+                final_predict_labels_2 = [int(labels[predict]) for predict in predict_labels]
+                rewards_2 = [1 if final_predict_labels_2[j] == batch_labels[j] else 0 for j in range(batch_size)]
+                total_rewards_2 += np.sum(rewards_2)
                 pass
 
-            accuracies.append(total_rewards / 1.0 / counter)
+            accuracies.append([total_rewards_1 / 1.0 / counter, total_rewards_2 / 1.0 / counter])
             pass
-        return np.mean(np.array(accuracies, dtype=np.float))
+        return np.mean(np.array(accuracies, dtype=np.float), axis=0)
 
     @staticmethod
     def to_cuda(x):

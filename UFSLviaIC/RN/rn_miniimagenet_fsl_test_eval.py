@@ -63,8 +63,11 @@ class Runner(object):
         self.eval_one(num_way=5, num_shot=1)
         self.eval_one(num_way=5, num_shot=5)
         self.eval_one(num_way=5, num_shot=10)
+        self.eval_one(num_way=5, num_shot=20)
         self.eval_one(num_way=10, num_shot=1)
         self.eval_one(num_way=10, num_shot=5)
+        self.eval_one(num_way=10, num_shot=10)
+        self.eval_one(num_way=10, num_shot=20)
         pass
 
     pass
@@ -114,7 +117,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 3
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
