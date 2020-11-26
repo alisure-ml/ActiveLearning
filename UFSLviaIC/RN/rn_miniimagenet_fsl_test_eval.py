@@ -116,12 +116,33 @@ class Runner(object):
 """
 
 
+"""
+../models/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_500_200_512_1_1.0_1.0_fe_5way_1shot.pkl
+../models/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_500_200_512_1_1.0_1.0_rn_5way_1shot.pkl
+2020-11-26 19:47:28 way:5 shot:1
+2020-11-26 19:49:37 Train 0 Accuracy: [0.50055556 0.50055556]
+2020-11-26 19:49:37 Val   0 Accuracy: [0.443 0.443]
+2020-11-26 19:55:17 episode=0, Mean Test accuracy=[0.46670667 0.46670667]
+2020-11-26 19:55:17 way:5 shot:5
+2020-11-26 20:00:24 Train 0 Accuracy: [0.65426667 0.61126667]
+2020-11-26 20:00:24 Val   0 Accuracy: [0.61186667 0.564     ]
+2020-11-26 20:12:32 episode=0, Mean Test accuracy=[0.62052    0.57646667]
+2020-11-26 20:12:32 way:5 shot:10
+2020-11-26 20:21:07 Train 0 Accuracy: [0.699      0.64433333]
+2020-11-26 20:21:07 Val   0 Accuracy: [0.65126667 0.5994    ]
+2020-11-26 20:40:21 episode=0, Mean Test accuracy=[0.66968444 0.61347556]
+2020-11-26 20:40:21 way:5 shot:20
+^[[C2020-11-26 20:55:49 Train 0 Accuracy: [0.7176     0.67293333]
+2020-11-26 20:55:49 Val   0 Accuracy: [0.686      0.62966667]
+2020-11-26 21:31:10 episode=0, Mean Test accuracy=[0.70228    0.64510667]
+"""
+
+
 class Config(object):
     gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
-    batch_size = 64
     episode_size = 15
     test_episode = 600
     test_avg_num = 5
