@@ -277,6 +277,10 @@ class Runner(object):
         pass
 
     def load_model(self):
+        if Config.ic_pretrain_dir and os.path.exists(Config.ic_pretrain_dir):
+            self.ic_model.load_state_dict(torch.load(Config.ic_pretrain_dir))
+            Tools.print("load ic pretrain model success from {}".format(Config.ic_pretrain_dir))
+
         if os.path.exists(Config.pn_dir):
             self.proto_net.load_state_dict(torch.load(Config.pn_dir))
             Tools.print("load feature encoder success from {}".format(Config.pn_dir))
@@ -376,9 +380,11 @@ class Runner(object):
                 all_loss_ic += loss_ic.item()
 
                 # 4 backward
-                self.ic_model.zero_grad()
-                loss_ic.backward()
-                self.ic_model_optim.step()
+                if Config.train_ic:
+                    self.ic_model.zero_grad()
+                    loss_ic.backward()
+                    self.ic_model_optim.step()
+                    pass
 
                 self.proto_net.zero_grad()
                 loss_fsl.backward()
@@ -432,7 +438,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
@@ -457,17 +463,31 @@ class Config(object):
     loss_fsl_ratio = 1.0
     loss_ic_ratio = 1.0
 
-    # train_epoch = 500
-    # first_epoch, t_epoch = 300, 150
-    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
+    train_epoch = 600
+    first_epoch, t_epoch = 300, 150
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    train_epoch = 2100
-    first_epoch, t_epoch = 500, 200
-    adjust_learning_rate = RunnerTool.adjust_learning_rate1
+    # train_epoch = 2100
+    # first_epoch, t_epoch = 500, 200
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate1
+
+    train_ic = False
+    # train_ic = True
+    ic_pretrain_dir = None
+    if "Linux" in platform.platform() and not train_ic:
+        _ic_pretrain_name = "2_2100_64_5_1_500_200_512_1_1.0_1.0_ic_5way_1shot.pkl"
+        ic_pretrain_dir = "../models/two_ic_ufsl_2net_res_sgd_acc_duli/{}".format(_ic_pretrain_name)
+        if not os.path.isdir(ic_pretrain_dir):
+            ic_pretrain_dir = "../models/ic_res_no_val/1_32_512_1_500_200_0.01_ic.pkl"
+        pass
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
         gpu_id, train_epoch, batch_size, num_way, num_shot, hid_dim, z_dim, first_epoch,
         t_epoch, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
+
+    _root_path = "../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli"
+    pn_dir = Tools.new_dir("{}/{}_pn_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
+    ic_dir = Tools.new_dir("{}/{}_ic_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -476,16 +496,12 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    _root_path = "../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli"
-
-    pn_dir = Tools.new_dir("{}/{}_pn_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
-    ic_dir = Tools.new_dir("{}/{}_ic_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
     pass
 
 
 if __name__ == '__main__':
     runner = Runner()
-    # runner.load_model()
+    runner.load_model()
 
     # runner.proto_net.eval()
     # runner.ic_model.eval()
