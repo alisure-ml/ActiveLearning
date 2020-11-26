@@ -9,6 +9,7 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
+import torch.backends.cudnn as cudnn
 from torch.distributions import Bernoulli
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
@@ -342,14 +343,22 @@ class Runner(object):
         RunnerTool.to_cuda(self.proto_net.apply(RunnerTool.weights_init))
 
         # optim
-        self.proto_net_optim = torch.optim.SGD(self.proto_net.parameters(),
-                                               lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
-        self.proto_net_scheduler = StepLR(self.proto_net_optim, Config.train_epoch // 3, gamma=0.1)
+        self.proto_net_optim = torch.optim.SGD(
+            self.proto_net.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
         self.test_tool = TestTool(self.proto_test, data_root=Config.data_root,
                                   num_way=Config.num_way,  num_shot=Config.num_shot,
                                   episode_size=Config.episode_size, test_episode=Config.test_episode,
                                   transform=self.task_train.transform_test)
+        pass
+
+    def adjust_learning_rate(self, epoch):
+        steps = np.sum(epoch > np.asarray(Config.learning_rate_decay_epochs))
+        if steps > 0:
+            new_lr = Config.learning_rate * (0.1 ** steps)
+            for param_group in self.proto_net_optim.param_groups:
+                param_group['lr'] = new_lr
+            pass
         pass
 
     def load_model(self):
@@ -401,6 +410,8 @@ class Runner(object):
 
             Tools.print()
             all_loss = 0.0
+            self.adjust_learning_rate(epoch=epoch)
+            Tools.print("{:6} lr:{}".format(epoch, self.proto_net_optim.param_groups[0]["lr"]))
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
 
@@ -421,10 +432,7 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f} lr:{}".format(
-                epoch + 1, all_loss / len(self.task_train_loader), self.proto_net_scheduler.get_last_lr()))
-
-            self.proto_net_scheduler.step()
+            Tools.print("{:6} loss:{:.3f}".format(epoch + 1, all_loss / len(self.task_train_loader)))
             ###########################################################################
 
             ###########################################################################
@@ -434,6 +442,7 @@ class Runner(object):
                 Tools.print("Test {} {} .......".format(epoch, Config.model_name))
 
                 self.proto_net.eval()
+
                 val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
@@ -450,14 +459,15 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+    cudnn.benchmark = True
 
-    # train_epoch = 300
-    train_epoch = 90
-    # learning_rate = 0.05
+    train_epoch = 150
+    learning_rate = 0.05
     # learning_rate = 0.01
-    learning_rate = 0.1
+    # learning_rate = 0.1
+    learning_rate_decay_epochs = [80, 120]
     num_workers = 8
 
     val_freq = 2
@@ -490,31 +500,25 @@ class Config(object):
 
 
 """
+2020-11-25 22:31:55 load proto net success from ../models_pn/fsl_res12/0_90_32_BasicBlock1_0.1_pn_5way_1shot.pkl
+2020-11-25 22:34:18 Train 90 Accuracy: 0.8385555555555555
+2020-11-25 22:34:18 Val   90 Accuracy: 0.584111111111111
+2020-11-25 22:40:33 episode=90, Mean Test accuracy=0.5557866666666667
+
 2020-11-25 08:52:06 load proto net success from ../models_pn/fsl_res12/3_90_32_BasicBlock1_0.05_pn_5way_1shot.pkl
 2020-11-25 08:54:28 Train 90 Accuracy: 0.8983333333333333
 2020-11-25 08:54:28 Val   90 Accuracy: 0.5922222222222223
-2020-11-25 08:54:28 Test1 90 Accuracy: 0.572
-2020-11-25 08:54:28 Test2 90 Accuracy: 0.5649777777777778
-2020-11-25 09:00:47 episode=90, Test accuracy=0.5716666666666667
-2020-11-25 09:00:47 episode=90, Test accuracy=0.5697111111111111
-2020-11-25 09:00:47 episode=90, Test accuracy=0.5694888888888888
-2020-11-25 09:00:47 episode=90, Test accuracy=0.5793333333333334
-2020-11-25 09:00:47 episode=90, Test accuracy=0.5696
 2020-11-25 09:00:47 episode=90, Mean Test accuracy=0.57196
-
 
 2020-11-25 08:39:18 load proto net success from ../models_pn/fsl_res12/0_90_32_BasicBlock1_0.01_pn_5way_1shot.pkl
 2020-11-25 08:41:43 Train 90 Accuracy: 0.7853333333333334
 2020-11-25 08:41:43 Val   90 Accuracy: 0.5751111111111111
-2020-11-25 08:41:43 Test1 90 Accuracy: 0.5514444444444444
-2020-11-25 08:41:43 Test2 90 Accuracy: 0.5526888888888889
-2020-11-25 08:48:21 episode=90, Test accuracy=0.5550222222222222
-2020-11-25 08:48:21 episode=90, Test accuracy=0.5477777777777778
-2020-11-25 08:48:21 episode=90, Test accuracy=0.5548222222222222
-2020-11-25 08:48:21 episode=90, Test accuracy=0.5561111111111111
-2020-11-25 08:48:21 episode=90, Test accuracy=0.5547333333333334
 2020-11-25 08:48:21 episode=90, Mean Test accuracy=0.5536933333333334
 
+2020-11-25 22:12:49 load proto net success from ../models_pn/fsl_res12/1_90_32_BasicBlock2_0.05_pn_5way_1shot.pkl
+2020-11-25 22:15:16 Train 90 Accuracy: 0.8823333333333335
+2020-11-25 22:15:16 Val   90 Accuracy: 0.599
+2020-11-25 22:21:49 episode=90, Mean Test accuracy=0.5734222222222223
 """
 
 
