@@ -85,10 +85,14 @@ class Normalize(nn.Module):
 
 class ICResNet(nn.Module):
 
-    def __init__(self, low_dim=512):
+    def __init__(self, low_dim=512, modify_head=False):
         super().__init__()
         self.resnet = resnet50(num_classes=low_dim)
         self.l2norm = Normalize(2)
+
+        if modify_head:
+            self.resnet.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+            pass
         pass
 
     def forward(self, x):
@@ -176,10 +180,9 @@ class Runner(object):
         self.produce_class.init()
 
         # model
-        self.ic_model = self.to_cuda(ICResNet(Config.ic_out_dim))
+        self.ic_model = self.to_cuda(ICResNet(Config.ic_out_dim, modify_head=Config.modify_head))
         self.ic_loss = self.to_cuda(nn.CrossEntropyLoss())
 
-        # self.ic_model_optim = torch.optim.Adam(self.ic_model.parameters(), lr=Config.learning_rate)
         self.ic_model_optim = torch.optim.SGD(
             self.ic_model.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
@@ -360,6 +363,14 @@ class Runner(object):
 2020-10-23 23:16:05 Epoch: [2100] Final Train 0.5005/0.7878
 2020-10-23 23:16:07 Epoch: [2100] Final Val 0.5781/0.9140
 2020-10-23 23:16:09 Epoch: [2100] Final Test 0.5600/0.9048
+
+ic_res50/64_512_1_1400_200_150_0.01_ic.pkl
+2020-11-26 14:52:07 Train: [1400] 9259/1813
+2020-11-26 14:52:34 load ic model success from ../models_ic/ic_res50/64_512_1_1400_200_150_0.01_ic.pkl
+2020-11-26 14:52:34 Test 1400 .......
+2020-11-26 14:52:59 Epoch: 1400 Train 0.4727/0.7690 0.0000
+2020-11-26 14:52:59 Epoch: 1400 Val   0.5815/0.9148 0.0000
+2020-11-26 14:52:59 Epoch: 1400 Test  0.5437/0.9024 0.0000
 """
 
 
@@ -371,6 +382,9 @@ class Config(object):
     batch_size = 64
     # batch_size = 256
     val_freq = 10
+
+    # modify_head = False
+    modify_head = True
 
     learning_rate = 0.01
 
@@ -388,8 +402,8 @@ class Config(object):
     # ic_ratio = 2
     # ic_ratio = 3
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}".format(
-        batch_size, ic_out_dim, ic_ratio, train_epoch, first_epoch, t_epoch, learning_rate)
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}".format(
+        batch_size, ic_out_dim, ic_ratio, train_epoch, first_epoch, t_epoch, learning_rate, modify_head)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'

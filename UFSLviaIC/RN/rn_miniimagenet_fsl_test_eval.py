@@ -74,12 +74,48 @@ class Runner(object):
 
 
 """
+2020-11-26 13:05:06 way:5 shot:5
+2020-11-26 13:08:36 Train 0 Accuracy: 0.5961333333333333
+2020-11-26 13:08:36 Val   0 Accuracy: 0.5547333333333334
+2020-11-26 13:08:36 Test1 0 Accuracy: 0.5676666666666667
+2020-11-26 13:08:36 Test2 0 Accuracy: 0.5621111111111111
+2020-11-26 13:15:57 episode=0, Mean Test accuracy=0.5683555555555555
+2020-11-26 13:15:57 way:5 shot:1
+2020-11-26 13:17:53 Train 0 Accuracy: 0.4935555555555555
+2020-11-26 13:17:53 Val   0 Accuracy: 0.4393333333333333
+2020-11-26 13:17:53 Test1 0 Accuracy: 0.458
+2020-11-26 13:17:53 Test2 0 Accuracy: 0.46271111111111113
+2020-11-26 13:22:43 episode=0, Mean Test accuracy=0.46001777777777775
+"""
 
+
+"""
+2020-11-26 13:11:06 way:5 shot:1
+2020-11-26 13:12:50 Train 0 Accuracy: 0.49344444444444446
+2020-11-26 13:12:50 Val   0 Accuracy: 0.45133333333333336
+2020-11-26 13:17:01 episode=0, Mean Test accuracy=0.46661777777777774
+2020-11-26 13:17:01 way:5 shot:5
+2020-11-26 13:19:45 Train 0 Accuracy: 0.6024666666666666
+2020-11-26 13:19:45 Val   0 Accuracy: 0.5617333333333333
+2020-11-26 13:25:14 episode=0, Mean Test accuracy=0.5753777777777778
+2020-11-26 13:25:14 way:5 shot:10
+2020-11-26 13:29:06 Train 0 Accuracy: 0.6469333333333332
+2020-11-26 13:29:06 Val   0 Accuracy: 0.6004
+2020-11-26 13:36:32 episode=0, Mean Test accuracy=0.6134666666666666
+2020-11-26 13:36:32 way:10 shot:1
+2020-11-26 13:39:49 Train 0 Accuracy: 0.3608888888888888
+2020-11-26 13:39:49 Val   0 Accuracy: 0.30927777777777776
+2020-11-26 13:47:55 episode=0, Mean Test accuracy=0.3181622222222222
+2020-11-26 13:47:55 way:10 shot:5
+2020-11-26 13:54:04 Train 0 Accuracy: 0.47339999999999993
+2020-11-26 13:54:04 Val   0 Accuracy: 0.4098
+2020-11-26 14:06:47 episode=0, Mean Test accuracy=0.4181444444444445
 """
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    gpu_id = 3
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
     batch_size = 64
@@ -89,9 +125,14 @@ class Config(object):
 
     feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
 
-    model_path = "../models/two_ic_ufsl_2net_res_sgd_acc"
-    model_fe_name = "0_2100_64_5_1_500_200_512_1_1.0_1.0_fe_5way_1shot.pkl"
-    model_rn_name = "0_2100_64_5_1_500_200_512_1_1.0_1.0_rn_5way_1shot.pkl"
+    # model_path = "../models/two_ic_ufsl_2net_res_sgd_acc"
+    # model_fe_name = "0_2100_64_5_1_500_200_512_1_1.0_1.0_fe_5way_1shot.pkl"
+    # model_rn_name = "0_2100_64_5_1_500_200_512_1_1.0_1.0_rn_5way_1shot.pkl"
+
+    model_path = "../models/two_ic_ufsl_2net_res_sgd_acc_duli"
+    model_fe_name = "2_2100_64_5_1_500_200_512_1_1.0_1.0_fe_5way_1shot.pkl"
+    model_rn_name = "2_2100_64_5_1_500_200_512_1_1.0_1.0_rn_5way_1shot.pkl"
+
     fe_dir = Tools.new_dir(os.path.join(model_path, model_fe_name))
     rn_dir = Tools.new_dir(os.path.join(model_path, model_rn_name))
 

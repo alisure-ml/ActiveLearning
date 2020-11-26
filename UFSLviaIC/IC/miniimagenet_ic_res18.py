@@ -10,10 +10,10 @@ from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
 from torch.optim import lr_scheduler
-from torchvision.models import resnet18
 import torchvision.transforms as transforms
 from miniimagenet_ic_test_tool import ICTestTool
 from torch.utils.data import DataLoader, Dataset
+from torchvision.models import resnet18, resnet50
 
 
 ##############################################################################################################
@@ -85,10 +85,14 @@ class Normalize(nn.Module):
 
 class ICResNet(nn.Module):
 
-    def __init__(self, low_dim=512):
+    def __init__(self, low_dim=512, modify_head=False):
         super().__init__()
         self.resnet = resnet18(num_classes=low_dim)
         self.l2norm = Normalize(2)
+
+        if modify_head:
+            self.resnet.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+            pass
         pass
 
     def forward(self, x):
@@ -176,10 +180,9 @@ class Runner(object):
         self.produce_class.init()
 
         # model
-        self.ic_model = self.to_cuda(ICResNet(Config.ic_out_dim))
+        self.ic_model = self.to_cuda(ICResNet(Config.ic_out_dim, modify_head=Config.modify_head))
         self.ic_loss = self.to_cuda(nn.CrossEntropyLoss())
 
-        # self.ic_model_optim = torch.optim.Adam(self.ic_model.parameters(), lr=Config.learning_rate)
         self.ic_model_optim = torch.optim.SGD(
             self.ic_model.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
@@ -293,7 +296,7 @@ class Runner(object):
         finally:
             pass
 
-        for epoch in range(Config.train_epoch):
+        for epoch in range(1, 1 + Config.train_epoch):
             self.ic_model.train()
 
             Tools.print()
@@ -326,7 +329,7 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f}".format(epoch + 1, all_loss / len(self.ic_train_loader)))
+            Tools.print("{:6} loss:{:.3f}".format(epoch, all_loss / len(self.ic_train_loader)))
             Tools.print("Train: [{}] {}/{}".format(epoch, self.produce_class.count, self.produce_class.count_2))
             ###########################################################################
 
@@ -429,22 +432,21 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
     num_workers = 8
-    batch_size = 32
-    # batch_size = 64
+    # batch_size = 32
+    batch_size = 64
     # batch_size = 256
     val_freq = 10
 
+    # modify_head = False
+    modify_head = True
+
     learning_rate = 0.01
 
-    # train_epoch = 1000
-    # first_epoch, t_epoch = 200, 100
-    # adjust_learning_rate = Runner.adjust_learning_rate1
-
-    # train_epoch = 1500
-    # first_epoch, t_epoch = 500, 500
+    # train_epoch = 900
+    # first_epoch, t_epoch = 300, 300
     # adjust_learning_rate = Runner.adjust_learning_rate2
 
     train_epoch = 2100
@@ -457,7 +459,8 @@ class Config(object):
     # ic_ratio = 2
     # ic_ratio = 3
 
-    model_name = "1_{}_{}_{}_{}_{}_{}".format(batch_size, ic_out_dim, ic_ratio, first_epoch, t_epoch, learning_rate)
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}".format(
+        batch_size, ic_out_dim, ic_ratio, train_epoch, first_epoch, t_epoch, learning_rate, modify_head)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -466,7 +469,7 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    ic_dir = Tools.new_dir("../models/ic_res_no_val/{}_ic.pkl".format(model_name))
+    ic_dir = Tools.new_dir("../models/ic_res18/{}_ic.pkl".format(model_name))
     pass
 
 
@@ -474,10 +477,10 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    # runner.ic_model.eval()
-    # runner.test_tool_ic.val(epoch=0, is_print=True)
+    runner.ic_model.eval()
+    runner.test_tool_ic.val(epoch=0, is_print=True)
 
-    # runner.train()
+    runner.train()
 
     runner.load_model()
     runner.ic_model.eval()
