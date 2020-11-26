@@ -250,9 +250,8 @@ class Runner(object):
         Tools.print("Training...")
 
         for epoch in range(Config.train_epoch):
-            if Config.has_train:
-                self.feature_encoder.train()
-                self.relation_network.train()
+            self.feature_encoder.train()
+            self.relation_network.train()
 
             Tools.print()
             all_loss = 0.0
@@ -291,10 +290,8 @@ class Runner(object):
             if epoch % Config.val_freq == 0:
                 Tools.print()
                 Tools.print("Test {} {} .......".format(epoch, Config.model_name))
-
-                if Config.has_eval:
-                    self.feature_encoder.eval()
-                    self.relation_network.eval()
+                self.feature_encoder.eval()
+                self.relation_network.eval()
 
                 val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
                 if val_accuracy > self.best_accuracy:
@@ -331,11 +328,7 @@ class Config(object):
 
     feature_encoder, relation_network = VGGEncoder(), VGGRelationNetwork()
 
-    has_train = True
-    # has_train = False
-    has_eval = True
-    # has_eval = False
-    model_name = "1_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot, has_eval, has_train)
+    model_name = "{}_{}_{}{}".format(train_epoch, batch_size, num_way, num_shot)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -361,17 +354,15 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    if Config.has_eval:
-        runner.feature_encoder.eval()
-        runner.relation_network.eval()
+    runner.feature_encoder.eval()
+    runner.relation_network.eval()
     runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 
     runner.load_model()
-    if Config.has_eval:
-        runner.feature_encoder.eval()
-        runner.relation_network.eval()
+    runner.feature_encoder.eval()
+    runner.relation_network.eval()
     runner.test_tool.val(episode=Config.train_epoch, is_print=True)
     runner.test_tool.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
     pass
