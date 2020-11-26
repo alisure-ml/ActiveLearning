@@ -257,8 +257,9 @@ class TestTool(object):
                 relations = self.model_fn(samples, self.to_cuda(batches))
 
                 _, predict_labels = torch.max(relations.data, 1)
+                final_predict_labels = [int(labels[predict]) for predict in predict_labels]
                 batch_size = batch_labels.shape[0]
-                rewards = [1 if predict_labels[j].cpu() == batch_labels[j] else 0 for j in range(batch_size)]
+                rewards = [1 if final_predict_labels[j] == batch_labels[j] else 0 for j in range(batch_size)]
                 total_rewards += np.sum(rewards)
 
                 counter += batch_size
