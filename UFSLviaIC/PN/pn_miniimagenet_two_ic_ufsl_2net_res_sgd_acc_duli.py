@@ -329,7 +329,7 @@ class Runner(object):
         Tools.print("Training...")
 
         # Init Update
-        try:
+        if False:
             self.ic_model.eval()
             Tools.print("Init label {} .......")
             self.produce_class.reset()
@@ -340,10 +340,9 @@ class Runner(object):
                 self.produce_class.cal_label(ic_out_l2norm, ic_labels)
                 pass
             Tools.print("Epoch: {}/{}".format(self.produce_class.count, self.produce_class.count_2))
-        finally:
             pass
 
-        for epoch in range(Config.train_epoch):
+        for epoch in range(1, 1 + Config.train_epoch):
             self.proto_net.train()
             self.ic_model.train()
 
@@ -399,7 +398,7 @@ class Runner(object):
             ###########################################################################
             # print
             Tools.print("{:6} loss:{:.3f} fsl:{:.3f} ic:{:.3f} ok:{:.3f}({}/{})".format(
-                epoch + 1, all_loss / len(self.task_train_loader),
+                epoch, all_loss / len(self.task_train_loader),
                 all_loss_fsl / len(self.task_train_loader), all_loss_ic / len(self.task_train_loader),
                 int(is_ok_acc) / int(is_ok_total), is_ok_acc, is_ok_total, ))
             Tools.print("Train: [{}] {}/{}".format(epoch, self.produce_class.count, self.produce_class.count_2))
@@ -433,7 +432,17 @@ class Runner(object):
 
 
 """
-
+2020-11-27 09:46:49    600 loss:2.319 fsl:1.047 ic:1.272 ok:0.267(10260/38400)
+2020-11-27 09:46:49 Train: [599] 11902/2098
+2020-11-27 09:46:49 load ic pretrain model success from ../models/ic_res_no_val/1_32_512_1_500_200_0.01_ic.pkl
+2020-11-27 09:46:49 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_600_64_5_1_64_64_300_150_512_1_1.0_1.0_pn_5way_1shot.pkl
+2020-11-27 09:46:49 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_600_64_5_1_64_64_300_150_512_1_1.0_1.0_ic_5way_1shot.pkl
+2020-11-27 09:47:02 Epoch: 600 Train 0.5121/0.8000 0.0000
+2020-11-27 09:47:02 Epoch: 600 Val   0.5988/0.9172 0.0000
+2020-11-27 09:47:02 Epoch: 600 Test  0.5718/0.9101 0.0000
+2020-11-27 09:48:28 Train 600 Accuracy: 0.39266666666666666
+2020-11-27 09:48:28 Val   600 Accuracy: 0.3691111111111111
+2020-11-27 09:51:55 episode=600, Mean Test accuracy=0.3861066666666666
 """
 
 
@@ -453,26 +462,29 @@ class Config(object):
 
     hid_dim = 64
     z_dim = 64
-    proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim)
+
+    has_norm = True
+    proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=has_norm)
 
     # ic
     ic_out_dim = 512
     ic_ratio = 1
 
     learning_rate = 0.01
+    # learning_rate_ic = 0.0001
     loss_fsl_ratio = 1.0
     loss_ic_ratio = 1.0
 
-    train_epoch = 600
-    first_epoch, t_epoch = 300, 150
-    adjust_learning_rate = RunnerTool.adjust_learning_rate2
+    # train_epoch = 600
+    # first_epoch, t_epoch = 300, 150
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    # train_epoch = 2100
-    # first_epoch, t_epoch = 500, 200
-    # adjust_learning_rate = RunnerTool.adjust_learning_rate1
+    train_epoch = 2100
+    first_epoch, t_epoch = 500, 200
+    adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
-    train_ic = False
-    # train_ic = True
+    # train_ic = False
+    train_ic = True
     ic_pretrain_dir = None
     if "Linux" in platform.platform() and not train_ic:
         _ic_pretrain_name = "2_2100_64_5_1_500_200_512_1_1.0_1.0_ic_5way_1shot.pkl"
@@ -501,7 +513,7 @@ class Config(object):
 
 if __name__ == '__main__':
     runner = Runner()
-    runner.load_model()
+    # runner.load_model()
 
     # runner.proto_net.eval()
     # runner.ic_model.eval()

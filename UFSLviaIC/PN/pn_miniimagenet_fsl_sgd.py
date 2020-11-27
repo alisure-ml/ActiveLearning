@@ -222,7 +222,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -239,7 +239,10 @@ class Config(object):
     hid_dim = 64
     z_dim = 64
 
-    proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim)
+    # has_norm = False
+    has_norm = True
+
+    proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=has_norm)
 
     learning_rate = 0.01
 
@@ -251,8 +254,9 @@ class Config(object):
     # first_epoch, t_epoch = 500, 200
     # adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        gpu_id, train_epoch, batch_size, num_way, num_shot, hid_dim, z_dim, first_epoch, t_epoch)
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
+        gpu_id, train_epoch, batch_size, num_way, num_shot,
+        hid_dim, z_dim, first_epoch, t_epoch, "_norm" if has_norm else "")
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
