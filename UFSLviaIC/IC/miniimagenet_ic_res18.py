@@ -431,6 +431,17 @@ class Runner(object):
 """
 
 
+"""
+modify_head = True
+2020-11-27 23:08:23 Train: [2100] 6560/1403
+2020-11-27 23:08:50 load ic model success from ../models/ic_res18/64_512_1_2100_500_200_0.01_True_ic.pkl
+2020-11-27 23:08:50 Test 2100 .......
+2020-11-27 23:09:16 Epoch: 2100 Train 0.5119/0.7945 0.0000
+2020-11-27 23:09:16 Epoch: 2100 Val   0.6073/0.9267 0.0000
+2020-11-27 23:09:16 Epoch: 2100 Test  0.5687/0.9106 0.0000
+"""
+
+
 class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
