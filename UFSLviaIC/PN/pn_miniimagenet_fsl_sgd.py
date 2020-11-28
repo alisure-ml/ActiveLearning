@@ -166,7 +166,7 @@ class Runner(object):
         Tools.print()
         Tools.print("Training...")
 
-        for epoch in range(Config.train_epoch):
+        for epoch in range(1, 1 + Config.train_epoch):
             self.proto_net.train()
 
             Tools.print()
@@ -195,7 +195,7 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f}".format(epoch + 1, all_loss / len(self.task_train_loader)))
+            Tools.print("{:6} loss:{:.3f}".format(epoch, all_loss / len(self.task_train_loader)))
             ###########################################################################
 
             ###########################################################################
