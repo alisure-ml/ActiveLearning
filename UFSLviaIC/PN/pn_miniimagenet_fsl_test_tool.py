@@ -168,7 +168,9 @@ class MiniImageNet(Dataset):
             pass
 
         if transform is None:
-            normalize = transforms.Normalize(mean=[0.92206, 0.92206, 0.92206], std=[0.08426, 0.08426, 0.08426])
+            normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
+                                             std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
+            # normalize = transforms.Normalize(mean=[0.92206, 0.92206, 0.92206], std=[0.08426, 0.08426, 0.08426])
             transform = transforms.Compose([transforms.ToTensor(), normalize])
             pass
         dataset = MiniImageNet(task, split=split, transform=transform)
@@ -241,17 +243,18 @@ class TestTool(object):
         for i in range(all_episode):
             total_rewards = 0
             counter = 0
-            # 随机选5类，每类中取出1个作为训练样本，每类取出15个作为测试样本
+            # 随机选5类，每类中取出num_shot个作为训练样本，总共取出15个作为测试样本
             task = MiniImageNetTask(folders, self.num_way, self.num_shot, self.episode_size)
-            sample_data_loader = MiniImageNet.get_data_loader(task, 1, "train", sampler_test=sampler_test,
+            sample_data_loader = MiniImageNet.get_data_loader(task, self.num_shot, "train", sampler_test=sampler_test,
                                                               shuffle=False, transform=self.transform)
-            batch_data_loader = MiniImageNet.get_data_loader(task, 3, "val", sampler_test=sampler_test,
+            num_per_class = 5 if self.num_shot > 1 else 3
+            batch_data_loader = MiniImageNet.get_data_loader(task, num_per_class, "val", sampler_test=sampler_test,
                                                              shuffle=True, transform=self.transform)
             samples, labels = sample_data_loader.__iter__().next()
 
             samples = self.to_cuda(samples)
             for batches, batch_labels in batch_data_loader:
-                results = self.model_fn(samples, self.to_cuda(batches))
+                results = self.model_fn(samples, self.to_cuda(batches), num_way=self.num_way, num_shot=self.num_shot)
 
                 _, predict_labels = torch.max(results.data, 1)
                 batch_size = batch_labels.shape[0]

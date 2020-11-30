@@ -272,7 +272,7 @@ class Runner(object):
         log_p_y = F.log_softmax(-dists, dim=1)
         return log_p_y
 
-    def proto_test(self, samples, batches):
+    def proto_test(self, samples, batches, num_way, num_shot):
         batch_num, _, _, _ = batches.shape
 
         sample_z = self.proto_net(samples)  # 5x64*5*5
@@ -350,7 +350,7 @@ class Runner(object):
 
                 self.proto_net.zero_grad()
                 loss_fsl.backward()
-                torch.nn.utils.clip_grad_norm_(self.proto_net.parameters(), 0.5)
+                # torch.nn.utils.clip_grad_norm_(self.proto_net.parameters(), 0.5)
                 self.proto_net_optim.step()
 
                 # is ok
@@ -379,6 +379,10 @@ class Runner(object):
 
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
+                    torch.save(self.proto_net.state_dict(),
+                               "{}/pn_{}.pkl".format(os.path.basename(Config.pn_dir), val_accuracy))
+                    torch.save(self.ic_model.state_dict(),
+                               "{}/ic_{}.pkl".format(os.path.basename(Config.ic_dir), val_accuracy))
                     torch.save(self.proto_net.state_dict(), Config.pn_dir)
                     torch.save(self.ic_model.state_dict(), Config.ic_dir)
                     Tools.print("Save networks for epoch: {}".format(epoch))
@@ -387,6 +391,9 @@ class Runner(object):
             ###########################################################################
             pass
 
+        Tools.print("Save networks for last")
+        torch.save(self.proto_net.state_dict(), "{}/pn_last.pkl".format(os.path.basename(Config.pn_dir)))
+        torch.save(self.ic_model.state_dict(), "{}/ic_last.pkl".format(os.path.basename(Config.ic_dir)))
         pass
 
     pass
@@ -399,8 +406,8 @@ class Runner(object):
 Norm=True
 2020-11-29 20:55:31   2100 loss:1.623 fsl:0.604 ic:1.019 ok:0.256(9847/38400)
 2020-11-29 20:55:31 Train: [2100] 8947/1754
-2020-11-29 20:57:26 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_pn_5way_1shot.pkl
-2020-11-29 20:57:26 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_ic_5way_1shot.pkl
+2020-11-29 20:57:26 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm_pn_5way_1shot.pkl
+2020-11-29 20:57:26 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm_ic_5way_1shot.pkl
 2020-11-29 20:57:39 Epoch: 2100 Train 0.4941/0.7815 0.0000
 2020-11-29 20:57:39 Epoch: 2100 Val   0.5780/0.9105 0.0000
 2020-11-29 20:57:39 Epoch: 2100 Test  0.5575/0.9041 0.0000
@@ -411,7 +418,7 @@ Norm=True
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
@@ -427,8 +434,8 @@ class Config(object):
     hid_dim = 64
     z_dim = 64
 
-    # has_norm = True
-    has_norm = False
+    has_norm = True
+    # has_norm = False
     proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=has_norm)
 
     # ic
@@ -436,25 +443,20 @@ class Config(object):
     ic_ratio = 1
 
     learning_rate = 0.01
-    # learning_rate_ic = 0.0001
     loss_fsl_ratio = 1.0
     loss_ic_ratio = 1.0
-
-    # train_epoch = 600
-    # first_epoch, t_epoch = 300, 150
-    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     train_epoch = 2100
     first_epoch, t_epoch = 500, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
         gpu_id, train_epoch, batch_size, num_way, num_shot, hid_dim, z_dim, first_epoch,
         t_epoch, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, "_norm" if has_norm else "")
 
     _root_path = "../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli"
-    pn_dir = Tools.new_dir("{}/{}_pn_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
-    ic_dir = Tools.new_dir("{}/{}_ic_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
+    pn_dir = Tools.new_dir("{}/{}/pn_final.pkl".format(_root_path, model_name))
+    ic_dir = Tools.new_dir("{}/{}/ic_final.pkl".format(_root_path, model_name))
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
