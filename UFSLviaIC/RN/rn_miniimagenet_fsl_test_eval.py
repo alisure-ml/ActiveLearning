@@ -53,6 +53,9 @@ class Runner(object):
     def eval_one(self, num_way=5, num_shot=1):
         Tools.print("way:{} shot:{}".format(num_way, num_shot))
 
+        # self.feature_encoder.eval()
+        # self.relation_network.eval()
+
         test_tool_fsl = TestTool(self.compare_fsl_test, Config.data_root, num_way=num_way, num_shot=num_shot,
                                  episode_size=Config.episode_size, test_episode=Config.test_episode)
         test_tool_fsl.val(is_print=True)
