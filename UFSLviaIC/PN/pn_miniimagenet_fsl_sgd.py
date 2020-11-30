@@ -276,14 +276,14 @@ class Config(object):
 2020-11-25 06:56:12 load proto net success from ../models_pn/fsl_sgd/1_500_64_5_1_64_64_300_150_pn_5way_1shot.pkl
 2020-11-25 06:57:50 Train 500 Accuracy: 0.6728888888888889
 2020-11-25 06:57:50 Val   500 Accuracy: 0.504
-2020-11-25 06:57:50 Test1 500 Accuracy: 0.525
-2020-11-25 06:57:50 Test2 500 Accuracy: 0.5089555555555556
-2020-11-25 07:01:48 episode=500, Test accuracy=0.5038888888888889
-2020-11-25 07:01:48 episode=500, Test accuracy=0.5120666666666667
-2020-11-25 07:01:48 episode=500, Test accuracy=0.5151777777777778
-2020-11-25 07:01:48 episode=500, Test accuracy=0.5124
-2020-11-25 07:01:48 episode=500, Test accuracy=0.5084000000000001
 2020-11-25 07:01:48 episode=500, Mean Test accuracy=0.5103866666666667
+
+norm
+2020-11-28 21:11:12 load proto net success from ../models_pn/fsl_sgd/0_500_64_5_1_64_64_300_150_norm_pn_5way_1shot.pkl
+2020-11-28 21:12:55 Train 500 Accuracy: 0.6346666666666667
+2020-11-28 21:12:55 Val   500 Accuracy: 0.4473333333333334
+2020-11-28 21:17:05 episode=500, Mean Test accuracy=0.45159111111111105
+
 """
 
 

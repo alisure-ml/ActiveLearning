@@ -396,17 +396,17 @@ class Runner(object):
 
 
 """
-2020-11-27 09:46:49    600 loss:2.319 fsl:1.047 ic:1.272 ok:0.267(10260/38400)
-2020-11-27 09:46:49 Train: [599] 11902/2098
-2020-11-27 09:46:49 load ic pretrain model success from ../models/ic_res_no_val/1_32_512_1_500_200_0.01_ic.pkl
-2020-11-27 09:46:49 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_600_64_5_1_64_64_300_150_512_1_1.0_1.0_pn_5way_1shot.pkl
-2020-11-27 09:46:49 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_600_64_5_1_64_64_300_150_512_1_1.0_1.0_ic_5way_1shot.pkl
-2020-11-27 09:47:02 Epoch: 600 Train 0.5121/0.8000 0.0000
-2020-11-27 09:47:02 Epoch: 600 Val   0.5988/0.9172 0.0000
-2020-11-27 09:47:02 Epoch: 600 Test  0.5718/0.9101 0.0000
-2020-11-27 09:48:28 Train 600 Accuracy: 0.39266666666666666
-2020-11-27 09:48:28 Val   600 Accuracy: 0.3691111111111111
-2020-11-27 09:51:55 episode=600, Mean Test accuracy=0.3861066666666666
+Norm=True
+2020-11-29 20:55:31   2100 loss:1.623 fsl:0.604 ic:1.019 ok:0.256(9847/38400)
+2020-11-29 20:55:31 Train: [2100] 8947/1754
+2020-11-29 20:57:26 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_pn_5way_1shot.pkl
+2020-11-29 20:57:26 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_ic_5way_1shot.pkl
+2020-11-29 20:57:39 Epoch: 2100 Train 0.4941/0.7815 0.0000
+2020-11-29 20:57:39 Epoch: 2100 Val   0.5780/0.9105 0.0000
+2020-11-29 20:57:39 Epoch: 2100 Test  0.5575/0.9041 0.0000
+2020-11-29 20:59:19 Train 2100 Accuracy: 0.4948888888888888
+2020-11-29 20:59:19 Val   2100 Accuracy: 0.43855555555555553
+2020-11-29 21:03:14 episode=2100, Mean Test accuracy=0.4551777777777778
 """
 
 

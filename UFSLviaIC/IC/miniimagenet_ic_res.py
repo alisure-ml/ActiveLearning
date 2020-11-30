@@ -13,7 +13,7 @@ from torch.optim import lr_scheduler
 import torchvision.transforms as transforms
 from miniimagenet_ic_test_tool import ICTestTool
 from torch.utils.data import DataLoader, Dataset
-from torchvision.models import resnet18, resnet34, resnet50
+from torchvision.models import resnet18, resnet34, resnet50, vgg16_bn
 
 
 ##############################################################################################################
@@ -85,18 +85,39 @@ class Normalize(nn.Module):
 
 class ICResNet(nn.Module):
 
-    def __init__(self, low_dim=512, modify_head=False, resnet=resnet18):
+    def __init__(self, low_dim=512, modify_head=False, resnet=None, vggnet=None):
         super().__init__()
-        self.resnet = resnet(num_classes=low_dim)
-        self.l2norm = Normalize(2)
+        self.is_res = True if resnet else False
+        self.is_vgg = True if vggnet else False
 
-        if modify_head:
-            self.resnet.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        if self.is_res:
+            self.resnet = resnet(num_classes=low_dim)
+            if modify_head:
+                self.resnet.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+                pass
+        elif self.is_vgg:
+            self.vggnet = vggnet()
+            self.avgpool = nn.AdaptiveAvgPool2d(1)
+            self.fc = nn.Linear(512, low_dim)
             pass
+        else:
+            raise Exception("......")
+
+        self.l2norm = Normalize(2)
         pass
 
     def forward(self, x):
-        out_logits = self.resnet(x)
+        if self.is_res:
+            out_logits = self.resnet(x)
+        elif self.is_vgg:
+            features = self.vggnet.features(x)
+            features = self.avgpool(features)
+            features = torch.flatten(features, 1)
+            out_logits = self.fc(features)
+            pass
+        else:
+            raise Exception("......")
+
         out_l2norm = self.l2norm(out_logits)
         return out_logits, out_l2norm
 
@@ -180,7 +201,8 @@ class Runner(object):
         self.produce_class.init()
 
         # model
-        self.ic_model = self.to_cuda(ICResNet(Config.ic_out_dim, modify_head=Config.modify_head, resnet=Config.resnet))
+        self.ic_model = self.to_cuda(ICResNet(Config.ic_out_dim, modify_head=Config.modify_head,
+                                              resnet=Config.resnet, vggnet=Config.vggnet))
         self.ic_loss = self.to_cuda(nn.CrossEntropyLoss())
 
         self.ic_model_optim = torch.optim.SGD(
@@ -439,6 +461,14 @@ modify_head = True
 2020-11-27 23:09:16 Epoch: 2100 Train 0.5119/0.7945 0.0000
 2020-11-27 23:09:16 Epoch: 2100 Val   0.6073/0.9267 0.0000
 2020-11-27 23:09:16 Epoch: 2100 Test  0.5687/0.9106 0.0000
+
+resnet_34, modify_head = False
+2020-11-30 07:01:22 Train: [2100] 4956/1389
+2020-11-30 07:02:02 load ic model success from ../models/ic_res_xx/3_resnet_34_64_512_1_2100_500_200_ic.pkl
+2020-11-30 07:02:02 Test 2100 .......
+2020-11-30 07:02:42 Epoch: 2100 Train 0.5245/0.8043 0.0000
+2020-11-30 07:02:42 Epoch: 2100 Val   0.6268/0.9342 0.0000
+2020-11-30 07:02:42 Epoch: 2100 Test  0.5926/0.9198 0.0000
 """
 
 
@@ -452,9 +482,10 @@ class Config(object):
     # batch_size = 256
     val_freq = 10
 
-    # resnet, net_name = resnet18, "resnet_18"
-    resnet, net_name = resnet34, "resnet_34"
-    # resnet, net_name = resnet50, "resnet_50"
+    # resnet, vggnet, net_name = resnet18, None, "resnet_18"
+    # resnet, vggnet, net_name = resnet34, None, "resnet_34"
+    # resnet, vggnet, net_name = resnet50, None, "resnet_50"
+    resnet, vggnet, net_name = None, vgg16_bn, "vgg16_bn"
 
     # modify_head = False
     modify_head = True
