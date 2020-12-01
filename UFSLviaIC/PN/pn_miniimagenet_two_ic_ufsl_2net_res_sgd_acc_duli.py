@@ -350,7 +350,7 @@ class Runner(object):
 
                 self.proto_net.zero_grad()
                 loss_fsl.backward()
-                # torch.nn.utils.clip_grad_norm_(self.proto_net.parameters(), 0.5)
+                torch.nn.utils.clip_grad_norm_(self.proto_net.parameters(), 0.5)
                 self.proto_net_optim.step()
 
                 # is ok
@@ -430,7 +430,7 @@ Norm=True
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
