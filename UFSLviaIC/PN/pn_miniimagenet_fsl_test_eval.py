@@ -72,7 +72,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -89,7 +89,7 @@ class Config(object):
 
     model_path = "../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli"
     # model_pn_name = "2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm_pn_5way_1shot.pkl"
-    model_pn_name = "1_2100_64_5_1_64_64_500_200_512_1_1.0_1.0__pn_5way_1shot.pkl"
+    model_pn_name = "1_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_pn_5way_1shot.pkl"
     pn_dir = Tools.new_dir(os.path.join(model_path, model_pn_name))
 
     if "Linux" in platform.platform():

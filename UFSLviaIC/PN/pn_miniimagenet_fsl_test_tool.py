@@ -12,6 +12,31 @@ from torch.utils.data import DataLoader, Dataset
 
 ##############################################################################################################
 
+class AverageMeter(object):
+
+    def __init__(self):
+        self.reset()
+        pass
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+        pass
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+        pass
+
+    pass
+
+
+##############################################################################################################
+
 
 class ClassBalancedSampler(Sampler):
     """ Samples 'num_inst' examples each from 'num_cl' pools of examples of size 'num_per_class' """

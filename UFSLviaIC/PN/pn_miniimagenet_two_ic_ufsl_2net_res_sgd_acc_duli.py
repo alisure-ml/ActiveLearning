@@ -380,9 +380,9 @@ class Runner(object):
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
                     torch.save(self.proto_net.state_dict(),
-                               "{}/pn_{}.pkl".format(os.path.basename(Config.pn_dir), val_accuracy))
+                               "{}/pn_{}_{}.pkl".format(os.path.split(Config.pn_dir)[0], epoch, val_accuracy))
                     torch.save(self.ic_model.state_dict(),
-                               "{}/ic_{}.pkl".format(os.path.basename(Config.ic_dir), val_accuracy))
+                               "{}/ic_{}_{}.pkl".format(os.path.split(Config.ic_dir)[0], epoch, val_accuracy))
                     torch.save(self.proto_net.state_dict(), Config.pn_dir)
                     torch.save(self.ic_model.state_dict(), Config.ic_dir)
                     Tools.print("Save networks for epoch: {}".format(epoch))
@@ -392,8 +392,8 @@ class Runner(object):
             pass
 
         Tools.print("Save networks for last")
-        torch.save(self.proto_net.state_dict(), "{}/pn_last.pkl".format(os.path.basename(Config.pn_dir)))
-        torch.save(self.ic_model.state_dict(), "{}/ic_last.pkl".format(os.path.basename(Config.ic_dir)))
+        torch.save(self.proto_net.state_dict(), "{}/pn_last.pkl".format(os.path.split(Config.pn_dir)[0]))
+        torch.save(self.ic_model.state_dict(), "{}/ic_last.pkl".format(os.path.split(Config.ic_dir)[0]))
         pass
 
     pass
@@ -414,6 +414,18 @@ Norm=True
 2020-11-29 20:59:19 Train 2100 Accuracy: 0.4948888888888888
 2020-11-29 20:59:19 Val   2100 Accuracy: 0.43855555555555553
 2020-11-29 21:03:14 episode=2100, Mean Test accuracy=0.4551777777777778
+
+1_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_pn_5way_1shot.pkl
+2020-12-01 06:16:29   2100 loss:1.669 fsl:0.660 ic:1.009 ok:0.264(10143/38400)
+2020-12-01 06:16:29 Train: [2100] 8899/1741
+2020-12-01 06:18:23 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/1_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_pn_5way_1shot.pkl
+2020-12-01 06:18:23 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/1_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_ic_5way_1shot.pkl
+2020-12-01 06:18:36 Epoch: 2100 Train 0.4982/0.7851 0.0000
+2020-12-01 06:18:36 Epoch: 2100 Val   0.5806/0.9125 0.0000
+2020-12-01 06:18:36 Epoch: 2100 Test  0.5617/0.9018 0.0000
+2020-12-01 06:20:20 Train 2100 Accuracy: 0.4679999999999999
+2020-12-01 06:20:20 Val   2100 Accuracy: 0.43411111111111117
+2020-12-01 06:24:20 episode=2100, Mean Test accuracy=0.4441644444444445
 """
 
 
