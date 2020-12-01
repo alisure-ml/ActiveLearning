@@ -105,9 +105,7 @@ class MiniImageNet(Dataset):
             pass
 
         if transform is None:
-            normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
-                                             std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
-            transform = transforms.Compose([transforms.ToTensor(), normalize])
+            transform = transforms.Compose([transforms.ToTensor(), Config.transforms_normalize])
             pass
         dataset = MiniImageNet(task, split=split, transform=transform)
         return DataLoader(dataset, batch_size=num_per_class * task.num_classes, sampler=sampler)
@@ -129,13 +127,11 @@ class ImageNet(Dataset):
             self.data_dict[label].append((index, label, image_filename))
             pass
 
-        normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
-                                         std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
         self.transform = transforms.Compose([
             transforms.RandomCrop(84, padding=8),
             transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), Config.transforms_normalize])
+        self.transform_test = transforms.Compose([transforms.ToTensor(), Config.transforms_normalize])
         if not is_train:
             self.transform = self.transform_test
         pass
@@ -239,6 +235,11 @@ class MiniImageNetOld(Dataset):
 
     def __getitem__(self, idx):
         image = self.image_datas[idx]
+
+        # image_path = Tools.new_dir(os.path.join(Config.data_root2, "tmp", "{}.png".format(idx)))
+        # Image.fromarray(image).save(image_path)
+        # image = np.asarray(Image.open(image_path))
+
         if self.transform is not None:
             image = self.transform(image)
 
@@ -291,9 +292,7 @@ class MiniImageNetOld(Dataset):
             pass
 
         if transform is None:
-            normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
-                                             std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
-            transform = transforms.Compose([transforms.ToTensor(), normalize])
+            transform = transforms.Compose([transforms.ToTensor(), Config.transforms_normalize])
             pass
         dataset = MiniImageNetOld(task, split=split, transform=transform)
         return DataLoader(dataset, batch_size=num_per_class * task.num_classes, sampler=sampler)
@@ -308,14 +307,13 @@ class ImageNetOld(Dataset):
         self.labels = labels
         self.is_train = is_train
 
-        normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
-                                         std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
         self.transform = transforms.Compose([
             lambda x: Image.fromarray(x),
             transforms.RandomCrop(84, padding=8),
             transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([lambda x: Image.fromarray(x), transforms.ToTensor(), normalize])
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), Config.transforms_normalize])
+        self.transform_test = transforms.Compose([lambda x: Image.fromarray(x),
+                                                  transforms.ToTensor(), Config.transforms_normalize])
         if not is_train:
             self.transform = self.transform_test
         pass
@@ -554,9 +552,8 @@ class ResNet(nn.Module):
 
 class TestTool(object):
 
-    def __init__(self, model_fn, data_root, num_way=5, num_shot=1, episode_size=15, test_episode=600, transform=None):
+    def __init__(self, model_fn, data_root, num_way=5, num_shot=1, episode_size=15, test_episode=600):
         self.model_fn = model_fn
-        self.transform = transform
 
         self.folders_train, self.folders_val, self.folders_test = MiniImageNet.folders(data_root)
 
@@ -609,11 +606,11 @@ class TestTool(object):
             total_rewards, counter = 0, 0
             # 随机选5类，每类中取出num_shot个作为训练样本，总共取出15个作为测试样本
             task = MiniImageNetTask(folders, self.num_way, self.num_shot, self.episode_size)
-            sample_data_loader = MiniImageNet.get_data_loader(task, self.num_shot, "train", sampler_test=sampler_test,
-                                                              shuffle=False, transform=self.transform)
+            sample_data_loader = MiniImageNet.get_data_loader(
+                task, self.num_shot, "train", sampler_test=sampler_test, shuffle=False)
             num_per_class = 5 if self.num_shot > 1 else 3
-            batch_data_loader = MiniImageNet.get_data_loader(task, num_per_class, "val", sampler_test=sampler_test,
-                                                             shuffle=True, transform=self.transform)
+            batch_data_loader = MiniImageNet.get_data_loader(
+                task, num_per_class, "val", sampler_test=sampler_test, shuffle=True)
             samples, labels = sample_data_loader.__iter__().next()
 
             samples = self.to_cuda(samples)
@@ -639,9 +636,8 @@ class TestTool(object):
 
 class TestToolOld(object):
 
-    def __init__(self, model_fn, data_root, num_way=5, num_shot=1, episode_size=15, test_episode=600, transform=None):
+    def __init__(self, model_fn, data_root, num_way=5, num_shot=1, episode_size=15, test_episode=600):
         self.model_fn = model_fn
-        self.transform = transform
 
         self.val_data, self.test_data = MiniImageNetOld.all_data(data_root)
 
@@ -695,10 +691,10 @@ class TestToolOld(object):
             # 随机选5类，每类中取出num_shot个作为训练样本，总共取出15个作为测试样本
             task = MiniImageNetTaskOld(test_data, self.num_way, self.num_shot, self.episode_size)
             sample_data_loader = MiniImageNetOld.get_data_loader(
-                task, self.num_shot, "train", sampler_test=sampler_test, shuffle=False, transform=self.transform)
+                task, self.num_shot, "train", sampler_test=sampler_test, shuffle=False)
             num_per_class = 5 if self.num_shot > 1 else 3
             batch_data_loader = MiniImageNetOld.get_data_loader(
-                task, num_per_class, "val", sampler_test=sampler_test, shuffle=True, transform=self.transform)
+                task, num_per_class, "val", sampler_test=sampler_test, shuffle=True)
             samples, labels = sample_data_loader.__iter__().next()
 
             samples = self.to_cuda(samples)
@@ -953,13 +949,18 @@ class Runner(object):
 ##############################################################################################################
 
 
+transforms_normalize1 = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
+                                             np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
+
+transforms_normalize2 = transforms.Normalize(np.array([x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]),
+                                             np.array([x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]))
+
+
 class Config(object):
-    gpu_id = 2
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
     warnings.filterwarnings('ignore')
-
-    class_is_old = True
 
     num_workers = 8
     epochs = 100
@@ -975,8 +976,15 @@ class Config(object):
     num_shot = 1
     episode_size = 15
 
-    model_name = "{}".format('Proto')
+    # class_is_old, class_name = False, "my"
+    class_is_old, class_name = True, "old"
+
+    # transforms_normalize, norm_name = transforms_normalize1, "norm1"
+    transforms_normalize, norm_name = transforms_normalize2, "norm2"
+
+    model_name = "{}_{}_{}".format('Proto', class_name, norm_name)
     model_path = Tools.new_dir('../../rfs/models_pretrained_my/{}'.format(model_name))
+    Tools.print(model_path)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -988,6 +996,13 @@ class Config(object):
         data_root = "F:\\data\\miniImagenet"
 
     pass
+
+
+"""
+2020-12-01 14:48:37 load model success from ../../rfs/models_pretrained_my/Proto/last.pth
+2020-12-01 14:50:04 Val   0 Accuracy: 0.6364444444444445
+2020-12-01 14:55:08 episode=0, Mean Test accuracy=0.6119822222222222
+"""
 
 
 if __name__ == '__main__':
