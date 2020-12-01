@@ -295,7 +295,7 @@ class MiniImageNetOld(Dataset):
                                              std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
             transform = transforms.Compose([transforms.ToTensor(), normalize])
             pass
-        dataset = MiniImageNet(task, split=split, transform=transform)
+        dataset = MiniImageNetOld(task, split=split, transform=transform)
         return DataLoader(dataset, batch_size=num_per_class * task.num_classes, sampler=sampler)
 
     pass
@@ -693,12 +693,12 @@ class TestToolOld(object):
         for i in range(all_episode):
             total_rewards, counter = 0, 0
             # 随机选5类，每类中取出num_shot个作为训练样本，总共取出15个作为测试样本
-            task = MiniImageNetTask(test_data, self.num_way, self.num_shot, self.episode_size)
-            sample_data_loader = MiniImageNet.get_data_loader(task, self.num_shot, "train", sampler_test=sampler_test,
-                                                              shuffle=False, transform=self.transform)
+            task = MiniImageNetTaskOld(test_data, self.num_way, self.num_shot, self.episode_size)
+            sample_data_loader = MiniImageNetOld.get_data_loader(
+                task, self.num_shot, "train", sampler_test=sampler_test, shuffle=False, transform=self.transform)
             num_per_class = 5 if self.num_shot > 1 else 3
-            batch_data_loader = MiniImageNet.get_data_loader(task, num_per_class, "val", sampler_test=sampler_test,
-                                                             shuffle=True, transform=self.transform)
+            batch_data_loader = MiniImageNetOld.get_data_loader(
+                task, num_per_class, "val", sampler_test=sampler_test, shuffle=True, transform=self.transform)
             samples, labels = sample_data_loader.__iter__().next()
 
             samples = self.to_cuda(samples)
