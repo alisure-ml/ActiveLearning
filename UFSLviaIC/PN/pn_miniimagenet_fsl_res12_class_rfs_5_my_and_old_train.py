@@ -760,7 +760,7 @@ class Runner(object):
         pass
 
     def load_model(self):
-        model_path = os.path.join(Config.model_path, 'last.pth')
+        model_path = os.path.join(Config.model_path, 'best.pth')
         if os.path.exists(model_path):
             self.model.load_state_dict(torch.load(model_path))
             Tools.print("load model success from {}".format(model_path))
@@ -794,6 +794,7 @@ class Runner(object):
         return log_p_y
 
     def train(self):
+        best_accuracy = 0.0
         for epoch in range(1, Config.epochs + 1):
             self.adjust_learning_rate(epoch)
             Tools.print()
@@ -810,15 +811,19 @@ class Runner(object):
 
             # regular saving
             if epoch % Config.save_freq == 0:
-                state = {'epoch': epoch, 'model': self.model.state_dict()}
                 save_file = os.path.join(Config.model_path, 'ckpt_epoch_{epoch}.pth'.format(epoch=epoch))
-                torch.save(state, save_file)
+                torch.save(self.model.state_dict(), save_file)
 
                 Tools.print()
                 Tools.print('==> Saving ... {}'.format(save_file))
 
                 self.model.eval()
-                self.test_tool.val(episode=epoch, is_print=True)
+                val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
+                if val_accuracy > best_accuracy:
+                    best_accuracy = val_accuracy
+                    torch.save(self.model.state_dict(), os.path.join(Config.model_path, 'best.pth'))
+                    Tools.print("Save best model for epoch: {}, acc={}".format(epoch, best_accuracy))
+                    pass
                 pass
             pass
 
@@ -1002,6 +1007,22 @@ class Config(object):
 2020-12-01 14:48:37 load model success from ../../rfs/models_pretrained_my/Proto/last.pth
 2020-12-01 14:50:04 Val   0 Accuracy: 0.6364444444444445
 2020-12-01 14:55:08 episode=0, Mean Test accuracy=0.6119822222222222
+
+2020-12-01 20:58:15 load model success from ../../rfs/models_pretrained_my/Proto_my_norm1/last.pth
+2020-12-01 21:01:20 Val   0 Accuracy: 0.6133333333333333
+2020-12-01 21:10:30 episode=0, Mean Test accuracy=0.5870044444444446
+
+2020-12-01 20:17:03 load model success from ../../rfs/models_pretrained_my/Proto_my_norm2/last.pth
+2020-12-01 20:19:01 Val   0 Accuracy: 0.6158888888888888
+2020-12-01 20:27:24 episode=0, Mean Test accuracy=0.58768
+
+2020-12-01 20:29:22 load model success from ../../rfs/models_pretrained_my/Proto_old_norm1/last.pth
+2020-12-01 20:31:04 Val   0 Accuracy: 0.6381111111111111
+2020-12-01 20:36:57 episode=0, Mean Test accuracy=0.6170755555555555
+
+2020-12-01 21:28:03 load model success from ../../rfs/models_pretrained_my/Proto_old_norm2/last.pth
+2020-12-01 21:30:35 Val   0 Accuracy: 0.6391111111111112
+2020-12-01 21:38:56 episode=0, Mean Test accuracy=0.6162355555555556
 """
 
 
