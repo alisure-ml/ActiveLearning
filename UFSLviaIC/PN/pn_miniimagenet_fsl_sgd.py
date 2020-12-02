@@ -30,12 +30,10 @@ class MiniImageNetDataset(object):
             self.data_dict[label].append((index, label, image_filename))
             pass
 
-        normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
-                                         std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
         self.transform = transforms.Compose([
             transforms.RandomCrop(84, padding=8),
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), Config.transforms_normalize])
+        self.transform_test = transforms.Compose([transforms.ToTensor(), Config.transforms_normalize])
         pass
 
     def __len__(self):
@@ -145,18 +143,18 @@ class Runner(object):
         log_p_y = F.log_softmax(-dists, dim=1)
         return log_p_y
 
-    def proto_test(self, samples, batches):
+    def proto_test(self, samples, batches, num_way, num_shot):
         batch_num, _, _, _ = batches.shape
 
         sample_z = self.proto_net(samples)  # 5x64*5*5
         batch_z = self.proto_net(batches)  # 75x64*5*5
-        sample_z = sample_z.view(Config.num_way, Config.num_shot, -1)
+        sample_z = sample_z.view(num_way, num_shot, -1)
         batch_z = batch_z.view(batch_num, -1)
         _, z_dim = batch_z.shape
 
         z_proto = sample_z.mean(1)
-        z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, Config.num_way, z_dim)
-        z_query_expand = batch_z.unsqueeze(1).expand(batch_num, Config.num_way, z_dim)
+        z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, num_way, z_dim)
+        z_query_expand = batch_z.unsqueeze(1).expand(batch_num, num_way, z_dim)
 
         dists = torch.pow(z_query_expand - z_proto_expand, 2).sum(2)
         log_p_y = F.log_softmax(-dists, dim=1)
@@ -221,8 +219,18 @@ class Runner(object):
     pass
 
 
+##############################################################################################################
+
+
+transforms_normalize1 = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
+                                             np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
+
+transforms_normalize2 = transforms.Normalize(np.array([x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]),
+                                             np.array([x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]))
+
+
 class Config(object):
-    gpu_id = 0
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -239,8 +247,10 @@ class Config(object):
     hid_dim = 64
     z_dim = 64
 
-    # has_norm = False
-    has_norm = True
+    has_norm = False
+    # has_norm = True
+    is_png = True
+    # is_png = False
 
     proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=has_norm)
 
@@ -250,13 +260,13 @@ class Config(object):
     first_epoch, t_epoch = 300, 150
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    # train_epoch = 2100
-    # first_epoch, t_epoch = 500, 200
-    # adjust_learning_rate = RunnerTool.adjust_learning_rate1
+    transforms_normalize, norm_name = transforms_normalize1, "norm1"
+    # transforms_normalize, norm_name = transforms_normalize2, "norm2"
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
-        gpu_id, train_epoch, batch_size, num_way, num_shot,
-        hid_dim, z_dim, first_epoch, t_epoch, "_norm" if has_norm else "")
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}{}_{}{}".format(
+        gpu_id, train_epoch, batch_size, num_way, num_shot, hid_dim, z_dim,
+        first_epoch, t_epoch, "_norm" if has_norm else "", norm_name, "_png" if is_png else "")
+    Tools.print(model_name)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -264,6 +274,8 @@ class Config(object):
             data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
     else:
         data_root = "F:\\data\\miniImagenet"
+    data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
+    Tools.print(data_root)
 
     pn_dir = Tools.new_dir("../models_pn/fsl_sgd/{}_pn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     pass
@@ -284,6 +296,40 @@ norm
 2020-11-28 21:12:55 Val   500 Accuracy: 0.4473333333333334
 2020-11-28 21:17:05 episode=500, Mean Test accuracy=0.45159111111111105
 
+
+jpg normalize2
+2020-12-02 05:13:35 Test 500 3_500_64_5_1_64_64_300_150 .......
+2020-12-02 05:15:21 Train 500 Accuracy: 0.6847777777777778
+2020-12-02 05:15:21 Val   500 Accuracy: 0.5203333333333333
+2020-12-02 05:15:21 Test1 500 Accuracy: 0.5157777777777778
+2020-12-02 05:15:21 Test2 500 Accuracy: 0.516311111111111
+2020-12-02 05:15:21 Save networks for epoch: 500
+2020-12-02 05:15:21 load proto net success from ../models_pn/fsl_sgd/3_500_64_5_1_64_64_300_150_pn_5way_1shot.pkl
+2020-12-02 05:16:57 Train 500 Accuracy: 0.6962222222222223
+2020-12-02 05:16:57 Val   500 Accuracy: 0.5123333333333333
+2020-12-02 05:21:11 episode=500, Mean Test accuracy=0.5158133333333333
+
+png normalize1
+2020-12-02 06:16:57 Test 500 1_500_64_5_1_64_64_300_150norm1_png .......
+2020-12-02 06:18:43 Train 500 Accuracy: 0.7264444444444444
+2020-12-02 06:18:43 Val   500 Accuracy: 0.5384444444444444
+2020-12-02 06:18:43 Test1 500 Accuracy: 0.5304444444444444
+2020-12-02 06:18:43 Test2 500 Accuracy: 0.5390666666666668
+2020-12-02 06:18:43 load proto net success from ../models_pn/fsl_sgd/1_500_64_5_1_64_64_300_150norm1_png_pn_5way_1shot.pkl
+2020-12-02 06:20:29 Train 500 Accuracy: 0.7137777777777777
+2020-12-02 06:20:29 Val   500 Accuracy: 0.5265555555555556
+2020-12-02 06:24:52 episode=500, Mean Test accuracy=0.5280755555555555
+
+png normalize2
+2020-12-02 05:26:53 Test 500 2_500_64_5_1_64_64_300_150_png .......
+2020-12-02 05:28:54 Train 500 Accuracy: 0.7293333333333334
+2020-12-02 05:28:54 Val   500 Accuracy: 0.53
+2020-12-02 05:28:54 Test1 500 Accuracy: 0.5473333333333333
+2020-12-02 05:28:54 Test2 500 Accuracy: 0.5371111111111111
+2020-12-02 05:28:54 load proto net success from ../models_pn/fsl_sgd/2_500_64_5_1_64_64_300_150_png_pn_5way_1shot.pkl
+2020-12-02 05:30:52 Train 500 Accuracy: 0.7393333333333334
+2020-12-02 05:30:52 Val   500 Accuracy: 0.542
+2020-12-02 05:35:37 episode=500, Mean Test accuracy=0.5368444444444445
 """
 
 
