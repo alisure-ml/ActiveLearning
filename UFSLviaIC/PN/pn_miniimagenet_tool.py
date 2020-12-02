@@ -10,6 +10,7 @@ from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
 from torch.optim import lr_scheduler
+from torchvision.models import resnet18
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 
@@ -330,6 +331,27 @@ class ProtoNet(nn.Module):
         out = self.conv_block_2(out)
         out = self.conv_block_3(out)
         out = self.conv_block_4(out)
+        if self.has_norm:
+            out = out.view(out.shape[0], -1)
+            out = self.l2norm(out)
+        return out
+
+    pass
+
+
+class ProtoRes18Net(nn.Module):
+
+    def __init__(self, low_dim, has_norm=False):
+        super().__init__()
+        self.resnet18 = resnet18(num_classes=low_dim)
+
+        self.has_norm = has_norm
+        if self.has_norm:
+            self.l2norm = Normalize(2)
+        pass
+
+    def forward(self, x):
+        out = self.resnet18(x)
         if self.has_norm:
             out = out.view(out.shape[0], -1)
             out = self.l2norm(out)

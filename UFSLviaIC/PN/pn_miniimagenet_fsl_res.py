@@ -9,12 +9,12 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-from torchvision.models import resnet18
-from torch.optim.lr_scheduler import StepLR
+import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader, Dataset
 from pn_miniimagenet_fsl_test_tool import TestTool
-from pn_miniimagenet_tool import ProtoNet, RunnerTool
+from pn_miniimagenet_tool import ProtoNet, RunnerTool, ProtoRes18Net
 
 
 ##############################################################################################################
@@ -32,12 +32,11 @@ class MiniImageNetDataset(object):
             self.data_dict[label].append((index, label, image_filename))
             pass
 
-        normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
-                                         std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
         self.transform = transforms.Compose([
             transforms.RandomCrop(84, padding=8),
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
+            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), Config.transforms_normalize])
+        self.transform_test = transforms.Compose([transforms.ToTensor(), Config.transforms_normalize])
         pass
 
     def __len__(self):
@@ -99,21 +98,6 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
-class ProtoResNet(nn.Module):
-
-    def __init__(self, low_dim):
-        super().__init__()
-        self.resnet18 = resnet18(num_classes=low_dim)
-        pass
-
-    def forward(self, x):
-        out = self.resnet18(x)
-        return out
-
-
-    pass
-
-
 class Runner(object):
 
     def __init__(self):
@@ -129,13 +113,22 @@ class Runner(object):
         RunnerTool.to_cuda(self.proto_net.apply(RunnerTool.weights_init))
 
         # optim
-        self.proto_net_optim = torch.optim.Adam(self.proto_net.parameters(), lr=Config.learning_rate)
-        self.proto_net_scheduler = StepLR(self.proto_net_optim, Config.train_epoch // 3, gamma=0.5)
+        self.proto_net_optim = torch.optim.SGD(
+            self.proto_net.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
         self.test_tool = TestTool(self.proto_test, data_root=Config.data_root,
                                   num_way=Config.num_way,  num_shot=Config.num_shot,
                                   episode_size=Config.episode_size, test_episode=Config.test_episode,
                                   transform=self.task_train.transform_test)
+        pass
+
+    def adjust_learning_rate(self, epoch):
+        steps = np.sum(epoch > np.asarray(Config.learning_rate_decay_epochs))
+        if steps > 0:
+            new_lr = Config.learning_rate * (0.1 ** steps)
+            for param_group in self.proto_net_optim.param_groups:
+                param_group['lr'] = new_lr
+            pass
         pass
 
     def load_model(self):
@@ -161,18 +154,18 @@ class Runner(object):
         log_p_y = F.log_softmax(-dists, dim=1)
         return log_p_y
 
-    def proto_test(self, samples, batches):
+    def proto_test(self, samples, batches, num_way, num_shot):
         batch_num, _, _, _ = batches.shape
 
         sample_z = self.proto_net(samples)  # 5x64*5*5
         batch_z = self.proto_net(batches)  # 75x64*5*5
-        sample_z = sample_z.view(Config.num_way, Config.num_shot, -1)
+        sample_z = sample_z.view(num_way, num_shot, -1)
         batch_z = batch_z.view(batch_num, -1)
         _, z_dim = batch_z.shape
 
         z_proto = sample_z.mean(1)
-        z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, Config.num_way, z_dim)
-        z_query_expand = batch_z.unsqueeze(1).expand(batch_num, Config.num_way, z_dim)
+        z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, num_way, z_dim)
+        z_query_expand = batch_z.unsqueeze(1).expand(batch_num, num_way, z_dim)
 
         dists = torch.pow(z_query_expand - z_proto_expand, 2).sum(2)
         log_p_y = F.log_softmax(-dists, dim=1)
@@ -182,11 +175,13 @@ class Runner(object):
         Tools.print()
         Tools.print("Training...")
 
-        for epoch in range(Config.train_epoch):
+        for epoch in range(1, 1 + Config.train_epoch):
             self.proto_net.train()
 
             Tools.print()
             all_loss = 0.0
+            self.adjust_learning_rate(epoch=epoch)
+            Tools.print("{:6} lr:{}".format(epoch, self.proto_net_optim.param_groups[0]["lr"]))
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
 
@@ -207,10 +202,7 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f} lr:{}".format(
-                epoch + 1, all_loss / len(self.task_train_loader), self.proto_net_scheduler.get_last_lr()))
-
-            self.proto_net_scheduler.step()
+            Tools.print("{:6} loss:{:.3f}".format(epoch, all_loss / len(self.task_train_loader)))
             ###########################################################################
 
             ###########################################################################
@@ -236,15 +228,29 @@ class Runner(object):
     pass
 
 
-class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+##############################################################################################################
 
-    # train_epoch = 300
-    train_epoch = 180
-    learning_rate = 0.001
+
+transforms_normalize1 = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
+                                             np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
+
+transforms_normalize2 = transforms.Normalize(np.array([x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]),
+                                             np.array([x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]))
+
+
+class Config(object):
+    gpu_id = 1
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+    cudnn.benchmark = True
+
+    train_epoch = 150
+    learning_rate = 0.05
+    # learning_rate = 0.01
+    # learning_rate = 0.1
+    learning_rate_decay_epochs = [80, 120]
     num_workers = 8
 
-    val_freq = 10
+    val_freq = 5
 
     num_way = 5
     num_shot = 1
@@ -253,11 +259,23 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
+    # has_norm = True
+    has_norm = False
+
+    is_png = True
+    # is_png = False
+
     z_dim = 512
 
-    proto_net = ProtoResNet(low_dim=z_dim)
+    proto_net = ProtoRes18Net(low_dim=z_dim, has_norm=has_norm)
 
-    model_name = "new_1_{}_{}_{}".format(train_epoch, batch_size, z_dim)
+    # transforms_normalize, normalize_name = transforms_normalize1, "normalize1"
+    transforms_normalize, normalize_name = transforms_normalize2, "normalize2"
+
+    model_name = "{}_{}_{}_{}_{}{}_{}{}".format(
+        gpu_id, train_epoch, batch_size, z_dim, learning_rate,
+        "_norm" if has_norm else "", normalize_name, "_png" if is_png else "")
+    Tools.print(model_name)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -265,6 +283,8 @@ class Config(object):
             data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
     else:
         data_root = "F:\\data\\miniImagenet"
+    data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
+    Tools.print(data_root)
 
     pn_dir = Tools.new_dir("../models_pn/fsl_res/{}_pn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     pass
@@ -290,8 +310,8 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    runner.proto_net.eval()
-    runner.test_tool.val(episode=0, is_print=True)
+    # runner.proto_net.eval()
+    # runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 

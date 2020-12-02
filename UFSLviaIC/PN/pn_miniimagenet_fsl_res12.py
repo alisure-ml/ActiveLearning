@@ -33,16 +33,11 @@ class MiniImageNetDataset(object):
             self.data_dict[label].append((index, label, image_filename))
             pass
 
-        normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
-                                         std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
-        # self.transform = transforms.Compose([
-        #     transforms.RandomCrop(84, padding=8),
-        #     transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform = transforms.Compose([
             transforms.RandomCrop(84, padding=8),
             transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), Config.transforms_normalize])
+        self.transform_test = transforms.Compose([transforms.ToTensor(), Config.transforms_normalize])
         pass
 
     def __len__(self):
@@ -277,7 +272,6 @@ class ResNet12(nn.Module):
 
     def __init__(self, block=BasicBlock, keep_prob=1.0, avg_pool=False, drop_rate=0.0, dropblock_size=5):
         super().__init__()
-
         self.inplanes = 3
 
         self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
@@ -288,7 +282,8 @@ class ResNet12(nn.Module):
                                        drop_block=True, block_size=dropblock_size)
 
         self.keep_avg_pool = avg_pool
-        self.avgpool = nn.AvgPool2d(5, stride=1)
+        # self.avgpool = nn.AvgPool2d(5, stride=1)
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -317,8 +312,7 @@ class ResNet12(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
 
-        if self.keep_avg_pool:
-            x = self.avgpool(x)
+        x = self.avgpool(x) if self.keep_avg_pool else x
 
         return x
 
@@ -384,18 +378,18 @@ class Runner(object):
         log_p_y = F.log_softmax(-dists, dim=1)
         return log_p_y
 
-    def proto_test(self, samples, batches):
+    def proto_test(self, samples, batches, num_way, num_shot):
         batch_num, _, _, _ = batches.shape
 
         sample_z = self.proto_net(samples)  # 5x64*5*5
         batch_z = self.proto_net(batches)  # 75x64*5*5
-        sample_z = sample_z.view(Config.num_way, Config.num_shot, -1)
+        sample_z = sample_z.view(num_way, num_shot, -1)
         batch_z = batch_z.view(batch_num, -1)
         _, z_dim = batch_z.shape
 
         z_proto = sample_z.mean(1)
-        z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, Config.num_way, z_dim)
-        z_query_expand = batch_z.unsqueeze(1).expand(batch_num, Config.num_way, z_dim)
+        z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, num_way, z_dim)
+        z_query_expand = batch_z.unsqueeze(1).expand(batch_num, num_way, z_dim)
 
         dists = torch.pow(z_query_expand - z_proto_expand, 2).sum(2)
         log_p_y = F.log_softmax(-dists, dim=1)
@@ -405,7 +399,7 @@ class Runner(object):
         Tools.print()
         Tools.print("Training...")
 
-        for epoch in range(Config.train_epoch):
+        for epoch in range(1, 1 + Config.train_epoch):
             self.proto_net.train()
 
             Tools.print()
@@ -432,7 +426,7 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f}".format(epoch + 1, all_loss / len(self.task_train_loader)))
+            Tools.print("{:6} loss:{:.3f}".format(epoch, all_loss / len(self.task_train_loader)))
             ###########################################################################
 
             ###########################################################################
@@ -458,15 +452,25 @@ class Runner(object):
     pass
 
 
+##############################################################################################################
+
+
+transforms_normalize1 = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
+                                             np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
+
+transforms_normalize2 = transforms.Normalize(np.array([x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]]),
+                                             np.array([x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]]))
+
+
 class Config(object):
-    gpu_id = 0
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
     cudnn.benchmark = True
 
     train_epoch = 150
-    learning_rate = 0.05
+    # learning_rate = 0.05
     # learning_rate = 0.01
-    # learning_rate = 0.1
+    learning_rate = 0.1
     learning_rate_decay_epochs = [80, 120]
     num_workers = 8
 
@@ -479,11 +483,19 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
+    is_png = True
+    # is_png = False
+
     block, block_name = BasicBlock, "BasicBlock1"
     # block, block_name = BasicBlock2, "BasicBlock2"
     proto_net = ResNet12(block=block, avg_pool=True, drop_rate=0.1, dropblock_size=5)
 
-    model_name = "{}_{}_{}_{}_{}".format(gpu_id, train_epoch, batch_size, block_name, learning_rate)
+    # transforms_normalize, norm_name = transforms_normalize1, "norm1"
+    transforms_normalize, norm_name = transforms_normalize2, "norm2"
+
+    model_name = "{}_{}_{}_{}_{}_{}{}".format(
+        gpu_id, train_epoch, batch_size, block_name, learning_rate, norm_name, "_png" if is_png else "")
+    Tools.print(model_name)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -491,6 +503,8 @@ class Config(object):
             data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
     else:
         data_root = "F:\\data\\miniImagenet"
+    data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
+    Tools.print(data_root)
 
     pn_dir = Tools.new_dir("../models_pn/fsl_res12/{}_pn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     pass
@@ -519,6 +533,25 @@ class Config(object):
 2020-11-25 22:15:16 Train 90 Accuracy: 0.8823333333333335
 2020-11-25 22:15:16 Val   90 Accuracy: 0.599
 2020-11-25 22:21:49 episode=90, Mean Test accuracy=0.5734222222222223
+
+0.01
+2020-11-27 10:21:22 load proto net success from ../models_pn/fsl_res12/0_150_32_BasicBlock1_0.01_pn_5way_1shot.pkl
+2020-11-27 10:23:46 Train 150 Accuracy: 0.9660000000000002
+2020-11-27 10:23:46 Val   150 Accuracy: 0.607111111111111
+2020-11-27 10:29:51 episode=150, Mean Test accuracy=0.57404
+
+0.05
+2020-11-27 13:47:04 load proto net success from ../models_pn/fsl_res12/0_150_32_BasicBlock1_0.05_pn_5way_1shot.pkl
+2020-11-27 13:49:46 Train 150 Accuracy: 0.9392222222222222
+2020-11-27 13:49:46 Val   150 Accuracy: 0.6131111111111112
+2020-11-27 13:57:03 episode=150, Mean Test accuracy=0.5756844444444444
+
+0.1
+2020-11-27 11:08:08 load proto net success from ../models_pn/fsl_res12/1_150_32_BasicBlock1_0.1_pn_5way_1shot.pkl
+2020-11-27 11:10:22 Train 150 Accuracy: 0.8586666666666667
+2020-11-27 11:10:22 Val   150 Accuracy: 0.5798888888888889
+2020-11-27 11:16:19 episode=150, Mean Test accuracy=0.5632577777777777
+
 """
 
 
