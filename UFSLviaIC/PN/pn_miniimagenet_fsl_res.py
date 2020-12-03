@@ -9,12 +9,10 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
-from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader, Dataset
 from pn_miniimagenet_fsl_test_tool import TestTool
-from pn_miniimagenet_tool import ProtoNet, RunnerTool, ProtoRes18Net
+from pn_miniimagenet_tool import ProtoRes18Net, RunnerTool
 
 
 ##############################################################################################################
@@ -102,6 +100,7 @@ class Runner(object):
 
     def __init__(self):
         self.best_accuracy = 0.0
+        self.adjust_learning_rate = Config.adjust_learning_rate
 
         # all data
         self.data_train = MiniImageNetDataset.get_data_all(Config.data_root)
@@ -120,15 +119,6 @@ class Runner(object):
                                   num_way=Config.num_way,  num_shot=Config.num_shot,
                                   episode_size=Config.episode_size, test_episode=Config.test_episode,
                                   transform=self.task_train.transform_test)
-        pass
-
-    def adjust_learning_rate(self, epoch):
-        steps = np.sum(epoch > np.asarray(Config.learning_rate_decay_epochs))
-        if steps > 0:
-            new_lr = Config.learning_rate * (0.1 ** steps)
-            for param_group in self.proto_net_optim.param_groups:
-                param_group['lr'] = new_lr
-            pass
         pass
 
     def load_model(self):
@@ -180,8 +170,10 @@ class Runner(object):
 
             Tools.print()
             all_loss = 0.0
-            self.adjust_learning_rate(epoch=epoch)
-            Tools.print("{:6} lr:{}".format(epoch, self.proto_net_optim.param_groups[0]["lr"]))
+            pn_lr = self.adjust_learning_rate(self.proto_net_optim, epoch,
+                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            Tools.print('Epoch: [{}] pn_lr={}'.format(epoch, pn_lr))
+
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
 
@@ -241,16 +233,10 @@ transforms_normalize2 = transforms.Normalize(np.array([x / 255.0 for x in [120.3
 class Config(object):
     gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-    cudnn.benchmark = True
 
-    train_epoch = 150
-    learning_rate = 0.05
-    # learning_rate = 0.01
-    # learning_rate = 0.1
-    learning_rate_decay_epochs = [80, 120]
     num_workers = 8
 
-    val_freq = 5
+    val_freq = 10
 
     num_way = 5
     num_shot = 1
@@ -261,7 +247,6 @@ class Config(object):
 
     # has_norm = True
     has_norm = False
-
     is_png = True
     # is_png = False
 
@@ -269,11 +254,17 @@ class Config(object):
 
     proto_net = ProtoRes18Net(low_dim=z_dim, has_norm=has_norm)
 
+    learning_rate = 0.01
+
+    train_epoch = 500
+    first_epoch, t_epoch = 300, 150
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
+
     # transforms_normalize, normalize_name = transforms_normalize1, "normalize1"
     transforms_normalize, normalize_name = transforms_normalize2, "normalize2"
 
-    model_name = "{}_{}_{}_{}_{}{}_{}{}".format(
-        gpu_id, train_epoch, batch_size, z_dim, learning_rate,
+    model_name = "{}_{}_{}_{}_{}_{}_{}{}_{}{}".format(
+        gpu_id, train_epoch, first_epoch, t_epoch, batch_size, z_dim, learning_rate,
         "_norm" if has_norm else "", normalize_name, "_png" if is_png else "")
     Tools.print(model_name)
 
@@ -303,6 +294,11 @@ class Config(object):
 2020-10-30 00:54:11 Train 180 Accuracy: 0.7496666666666667
 2020-10-30 00:54:11 Val   180 Accuracy: 0.5024444444444445
 2020-10-30 01:04:22 episode=180, Mean Test accuracy=0.4780622222222222
+
+2020-12-02 13:54:02 load proto net success from ../models_pn/fsl_res/1_150_64_512_0.05_normalize2_png_pn_5way_1shot.pkl
+2020-12-02 13:56:38 Train 150 Accuracy: 0.8816666666666667
+2020-12-02 13:56:38 Val   150 Accuracy: 0.5273333333333333
+2020-12-02 14:03:23 episode=150, Mean Test accuracy=0.4994888888888889
 """
 
 

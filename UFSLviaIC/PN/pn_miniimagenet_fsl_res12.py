@@ -463,15 +463,15 @@ transforms_normalize2 = transforms.Normalize(np.array([x / 255.0 for x in [120.3
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
     cudnn.benchmark = True
 
-    train_epoch = 150
+    train_epoch = 100
     # learning_rate = 0.05
-    # learning_rate = 0.01
-    learning_rate = 0.1
-    learning_rate_decay_epochs = [80, 120]
+    learning_rate = 0.01
+    # learning_rate = 0.1
+    learning_rate_decay_epochs = [50, 80]
     num_workers = 8
 
     val_freq = 2
@@ -486,8 +486,8 @@ class Config(object):
     is_png = True
     # is_png = False
 
-    block, block_name = BasicBlock, "BasicBlock1"
-    # block, block_name = BasicBlock2, "BasicBlock2"
+    # block, block_name = BasicBlock, "BasicBlock1"
+    block, block_name = BasicBlock2, "BasicBlock2"
     proto_net = ResNet12(block=block, avg_pool=True, drop_rate=0.1, dropblock_size=5)
 
     # transforms_normalize, norm_name = transforms_normalize1, "norm1"
@@ -552,6 +552,23 @@ class Config(object):
 2020-11-27 11:10:22 Val   150 Accuracy: 0.5798888888888889
 2020-11-27 11:16:19 episode=150, Mean Test accuracy=0.5632577777777777
 
+0.05
+2020-12-02 21:12:19 load proto net success from ../models_pn/fsl_res12/0_150_32_BasicBlock1_0.05_norm2_png_pn_5way_1shot.pkl
+2020-12-02 21:15:22 Train 150 Accuracy: 0.9576666666666667
+2020-12-02 21:15:22 Val   150 Accuracy: 0.6487777777777778
+2020-12-02 21:23:44 episode=150, Mean Test accuracy=0.5978311111111111
+
+0.01
+2020-12-03 08:33:17 load proto net success from ../models_pn/fsl_res12/3_150_32_BasicBlock1_0.01_norm2_png_pn_5way_1shot.pkl
+2020-12-03 08:36:25 Train 150 Accuracy: 0.9587777777777777
+2020-12-03 08:36:25 Val   150 Accuracy: 0.6395555555555555
+2020-12-03 08:44:05 episode=150, Mean Test accuracy=0.60076
+
+0.1
+2020-12-03 08:23:10 load proto net success from ../models_pn/fsl_res12/2_150_32_BasicBlock1_0.1_norm2_png_pn_5way_1shot.pkl
+2020-12-03 08:26:14 Train 150 Accuracy: 0.8964444444444445
+2020-12-03 08:26:14 Val   150 Accuracy: 0.6315555555555554
+2020-12-03 08:34:39 episode=150, Mean Test accuracy=0.5916977777777779
 """
 
 
