@@ -133,7 +133,8 @@ class Normalize(nn.Module):
 
     def forward(self, x, dim=1):
         norm = x.pow(self.power).sum(dim, keepdim=True).pow(1. / self.power)
-        out = x.div(norm + 1e-16)
+        # out = x.div(norm + 1e-16)
+        out = x.div(norm)
         return out
 
     def __call__(self, *args, **kwargs):
@@ -143,6 +144,7 @@ class Normalize(nn.Module):
 
 
 class ICModel(nn.Module):
+
     def __init__(self, in_dim, out_dim):
         super().__init__()
         self.in_dim = in_dim
@@ -170,7 +172,27 @@ class ICModel(nn.Module):
     pass
 
 
+class ICResNet(nn.Module):
+
+    def __init__(self, resnet, low_dim=512):
+        super().__init__()
+        self.resnet = resnet(num_classes=low_dim)
+        self.l2norm = Normalize(2)
+        pass
+
+    def forward(self, x):
+        out_logits = self.resnet(x)
+        out_l2norm = self.l2norm(out_logits)
+        return out_logits, out_l2norm
+
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    pass
+
+
 class ProduceClass(object):
+
     def __init__(self, n_sample, out_dim, ratio=1.0):
         super().__init__()
         self.out_dim = out_dim
@@ -331,6 +353,137 @@ class ProtoNet(nn.Module):
         out = self.conv_block_2(out)
         out = self.conv_block_3(out)
         out = self.conv_block_4(out)
+        if self.has_norm:
+            out = out.view(out.shape[0], -1)
+            out = self.l2norm(out)
+        return out
+
+    pass
+
+
+def conv3x3(in_planes, out_planes, stride=1):
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
+
+
+class BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, drop_rate=0.0, drop_block=False, block_size=1):
+        super(BasicBlock, self).__init__()
+        self.conv1 = conv3x3(inplanes, planes)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.LeakyReLU(0.1)
+
+        self.conv2 = conv3x3(planes, planes)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+        self.conv3 = conv3x3(planes, planes)
+        self.bn3 = nn.BatchNorm2d(planes)
+
+        self.maxpool = nn.MaxPool2d(stride)
+        self.downsample = downsample
+
+        self.drop_rate = drop_rate
+        pass
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+        out = self.maxpool(out)
+
+        if self.drop_rate > 0:
+            out = F.dropout(out, p=self.drop_rate, training=self.training, inplace=True)
+            pass
+
+        return out
+
+    pass
+
+
+class ResNet12(nn.Module):
+
+    def __init__(self, block=BasicBlock, keep_prob=1.0, avg_pool=False, drop_rate=0.0, dropblock_size=5):
+        super().__init__()
+
+        self.inplanes = 3
+
+        self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
+        self.layer2 = self._make_layer(block, 160, stride=2, drop_rate=drop_rate)
+        self.layer3 = self._make_layer(block, 320, stride=2, drop_rate=drop_rate,
+                                       drop_block=True, block_size=dropblock_size)
+        self.layer4 = self._make_layer(block, 640, stride=2, drop_rate=drop_rate,
+                                       drop_block=True, block_size=dropblock_size)
+
+        self.keep_avg_pool = avg_pool
+        self.avgpool = nn.AvgPool2d(5, stride=1)
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            pass
+
+        pass
+
+    def _make_layer(self, block, planes, stride=1, drop_rate=0.0, drop_block=False, block_size=1):
+        downsample = None
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(nn.Conv2d(self.inplanes, planes * block.expansion, 1, stride=1, bias=False),
+                                       nn.BatchNorm2d(planes * block.expansion))
+            pass
+
+        layers = [block(self.inplanes, planes, stride, downsample, drop_rate, drop_block, block_size)]
+        self.inplanes = planes * block.expansion
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+
+        if self.keep_avg_pool:
+            x = self.avgpool(x)
+
+        return x
+
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    pass
+
+
+class ProtoNetLarge(nn.Module):
+
+    def __init__(self, has_norm=False):
+        super().__init__()
+        self.proto_net = ResNet12(block=BasicBlock, avg_pool=True, drop_rate=0.1, dropblock_size=5)
+
+        self.has_norm = has_norm
+        if self.has_norm:
+            self.l2norm = Normalize(2)
+        pass
+
+    def forward(self, x):
+        out = self.proto_net(x)
         if self.has_norm:
             out = out.view(out.shape[0], -1)
             out = self.l2norm(out)
