@@ -236,28 +236,33 @@ class TestTool(object):
         acc_list = []
         for _ in range(test_avg_num):
             acc = self._val(self.folders_test, sampler_test=True, all_episode=self.test_episode)
+            if is_print:
+                Tools.print("episode={}, Test accuracy={}".format(episode, acc))
+                pass
             acc_list.append(acc)
             pass
 
         mean_acc = np.mean(acc_list)
         if is_print:
-            for acc in acc_list:
-                Tools.print("episode={}, Test accuracy={}".format(episode, acc))
-                pass
             Tools.print("episode={}, Mean Test accuracy={}".format(episode, mean_acc))
             pass
         return mean_acc
 
     def val(self, episode=0, is_print=True):
         acc_train = self.val_train()
-        acc_val = self.val_val()
-        acc_test1 = self.val_test()
-        acc_test2 = self.val_test2()
-
         if is_print:
             Tools.print("Train {} Accuracy: {}".format(episode, acc_train))
+            pass
+        acc_val = self.val_val()
+        if is_print:
             Tools.print("Val   {} Accuracy: {}".format(episode, acc_val))
+            pass
+        acc_test1 = self.val_test()
+        if is_print:
             Tools.print("Test1 {} Accuracy: {}".format(episode, acc_test1))
+            pass
+        acc_test2 = self.val_test2()
+        if is_print:
             Tools.print("Test2 {} Accuracy: {}".format(episode, acc_test2))
             pass
         return acc_val

@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
-from usot_fsl_tool import RunnerTool
+from usot_fsl_tool import RunnerTool, Normalize
 from usot_fsl_test_tool import TestTool
 
 
@@ -143,11 +143,14 @@ class Runner(object):
         # all data
         self.data_train = MiniImageNetDataset.get_data_all(Config.data_root)
         self.task_train = MiniImageNetDataset(self.data_train, Config.num_way, Config.num_shot)
-        self.task_train_loader = DataLoader(self.task_train, Config.batch_size, shuffle=True, num_workers=Config.num_workers)
+        self.task_train_loader = DataLoader(self.task_train, Config.batch_size,
+                                            shuffle=True, num_workers=Config.num_workers)
 
         # model
         self.proto_net = RunnerTool.to_cuda(Config.proto_net)
         RunnerTool.to_cuda(self.proto_net.apply(RunnerTool.weights_init))
+        self.norm = Normalize(2)
+        self.loss = RunnerTool.to_cuda(nn.MSELoss())
 
         # optim
         self.proto_net_optim = torch.optim.SGD(
@@ -169,35 +172,40 @@ class Runner(object):
         data_batch_size, data_image_num, data_num_channel, data_width, data_weight = task_data.shape
         data_x = task_data.view(-1, data_num_channel, data_width, data_weight)
         net_out = self.proto_net(data_x)
-        z = net_out.view(data_batch_size, data_image_num, -1)
+        out_num, out_channel, out_width, out_weight = net_out.shape
+        feature_num = out_channel * out_width * out_weight
+        z = net_out.view(data_batch_size, data_image_num, feature_num)
 
         z_support, z_query = z.split(Config.num_shot * Config.num_way, dim=1)
-        z_batch_size, z_num, z_dim = z_support.shape
-        z_support = z_support.view(z_batch_size, Config.num_way, Config.num_shot, z_dim)
 
-        z_support_proto = z_support.mean(2)
-        z_query_expand = z_query.expand(z_batch_size, Config.num_way, z_dim)
-
-        dists = torch.pow(z_query_expand - z_support_proto, 2).sum(2)
-        log_p_y = F.log_softmax(-dists, dim=1)
-        return log_p_y
+        ######################################################################################################
+        z_query = z_query.expand(data_batch_size, Config.num_way, feature_num)
+        z_support = self.norm(z_support)
+        z_query = self.norm(z_query)
+        out = torch.sum(z_support * z_query, -1)
+        ######################################################################################################
+        return out
 
     def proto_test(self, samples, batches, num_way, num_shot):
         batch_num, _, _, _ = batches.shape
 
         sample_z = self.proto_net(samples)  # 5x64*5*5
         batch_z = self.proto_net(batches)  # 75x64*5*5
+
         sample_z = sample_z.view(num_way, num_shot, -1)
         batch_z = batch_z.view(batch_num, -1)
         _, z_dim = batch_z.shape
 
         z_proto = sample_z.mean(1)
+
         z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, num_way, z_dim)
         z_query_expand = batch_z.unsqueeze(1).expand(batch_num, num_way, z_dim)
 
-        dists = torch.pow(z_query_expand - z_proto_expand, 2).sum(2)
-        log_p_y = F.log_softmax(-dists, dim=1)
-        return log_p_y
+        z_proto_expand = self.norm(z_proto_expand)
+        z_query_expand = self.norm(z_query_expand)
+
+        out = torch.sum(z_query_expand * z_proto_expand, -1)
+        return out
 
     def train(self):
         Tools.print()
@@ -216,10 +224,10 @@ class Runner(object):
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
 
                 # 1 calculate features
-                log_p_y = self.proto(task_data)
+                out = self.proto(task_data)
 
                 # 2 loss
-                loss = -(log_p_y * task_labels).sum() / task_labels.sum()
+                loss = self.loss(out, task_labels)
                 all_loss += loss.item()
 
                 # 3 backward
@@ -269,7 +277,7 @@ transforms_normalize2 = transforms.Normalize(np.array([x / 255.0 for x in [120.3
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     image_size = 127
