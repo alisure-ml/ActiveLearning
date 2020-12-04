@@ -476,7 +476,18 @@ vgg16_bn
 2020-12-01 22:58:11 Epoch: 2100 Train 0.4975/0.7884 0.0000
 2020-12-01 22:58:11 Epoch: 2100 Val   0.5943/0.9223 0.0000
 2020-12-01 22:58:11 Epoch: 2100 Test  0.5617/0.9077 0.0000
+
+resnet_34, modify_head = False
+2020-12-04 08:58:34 Train: [2100] 6326/1634
+2020-12-04 08:58:53 load ic model success from ../models/ic_res_xx/3_resnet_34_64_512_1_2100_500_2000.01_ic.pkl
+2020-12-04 08:58:53 Test 2100 .......
+2020-12-04 08:59:13 Epoch: 2100 Train 0.5446/0.8186 0.0000
+2020-12-04 08:59:13 Epoch: 2100 Val   0.6197/0.9276 0.0000
+2020-12-04 08:59:13 Epoch: 2100 Test  0.5900/0.9191 0.0000
 """
+
+
+##############################################################################################################
 
 
 class Config(object):
@@ -490,12 +501,15 @@ class Config(object):
     val_freq = 10
 
     # resnet, vggnet, net_name = resnet18, None, "resnet_18"
-    # resnet, vggnet, net_name = resnet34, None, "resnet_34"
+    resnet, vggnet, net_name = resnet34, None, "resnet_34"
     # resnet, vggnet, net_name = resnet50, None, "resnet_50"
-    resnet, vggnet, net_name = None, vgg16_bn, "vgg16_bn"
+    # resnet, vggnet, net_name = None, vgg16_bn, "vgg16_bn"
 
     # modify_head = False
     modify_head = True
+
+    is_png = True
+    # is_png = False
 
     learning_rate = 0.01
 
@@ -513,8 +527,9 @@ class Config(object):
     # ic_ratio = 2
     # ic_ratio = 3
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}".format(gpu_id, net_name, batch_size, ic_out_dim, ic_ratio,
-                                                  train_epoch, first_epoch, t_epoch, learning_rate, modify_head)
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}{}".format(
+        gpu_id, net_name, batch_size, ic_out_dim, ic_ratio, train_epoch,
+        first_epoch, t_epoch, learning_rate, modify_head, "_png" if is_png else "")
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -522,6 +537,8 @@ class Config(object):
             data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
     else:
         data_root = "F:\\data\\miniImagenet"
+    data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
+    Tools.print(data_root)
 
     ic_dir = Tools.new_dir("../models/ic_res_xx/{}_ic.pkl".format(model_name))
     pass
