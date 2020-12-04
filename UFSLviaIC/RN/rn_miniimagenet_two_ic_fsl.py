@@ -14,7 +14,7 @@ import torchvision.transforms as transforms
 from rn_miniimagenet_fsl_test_tool import TestTool
 from rn_miniimagenet_ic_test_tool import ICTestTool
 from torch.utils.data import DataLoader, Dataset
-from rn_miniimagenet_tool import ICModel, ProduceClass, ICModel, CNNEncoder, RelationNetwork, ProduceClass, RunnerTool
+from rn_miniimagenet_tool import ICModel, ProduceClass, CNNEncoder, RelationNetwork, RunnerTool
 
 
 ##############################################################################################################
