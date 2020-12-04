@@ -131,9 +131,8 @@ class Normalize(nn.Module):
         self.power = power
         pass
 
-    def forward(self, x, dim=1):
+    def forward(self, x, dim=-1):
         norm = x.pow(self.power).sum(dim, keepdim=True).pow(1. / self.power)
-        # out = x.div(norm + 1e-16)
         out = x.div(norm)
         return out
 
