@@ -269,13 +269,16 @@ class TestTool(object):
                 total_rewards_1 += np.sum(rewards_1)
 
                 # method 2
-                _, predict_labels = torch.max(relations.data, 1)
-                final_predict_labels_2 = [int(labels[predict]) for predict in predict_labels]
-                rewards_2 = [1 if final_predict_labels_2[j] == batch_labels[j] else 0 for j in range(batch_size)]
-                total_rewards_2 += np.sum(rewards_2)
+                if self.num_shot > 1:
+                    _, predict_labels = torch.max(relations.data, 1)
+                    final_predict_labels_2 = [int(labels[predict]) for predict in predict_labels]
+                    rewards_2 = [1 if final_predict_labels_2[j] == batch_labels[j] else 0 for j in range(batch_size)]
+                    total_rewards_2 += np.sum(rewards_2)
                 pass
-
-            accuracies.append([total_rewards_1 / 1.0 / counter, total_rewards_2 / 1.0 / counter])
+            if self.num_shot > 1:
+                accuracies.append([total_rewards_1 / 1.0 / counter, total_rewards_2 / 1.0 / counter])
+            else:
+                accuracies.append(total_rewards_1 / 1.0 / counter)
             pass
         return np.mean(np.array(accuracies, dtype=np.float), axis=0)
 

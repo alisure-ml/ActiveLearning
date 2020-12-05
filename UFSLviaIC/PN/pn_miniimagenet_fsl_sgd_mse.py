@@ -11,8 +11,8 @@ import torch.nn.functional as F
 from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
-from usot_fsl_tool import RunnerTool, Normalize
-from usot_fsl_test_tool import TestTool
+from pn_miniimagenet_fsl_test_tool import TestTool
+from pn_miniimagenet_tool import ProtoNet, RunnerTool, Normalize
 
 
 ##############################################################################################################
@@ -30,13 +30,10 @@ class MiniImageNetDataset(object):
             self.data_dict[label].append((index, label, image_filename))
             pass
 
-        self.transform = transforms.Compose([transforms.Resize(Config.image_size),
-                                             transforms.RandomCrop(Config.image_size, padding=8),
-                                             transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-                                             transforms.RandomHorizontalFlip(),
-                                             transforms.ToTensor(), Config.transforms_normalize])
-        self.transform_test = transforms.Compose([transforms.Resize(Config.image_size),
-                                                  transforms.ToTensor(), Config.transforms_normalize])
+        self.transform = transforms.Compose([
+            transforms.RandomCrop(84, padding=8),
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), Config.transforms_normalize])
+        self.transform_test = transforms.Compose([transforms.ToTensor(), Config.transforms_normalize])
         pass
 
     def __len__(self):
@@ -91,83 +88,6 @@ class MiniImageNetDataset(object):
         if transform is not None:
             image = transform(image)
         return image
-
-    pass
-
-
-##############################################################################################################
-
-
-class AlexNet(nn.Module):
-
-    def __init__(self):
-        super().__init__()
-        pass
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-        x = self.conv5(x)
-        return x
-
-    pass
-
-
-class AlexNetV1(AlexNet):
-    output_stride = 8
-
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Sequential(nn.Conv2d(3, 96, 11, 2), nn.BatchNorm2d(96),
-                                   nn.ReLU(inplace=True), nn.MaxPool2d(3, 2))
-        self.conv2 = nn.Sequential(nn.Conv2d(96, 256, 5, 1, groups=2), nn.BatchNorm2d(256),
-                                   nn.ReLU(inplace=True), nn.MaxPool2d(3, 2))
-        self.conv3 = nn.Sequential(nn.Conv2d(256, 384, 3, 1), nn.BatchNorm2d(384), nn.ReLU(inplace=True))
-        self.conv4 = nn.Sequential(nn.Conv2d(384, 384, 3, 1, groups=2), nn.BatchNorm2d(384), nn.ReLU(inplace=True))
-        self.conv5 = nn.Sequential(nn.Conv2d(384, 256, 3, 1, groups=2))
-        pass
-
-    pass
-
-
-class AlexNetV2(nn.Module):
-    output_stride = 8
-
-    def __init__(self, drop_rate=0.1):
-        super().__init__()
-        self.drop_rate = drop_rate
-        self.conv1 = nn.Sequential(nn.Conv2d(3, 96, 11, 2), nn.BatchNorm2d(96),
-                                   nn.ReLU(inplace=True), nn.MaxPool2d(3, 2))
-        self.conv2 = nn.Sequential(nn.Conv2d(96, 256, 5, 1, groups=2), nn.BatchNorm2d(256),
-                                   nn.ReLU(inplace=True), nn.MaxPool2d(3, 2))
-        self.conv3 = nn.Sequential(nn.Conv2d(256, 384, 3, 1), nn.BatchNorm2d(384), nn.ReLU(inplace=True))
-        self.conv4 = nn.Sequential(nn.Conv2d(384, 384, 3, 1, groups=2), nn.BatchNorm2d(384), nn.ReLU(inplace=True))
-        self.conv5 = nn.Sequential(nn.Conv2d(384, 256, 3, 1, groups=2))
-        pass
-
-    def forward(self, x):
-        out = self.conv1(x)
-        if self.drop_rate > 0:
-            out = F.dropout(out, p=self.drop_rate, training=self.training)
-
-        out = self.conv2(out)
-        if self.drop_rate > 0:
-            out = F.dropout(out, p=self.drop_rate, training=self.training)
-
-        out = self.conv3(out)
-        if self.drop_rate > 0:
-            out = F.dropout(out, p=self.drop_rate, training=self.training)
-
-        out = self.conv4(out)
-        if self.drop_rate > 0:
-            out = F.dropout(out, p=self.drop_rate, training=self.training)
-
-        out = self.conv5(out)
-        if self.drop_rate > 0:
-            out = F.dropout(out, p=self.drop_rate, training=self.training)
-        return out
 
     pass
 
@@ -318,10 +238,8 @@ transforms_normalize2 = transforms.Normalize(np.array([x / 255.0 for x in [120.3
 
 
 class Config(object):
-    gpu_id = 3
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-
-    image_size = 127
 
     num_workers = 8
 
@@ -340,13 +258,12 @@ class Config(object):
     is_png = True
     # is_png = False
 
-    # proto_net = AlexNetV1()
-    proto_net = AlexNetV2()
+    proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=False)
 
     learning_rate = 0.01
 
-    train_epoch = 250
-    first_epoch, t_epoch = 150, 50
+    train_epoch = 500
+    first_epoch, t_epoch = 300, 150
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     transforms_normalize, norm_name = transforms_normalize1, "norm1"
@@ -366,7 +283,7 @@ class Config(object):
     data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
     Tools.print(data_root)
 
-    pn_dir = Tools.new_dir("../models_usot/alexnet/{}_pn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    pn_dir = Tools.new_dir("../models_pn/fsl_sgd_mse/{}_pn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     pass
 
 
@@ -374,11 +291,51 @@ class Config(object):
 
 
 """
-2020-12-03 11:51:50 Test 500 0_500_64_5_1_64_64_300_150_norm1_png .......
-2020-12-03 11:55:16 load proto net success from ../models_usot/alexnet/0_500_64_5_1_64_64_300_150_norm1_png_pn_5way_1shot.pkl
-2020-12-03 11:58:45 Train 500 Accuracy: 0.8536666666666668
-2020-12-03 11:58:45 Val   500 Accuracy: 0.5008888888888888
-2020-12-03 12:07:50 episode=500, Mean Test accuracy=0.48515555555555556
+2020-11-25 06:56:12 load proto net success from ../models_pn/fsl_sgd/1_500_64_5_1_64_64_300_150_pn_5way_1shot.pkl
+2020-11-25 06:57:50 Train 500 Accuracy: 0.6728888888888889
+2020-11-25 06:57:50 Val   500 Accuracy: 0.504
+2020-11-25 07:01:48 episode=500, Mean Test accuracy=0.5103866666666667
+
+norm
+2020-11-28 21:11:12 load proto net success from ../models_pn/fsl_sgd/0_500_64_5_1_64_64_300_150_norm_pn_5way_1shot.pkl
+2020-11-28 21:12:55 Train 500 Accuracy: 0.6346666666666667
+2020-11-28 21:12:55 Val   500 Accuracy: 0.4473333333333334
+2020-11-28 21:17:05 episode=500, Mean Test accuracy=0.45159111111111105
+
+
+jpg normalize2
+2020-12-02 05:13:35 Test 500 3_500_64_5_1_64_64_300_150 .......
+2020-12-02 05:15:21 Train 500 Accuracy: 0.6847777777777778
+2020-12-02 05:15:21 Val   500 Accuracy: 0.5203333333333333
+2020-12-02 05:15:21 Test1 500 Accuracy: 0.5157777777777778
+2020-12-02 05:15:21 Test2 500 Accuracy: 0.516311111111111
+2020-12-02 05:15:21 Save networks for epoch: 500
+2020-12-02 05:15:21 load proto net success from ../models_pn/fsl_sgd/3_500_64_5_1_64_64_300_150_pn_5way_1shot.pkl
+2020-12-02 05:16:57 Train 500 Accuracy: 0.6962222222222223
+2020-12-02 05:16:57 Val   500 Accuracy: 0.5123333333333333
+2020-12-02 05:21:11 episode=500, Mean Test accuracy=0.5158133333333333
+
+png normalize1
+2020-12-02 06:16:57 Test 500 1_500_64_5_1_64_64_300_150norm1_png .......
+2020-12-02 06:18:43 Train 500 Accuracy: 0.7264444444444444
+2020-12-02 06:18:43 Val   500 Accuracy: 0.5384444444444444
+2020-12-02 06:18:43 Test1 500 Accuracy: 0.5304444444444444
+2020-12-02 06:18:43 Test2 500 Accuracy: 0.5390666666666668
+2020-12-02 06:18:43 load proto net success from ../models_pn/fsl_sgd/1_500_64_5_1_64_64_300_150norm1_png_pn_5way_1shot.pkl
+2020-12-02 06:20:29 Train 500 Accuracy: 0.7137777777777777
+2020-12-02 06:20:29 Val   500 Accuracy: 0.5265555555555556
+2020-12-02 06:24:52 episode=500, Mean Test accuracy=0.5280755555555555
+
+png normalize2
+2020-12-02 05:26:53 Test 500 2_500_64_5_1_64_64_300_150_png .......
+2020-12-02 05:28:54 Train 500 Accuracy: 0.7293333333333334
+2020-12-02 05:28:54 Val   500 Accuracy: 0.53
+2020-12-02 05:28:54 Test1 500 Accuracy: 0.5473333333333333
+2020-12-02 05:28:54 Test2 500 Accuracy: 0.5371111111111111
+2020-12-02 05:28:54 load proto net success from ../models_pn/fsl_sgd/2_500_64_5_1_64_64_300_150_png_pn_5way_1shot.pkl
+2020-12-02 05:30:52 Train 500 Accuracy: 0.7393333333333334
+2020-12-02 05:30:52 Val   500 Accuracy: 0.542
+2020-12-02 05:35:37 episode=500, Mean Test accuracy=0.5368444444444445
 """
 
 

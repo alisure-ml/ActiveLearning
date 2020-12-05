@@ -154,10 +154,13 @@ class MiniImageNetDataset(object):
 
 class ICResNet(nn.Module):
 
-    def __init__(self, resnet, low_dim=512):
+    def __init__(self, resnet, low_dim=512, modify_head=False):
         super().__init__()
         self.resnet = resnet(num_classes=low_dim)
         self.l2norm = Normalize(2)
+        if modify_head:
+            self.resnet.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+            pass
         pass
 
     def forward(self, x):
@@ -253,7 +256,8 @@ class Runner(object):
         # model
         self.feature_encoder = RunnerTool.to_cuda(Config.feature_encoder)
         self.relation_network = RunnerTool.to_cuda(Config.relation_network)
-        self.ic_model = RunnerTool.to_cuda(ICResNet(resnet=Config.resnet, low_dim=Config.ic_out_dim))
+        self.ic_model = RunnerTool.to_cuda(ICResNet(resnet=Config.resnet, low_dim=Config.ic_out_dim,
+                                                    modify_head=Config.modify_head))
 
         RunnerTool.to_cuda(self.feature_encoder.apply(RunnerTool.weights_init))
         RunnerTool.to_cuda(self.relation_network.apply(RunnerTool.weights_init))
@@ -455,7 +459,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -468,17 +472,6 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    # resnet = resnet18
-    resnet = resnet34
-    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
-
-    # ic
-    ic_out_dim = 512
-    ic_ratio = 1
-
-    is_png = True
-    # is_png = False
-
     learning_rate = 0.01
     loss_fsl_ratio = 1.0
     loss_ic_ratio = 1.0
@@ -487,9 +480,25 @@ class Config(object):
     first_epoch, t_epoch = 500, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
-        gpu_id, train_epoch, batch_size, num_way, num_shot, first_epoch,
-        t_epoch, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, "_png" if is_png else "")
+    # ic
+    ic_out_dim = 512
+    ic_ratio = 1
+
+    ##############################################################################################################
+    # resnet = resnet18
+    resnet = resnet34
+    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+
+    is_png = True
+    # is_png = False
+
+    # modify_head = False
+    modify_head = True
+    ##############################################################################################################
+
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}{}".format(
+        gpu_id, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch, ic_out_dim, ic_ratio,
+        loss_fsl_ratio, loss_ic_ratio, "_head" if modify_head else "", "_png" if is_png else "")
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
