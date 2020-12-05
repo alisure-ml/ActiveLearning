@@ -32,6 +32,7 @@ class MiniImageNetDataset(object):
 
         self.transform = transforms.Compose([transforms.Resize(Config.image_size),
                                              transforms.RandomCrop(Config.image_size, padding=8),
+                                             transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
                                              transforms.RandomHorizontalFlip(),
                                              transforms.ToTensor(), Config.transforms_normalize])
         self.transform_test = transforms.Compose([transforms.Resize(Config.image_size),
@@ -303,8 +304,8 @@ class Config(object):
 
     learning_rate = 0.01
 
-    train_epoch = 500
-    first_epoch, t_epoch = 300, 150
+    train_epoch = 250
+    first_epoch, t_epoch = 150, 50
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     transforms_normalize, norm_name = transforms_normalize1, "norm1"
