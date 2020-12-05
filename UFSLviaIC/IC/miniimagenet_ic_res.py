@@ -484,6 +484,14 @@ resnet_34, modify_head = False
 2020-12-04 08:59:13 Epoch: 2100 Train 0.5446/0.8186 0.0000
 2020-12-04 08:59:13 Epoch: 2100 Val   0.6197/0.9276 0.0000
 2020-12-04 08:59:13 Epoch: 2100 Test  0.5900/0.9191 0.0000
+
+resnet_34, modify_head = True
+2020-12-05 22:40:54 load ic model success from ../models/ic_res_xx/3_resnet_34_64_512_1_2100_500_2000.01_ic.pkl
+2020-12-05 22:40:54 Test 2100 .......
+2020-12-05 22:41:27 Epoch: 2100 Train 0.5785/0.8421 0.0000
+2020-12-05 22:41:27 Epoch: 2100 Val   0.6636/0.9475 0.0000
+2020-12-05 22:41:27 Epoch: 2100 Test  0.6272/0.9386 0.0000
+
 """
 
 
@@ -530,6 +538,7 @@ class Config(object):
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}{}".format(
         gpu_id, net_name, batch_size, ic_out_dim, ic_ratio, train_epoch,
         first_epoch, t_epoch, learning_rate, modify_head, "_png" if is_png else "")
+    Tools.print(model_name)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
