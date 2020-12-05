@@ -14,7 +14,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from pn_miniimagenet_fsl_test_tool import TestTool
 from pn_miniimagenet_ic_test_tool import ICTestTool
-from pn_miniimagenet_tool import Normalize, ProtoNet, RunnerTool
+from pn_miniimagenet_tool import Normalize, ProduceClass, ProtoNet, RunnerTool
 
 
 ##############################################################################################################
@@ -144,62 +144,6 @@ class ICResNet(nn.Module):
     pass
 
 
-class ProduceClass(object):
-
-    def __init__(self, n_sample, out_dim, ratio=1.0):
-        super().__init__()
-        self.out_dim = out_dim
-        self.n_sample = n_sample
-        self.class_per_num = self.n_sample // self.out_dim * ratio
-        self.count = 0
-        self.count_2 = 0
-        self.class_num = np.zeros(shape=(self.out_dim,), dtype=np.int)
-        self.classes = np.zeros(shape=(self.n_sample,), dtype=np.int)
-        pass
-
-    def init(self):
-        class_per_num = self.n_sample // self.out_dim
-        self.class_num += class_per_num
-        for i in range(self.out_dim):
-            self.classes[i * class_per_num: (i + 1) * class_per_num] = i
-            pass
-        np.random.shuffle(self.classes)
-        pass
-
-    def reset(self):
-        self.count = 0
-        self.count_2 = 0
-        self.class_num *= 0
-        pass
-
-    def cal_label(self, out, indexes):
-        out_data = out.data.cpu()
-        top_k = out_data.topk(self.out_dim, dim=1)[1].cpu()
-        indexes_cpu = indexes.cpu()
-
-        batch_size = top_k.size(0)
-        class_labels = np.zeros(shape=(batch_size,), dtype=np.int)
-
-        for i in range(batch_size):
-            for j_index, j in enumerate(top_k[i]):
-                if self.class_per_num > self.class_num[j]:
-                    class_labels[i] = j
-                    self.class_num[j] += 1
-                    self.count += 1 if self.classes[indexes_cpu[i]] != j else 0
-                    self.classes[indexes_cpu[i]] = j
-                    self.count_2 += 1 if j_index != 0 else 0
-                    break
-                pass
-            pass
-        pass
-
-    def get_label(self, indexes):
-        _device = indexes.device
-        return torch.tensor(self.classes[indexes.cpu()]).long().to(_device)
-
-    pass
-
-
 ##############################################################################################################
 
 
@@ -277,13 +221,13 @@ class Runner(object):
 
         sample_z = self.proto_net(samples)  # 5x64*5*5
         batch_z = self.proto_net(batches)  # 75x64*5*5
-        sample_z = sample_z.view(Config.num_way, Config.num_shot, -1)
+        sample_z = sample_z.view(num_way, num_shot, -1)
         batch_z = batch_z.view(batch_num, -1)
         _, z_dim = batch_z.shape
 
         z_proto = sample_z.mean(1)
-        z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, Config.num_way, z_dim)
-        z_query_expand = batch_z.unsqueeze(1).expand(batch_num, Config.num_way, z_dim)
+        z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, num_way, z_dim)
+        z_query_expand = batch_z.unsqueeze(1).expand(batch_num, num_way, z_dim)
 
         dists = torch.pow(z_query_expand - z_proto_expand, 2).sum(2)
         log_p_y = F.log_softmax(-dists, dim=1)
@@ -350,7 +294,6 @@ class Runner(object):
 
                 self.proto_net.zero_grad()
                 loss_fsl.backward()
-                torch.nn.utils.clip_grad_norm_(self.proto_net.parameters(), 0.5)
                 self.proto_net_optim.step()
 
                 # is ok
@@ -377,7 +320,7 @@ class Runner(object):
                 self.test_tool_ic.val(epoch=epoch)
                 val_accuracy = self.test_tool_fsl.val(episode=epoch, is_print=True)
 
-                if val_accuracy > self.best_accuracy:
+                if val_accuracy > self.best_accuracy and epoch > Config.train_epoch // 3:
                     self.best_accuracy = val_accuracy
                     torch.save(self.proto_net.state_dict(),
                                "{}/pn_{}_{}.pkl".format(os.path.split(Config.pn_dir)[0], epoch, val_accuracy))
@@ -426,6 +369,33 @@ Norm=True
 2020-12-01 06:20:20 Train 2100 Accuracy: 0.4679999999999999
 2020-12-01 06:20:20 Val   2100 Accuracy: 0.43411111111111117
 2020-12-01 06:24:20 episode=2100, Mean Test accuracy=0.4441644444444445
+
+2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/pn_final.pkl
+2020-12-03 02:52:24   2100 loss:2.218 fsl:1.198 ic:1.020 ok:0.257(9879/38400)
+2020-12-03 02:52:24 Train: [2100] 8943/1734
+2020-12-03 02:54:19 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/pn_final.pkl
+2020-12-03 02:54:19 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/ic_final.pkl
+2020-12-03 02:54:19 Test 2100 .......
+2020-12-03 02:54:33 Epoch: 2100 Train 0.4969/0.7808 0.0000
+2020-12-03 02:54:33 Epoch: 2100 Val   0.5830/0.9116 0.0000
+2020-12-03 02:54:33 Epoch: 2100 Test  0.5545/0.8988 0.0000
+2020-12-03 02:56:17 Train 2100 Accuracy: 0.48133333333333334
+2020-12-03 02:56:17 Val   2100 Accuracy: 0.4271111111111111
+2020-12-03 03:00:33 episode=2100, Mean Test accuracy=0.41944
+
+1_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/pn_final.pkl
+2020-12-03 22:35:51   2100 loss:2.223 fsl:1.195 ic:1.028 ok:0.258(9916/38400)
+2020-12-03 22:35:51 Train: [2100] 9095/1777
+2020-12-03 22:37:40 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/1_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/pn_final.pkl
+2020-12-03 22:37:40 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/1_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/ic_final.pkl
+2020-12-03 22:37:40 Test 2100 .......
+2020-12-03 22:37:53 Epoch: 2100 Train 0.4945/0.7841 0.0000
+2020-12-03 22:37:53 Epoch: 2100 Val   0.5787/0.9097 0.0000
+2020-12-03 22:37:53 Epoch: 2100 Test  0.5623/0.8986 0.0000
+2020-12-03 22:39:30 Train 2100 Accuracy: 0.4697777777777778
+2020-12-03 22:39:30 Val   2100 Accuracy: 0.42266666666666663
+2020-12-03 22:43:30 episode=2100, Mean Test accuracy=0.41988888888888887
+
 """
 
 
@@ -433,7 +403,7 @@ class Config(object):
     gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    num_workers = 16
+    num_workers = 8
 
     num_way = 5
     num_shot = 1
@@ -446,8 +416,8 @@ class Config(object):
     hid_dim = 64
     z_dim = 64
 
-    has_norm = True
-    # has_norm = False
+    # has_norm = True
+    has_norm = False
     proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=has_norm)
 
     # ic
