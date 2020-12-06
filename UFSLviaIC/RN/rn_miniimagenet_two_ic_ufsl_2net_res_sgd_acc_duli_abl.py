@@ -455,6 +455,36 @@ class Runner(object):
 
 
 """
+resnet18, modify_head = False, is_png = True
+1_2100_64_5_1_500_200_512_1_1.0_1.0_png_fe_5way_1shot.pkl
+2020-12-06 05:01:34   2100 loss:1.021 fsl:0.078 ic:0.943 ok:0.288(11069/38400)
+2020-12-06 05:01:34 Train: [2099] 8436/1719
+2020-12-06 05:01:34 load feature encoder success from ../models/two_ic_ufsl_2net_res_sgd_acc_duli/1_2100_64_5_1_500_200_512_1_1.0_1.0_png_fe_5way_1shot.pkl
+2020-12-06 05:01:34 load relation network success from ../models/two_ic_ufsl_2net_res_sgd_acc_duli/1_2100_64_5_1_500_200_512_1_1.0_1.0_png_rn_5way_1shot.pkl
+2020-12-06 05:01:34 load ic model success from ../models/two_ic_ufsl_2net_res_sgd_acc_duli/1_2100_64_5_1_500_200_512_1_1.0_1.0_png_ic_5way_1shot.pkl
+2020-12-06 05:01:34 Test 2100 .......
+2020-12-06 05:01:48 Epoch: 2100 Train 0.5255/0.8092 0.0000
+2020-12-06 05:01:48 Epoch: 2100 Val   0.6091/0.9236 0.0000
+2020-12-06 05:01:48 Epoch: 2100 Test  0.5850/0.9154 0.0000
+2020-12-06 05:04:07 Train 2100 Accuracy: 0.5354444444444444
+2020-12-06 05:04:07 Val   2100 Accuracy: 0.482
+2020-12-06 05:09:46 episode=2100, Mean Test accuracy=0.48509777777777774
+
+
+resnet34, modify_head = False, is_png = True
+2_2100_64_5_1_500_200_512_1_1.0_1.0_png_fe_5way_1shot.pkl
+2020-12-06 08:13:20   2100 loss:0.785 fsl:0.077 ic:0.708 ok:0.313(12017/38400)
+2020-12-06 08:13:20 Train: [2099] 6354/1661
+2020-12-06 08:13:20 load feature encoder success from ../models/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_500_200_512_1_1.0_1.0_png_fe_5way_1shot.pkl
+2020-12-06 08:13:20 load relation network success from ../models/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_500_200_512_1_1.0_1.0_png_rn_5way_1shot.pkl
+2020-12-06 08:13:21 load ic model success from ../models/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_500_200_512_1_1.0_1.0_png_ic_5way_1shot.pkl
+2020-12-06 08:13:21 Test 2100 .......
+2020-12-06 08:13:38 Epoch: 2100 Train 0.5315/0.8087 0.0000
+2020-12-06 08:13:38 Epoch: 2100 Val   0.6189/0.9254 0.0000
+2020-12-06 08:13:38 Epoch: 2100 Test  0.5889/0.9195 0.0000
+2020-12-06 08:15:46 Train 2100 Accuracy: 0.5373333333333333
+2020-12-06 08:15:46 Val   2100 Accuracy: 0.4773333333333334
+2020-12-06 08:21:01 episode=2100, Mean Test accuracy=0.4897111111111111
 """
 
 

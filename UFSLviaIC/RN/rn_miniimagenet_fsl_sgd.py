@@ -184,7 +184,7 @@ class Runner(object):
         Tools.print()
         Tools.print("Training...")
 
-        for epoch in range(Config.train_epoch):
+        for epoch in range(1, 1 + Config.train_epoch):
             self.feature_encoder.train()
             self.relation_network.train()
 
@@ -219,7 +219,7 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f}".format(epoch + 1, all_loss / len(self.task_train_loader)))
+            Tools.print("{:6} loss:{:.3f}".format(epoch, all_loss / len(self.task_train_loader)))
             ###########################################################################
 
             ###########################################################################
@@ -247,7 +247,7 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
     learning_rate = 0.01
     num_workers = 8
@@ -264,11 +264,14 @@ class Config(object):
     first_epoch, t_epoch = 200, 100
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
-    # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+    is_png = True
+    # is_png = False
 
-    model_name = "2_{}_{}_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch)
-    # model_name = "2_{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
+    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+
+    model_name = "2_{}_{}_{}_{}_{}_{}{}".format(train_epoch, batch_size, num_way, num_shot,
+                                                first_epoch, t_epoch, "_png" if is_png else "")
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -276,6 +279,8 @@ class Config(object):
             data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
     else:
         data_root = "F:\\data\\miniImagenet"
+    data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
+    Tools.print(data_root)
 
     fe_dir = Tools.new_dir("../models/fsl_sgd/{}_fe_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
     rn_dir = Tools.new_dir("../models/fsl_sgd/{}_rn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
@@ -306,6 +311,15 @@ class Config(object):
 2020-10-25 11:57:55 Train 400 Accuracy: 0.7193333333333334
 2020-10-25 11:57:55 Val   400 Accuracy: 0.5487777777777777
 2020-10-25 12:02:00 episode=400, Mean Test accuracy=0.5206977777777778
+
+2_400_64_5_1_200_100_png_fe_5way_1shot, feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+2020-12-06 20:17:43 load feature encoder success from ../models/fsl_sgd/2_400_64_5_1_200_100_png_fe_5way_1shot.pkl
+2020-12-06 20:17:43 load relation network success from ../models/fsl_sgd/2_400_64_5_1_200_100_png_rn_5way_1shot.pkl
+2020-12-06 20:17:43 load model over
+2020-12-06 20:20:02 Train 400 Accuracy: 0.7846666666666667
+2020-12-06 20:20:02 Val   400 Accuracy: 0.5680000000000001
+2020-12-06 20:26:14 episode=400, Mean Test accuracy=0.5472177777777778
+
 """
 
 
@@ -313,9 +327,9 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    runner.feature_encoder.eval()
-    runner.relation_network.eval()
-    runner.test_tool.val(episode=0, is_print=True)
+    # runner.feature_encoder.eval()
+    # runner.relation_network.eval()
+    # runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 
