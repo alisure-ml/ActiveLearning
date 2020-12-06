@@ -339,7 +339,7 @@ class ProtoNet(nn.Module):
 
 class MatchingNet(nn.Module):
 
-    def __init__(self, hid_dim, z_dim):
+    def __init__(self, hid_dim, z_dim, has_norm=False):
         super().__init__()
         self.conv_block_1 = nn.Sequential(nn.Conv2d(3, hid_dim, 3, padding=1),
                                           nn.BatchNorm2d(hid_dim), nn.ReLU(), nn.MaxPool2d(2))  # 41
@@ -349,6 +349,10 @@ class MatchingNet(nn.Module):
                                           nn.BatchNorm2d(hid_dim), nn.ReLU(), nn.MaxPool2d(2))  # 10
         self.conv_block_4 = nn.Sequential(nn.Conv2d(hid_dim, z_dim, 3, padding=1),
                                           nn.BatchNorm2d(z_dim), nn.ReLU(), nn.MaxPool2d(2))  # 5
+
+        self.has_norm = has_norm
+        if self.has_norm:
+            self.norm = Normalize(2)
         pass
 
     def forward(self, x):
@@ -356,6 +360,10 @@ class MatchingNet(nn.Module):
         out = self.conv_block_2(out)
         out = self.conv_block_3(out)
         out = self.conv_block_4(out)
+
+        if self.has_norm:
+            out = out.view(out.shape[0], -1)
+            out = self.norm(out)
         return out
 
     def __call__(self, *args, **kwargs):
