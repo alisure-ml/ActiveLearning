@@ -200,7 +200,6 @@ class Runner(object):
                 # 3 backward
                 self.matching_net.zero_grad()
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.matching_net.parameters(), 0.5)
                 self.matching_net_optim.step()
                 ###########################################################################
                 pass
@@ -236,7 +235,8 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    gpu_id = 1
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     # train_epoch = 300
     train_epoch = 180
@@ -255,11 +255,14 @@ class Config(object):
     hid_dim = 64
     z_dim = 64
 
-    loss_is_mse = False
+    # loss_is_mse = False
+    loss_is_mse = True
 
     matching_net = MatchingNet(hid_dim=hid_dim, z_dim=z_dim)
 
-    model_name = "{}_{}_{}_{}_{}".format(train_epoch, batch_size, hid_dim, z_dim, loss_is_mse)
+    model_name = "{}_{}_{}_{}_{}".format(train_epoch, batch_size, hid_dim, z_dim,
+                                         "mse" if loss_is_mse else "ce")
+    Tools.print(model_name)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -276,11 +279,17 @@ class Config(object):
 
 
 """
-1_180_64_64_64_True_True_mn_5way_1shot
-2020-10-26 23:27:01 load proto net success from ../models_mn/fsl/1_180_64_64_64_True_True_mn_5way_1shot.pkl
-2020-10-26 23:28:38 Train 180 Accuracy: 0.6912222222222223
-2020-10-26 23:28:38 Val   180 Accuracy: 0.5012222222222222
-2020-10-26 23:32:34 episode=180, Mean Test accuracy=0.5017288888888889
+180_64_64_64_mse_mn_5way_1shot
+2020-12-06 20:16:16 load proto net success from ../models_mn/fsl/180_64_64_64_mse_mn_5way_1shot.pkl
+2020-12-06 20:17:57 Train 180 Accuracy: 0.7238888888888888
+2020-12-06 20:17:57 Val   180 Accuracy: 0.5101111111111111
+2020-12-06 20:21:32 episode=180, Mean Test accuracy=0.5105999999999999
+
+180_64_64_64_ce_mn_5way_1shot
+2020-12-06 20:11:16 load proto net success from ../models_mn/fsl/180_64_64_64_ce_mn_5way_1shot.pkl
+2020-12-06 20:12:58 Train 180 Accuracy: 0.6807777777777777
+2020-12-06 20:12:58 Val   180 Accuracy: 0.503
+2020-12-06 20:17:20 episode=180, Mean Test accuracy=0.5060533333333334
 """
 
 
@@ -288,8 +297,8 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    runner.matching_net.eval()
-    runner.test_tool.val(episode=0, is_print=True)
+    # runner.matching_net.eval()
+    # runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 
