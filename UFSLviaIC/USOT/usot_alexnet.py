@@ -138,13 +138,11 @@ class AlexNetV2(nn.Module):
     def __init__(self, drop_rate=0.1):
         super().__init__()
         self.drop_rate = drop_rate
-        self.conv1 = nn.Sequential(nn.Conv2d(3, 96, 11, 2), nn.BatchNorm2d(96),
-                                   nn.ReLU(inplace=True), nn.MaxPool2d(3, 2))
-        self.conv2 = nn.Sequential(nn.Conv2d(96, 256, 5, 1, groups=2), nn.BatchNorm2d(256),
-                                   nn.ReLU(inplace=True), nn.MaxPool2d(3, 2))
-        self.conv3 = nn.Sequential(nn.Conv2d(256, 384, 3, 1), nn.BatchNorm2d(384), nn.ReLU(inplace=True))
-        self.conv4 = nn.Sequential(nn.Conv2d(384, 384, 3, 1, groups=2), nn.BatchNorm2d(384), nn.ReLU(inplace=True))
-        self.conv5 = nn.Sequential(nn.Conv2d(384, 256, 3, 1, groups=2))
+        self.conv1 = nn.Sequential(nn.Conv2d(3, 96, 3, 1), nn.BatchNorm2d(96), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv2 = nn.Sequential(nn.Conv2d(96, 256, 3, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv3 = nn.Sequential(nn.Conv2d(256, 384, 3, 1), nn.BatchNorm2d(384), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv4 = nn.Sequential(nn.Conv2d(384, 384, 3, 1), nn.BatchNorm2d(384), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv5 = nn.Sequential(nn.Conv2d(384, 256, 3, 1, padding=1), nn.BatchNorm2d(256), nn.ReLU())
         pass
 
     def forward(self, x):
@@ -165,6 +163,7 @@ class AlexNetV2(nn.Module):
             out = F.dropout(out, p=self.drop_rate, training=self.training)
 
         out = self.conv5(out)
+
         if self.drop_rate > 0:
             out = F.dropout(out, p=self.drop_rate, training=self.training)
         return out
@@ -322,38 +321,33 @@ class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     image_size = 127
-
     num_workers = 8
-
-    val_freq = 10
-
-    num_way = 5
-    num_shot = 1
-    batch_size = 64
-
+    val_freq = 5
     episode_size = 15
     test_episode = 600
 
-    hid_dim = 64
-    z_dim = 64
+    num_way = 5
+    num_shot = 1
+    batch_size = 32
 
+    learning_rate = 0.01
+    train_epoch = 160
+    first_epoch, t_epoch = 80, 40
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
+
+    ##############################################################################################################
     is_png = True
     # is_png = False
 
     # proto_net = AlexNetV1()
     proto_net = AlexNetV2()
 
-    learning_rate = 0.01
+    # transforms_normalize, norm_name = transforms_normalize1, "norm1"
+    transforms_normalize, norm_name = transforms_normalize2, "norm2"
+    ##############################################################################################################
 
-    train_epoch = 250
-    first_epoch, t_epoch = 150, 50
-    adjust_learning_rate = RunnerTool.adjust_learning_rate2
-
-    transforms_normalize, norm_name = transforms_normalize1, "norm1"
-    # transforms_normalize, norm_name = transforms_normalize2, "norm2"
-
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
-        gpu_id, train_epoch, batch_size, num_way, num_shot, hid_dim, z_dim,
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}{}_relu".format(
+        gpu_id, train_epoch, batch_size, num_way, num_shot,
         first_epoch, t_epoch, norm_name, "_png" if is_png else "")
     Tools.print(model_name)
 
@@ -366,7 +360,7 @@ class Config(object):
     data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
     Tools.print(data_root)
 
-    pn_dir = Tools.new_dir("../models_usot/alexnet/{}_pn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    pn_dir = Tools.new_dir("../models_usot/alexnet/{}.pkl".format(model_name))
     pass
 
 

@@ -331,7 +331,7 @@ class RunnerTool(object):
 
 class ProtoNet(nn.Module):
 
-    def __init__(self, hid_dim, z_dim, has_norm=False, has_relu=False):
+    def __init__(self, hid_dim, z_dim, has_norm=False):
         super().__init__()
         self.conv_block_1 = nn.Sequential(nn.Conv2d(3, hid_dim, 3, padding=1),
                                           nn.BatchNorm2d(hid_dim), nn.ReLU(), nn.MaxPool2d(2))  # 41
@@ -345,9 +345,6 @@ class ProtoNet(nn.Module):
         self.has_norm = has_norm
         if self.has_norm:
             self.l2norm = Normalize(2)
-            self.has_relu = has_relu
-            if self.has_relu:
-                self.relu = nn.ReLU()
         pass
 
     def forward(self, x):
@@ -357,8 +354,6 @@ class ProtoNet(nn.Module):
         out = self.conv_block_4(out)
         if self.has_norm:
             out = out.view(out.shape[0], -1)
-            if self.has_relu:
-                out = self.relu(out)
             out = self.l2norm(out)
         return out
 
