@@ -4,8 +4,8 @@ import torch
 import random
 import platform
 import numpy as np
-import torch.nn as nn
 from tqdm import tqdm
+import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
@@ -238,7 +238,7 @@ class Runner(object):
         Tools.print("Training...")
 
         # Init Update
-        if True:
+        if False:
             self.ic_model.eval()
             Tools.print("Init label {} .......")
             self.produce_class.reset()
@@ -396,11 +396,35 @@ Norm=True
 2020-12-03 22:39:30 Val   2100 Accuracy: 0.42266666666666663
 2020-12-03 22:43:30 episode=2100, Mean Test accuracy=0.41988888888888887
 
+2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/pn_final.pkl
+2020-12-05 21:54:30 Train: [2100] 9139/1824
+2020-12-05 21:56:52 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/pn_final.pkl
+2020-12-05 21:56:52 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/2_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/ic_final.pkl
+2020-12-05 21:56:52 Test 2100 .......
+2020-12-05 21:57:06 Epoch: 2100 Train 0.4917/0.7822 0.0000
+2020-12-05 21:57:06 Epoch: 2100 Val   0.5831/0.9143 0.0000
+2020-12-05 21:57:06 Epoch: 2100 Test  0.5523/0.9018 0.0000
+2020-12-05 21:58:58 Train 2100 Accuracy: 0.46344444444444444
+2020-12-05 21:58:58 Val   2100 Accuracy: 0.41877777777777775
+2020-12-05 22:03:15 episode=2100, Mean Test accuracy=0.41872444444444445
+
+1_2100_64_5_1_64_64_500_200_512_1_1.0_1.0/pn_final.pkl
+2020-12-06 06:29:04   2100 loss:1.860 fsl:0.839 ic:1.021 ok:0.251(9624/38400)
+2020-12-06 06:29:04 Train: [2100] 8988/1794
+2020-12-06 06:30:59 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/1_2100_64_5_1_64_64_500_200_512_1_1.0_1.0/pn_final.pkl
+2020-12-06 06:30:59 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/1_2100_64_5_1_64_64_500_200_512_1_1.0_1.0/ic_final.pkl
+2020-12-06 06:30:59 Test 2100 .......
+2020-12-06 06:31:11 Epoch: 2100 Train 0.4910/0.7782 0.0000
+2020-12-06 06:31:11 Epoch: 2100 Val   0.5777/0.9125 0.0000
+2020-12-06 06:31:11 Epoch: 2100 Test  0.5517/0.8986 0.0000
+2020-12-06 06:32:53 Train 2100 Accuracy: 0.44122222222222224
+2020-12-06 06:32:53 Val   2100 Accuracy: 0.4073333333333333
+2020-12-06 06:36:58 episode=2100, Mean Test accuracy=0.4207466666666667
 """
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -416,8 +440,8 @@ class Config(object):
     hid_dim = 64
     z_dim = 64
 
-    # has_norm = True
-    has_norm = False
+    has_norm = True
+    # has_norm = False
     proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=has_norm)
 
     # ic
