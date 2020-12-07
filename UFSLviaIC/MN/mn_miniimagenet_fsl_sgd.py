@@ -9,7 +9,6 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from mn_miniimagenet_fsl_test_tool import TestTool
@@ -102,6 +101,7 @@ class Runner(object):
 
     def __init__(self):
         self.best_accuracy = 0.0
+        self.adjust_learning_rate = Config.adjust_learning_rate
 
         # all data
         self.data_train = MiniImageNetDataset.get_data_all(Config.data_root)
@@ -117,8 +117,8 @@ class Runner(object):
         self.loss_ce = RunnerTool.to_cuda(nn.CrossEntropyLoss())
 
         # optim
-        self.matching_net_optim = torch.optim.Adam(self.matching_net.parameters(), lr=Config.learning_rate)
-        self.matching_net_scheduler = StepLR(self.matching_net_optim, Config.train_epoch // 3, gamma=0.5)
+        self.matching_net_optim = torch.optim.SGD(
+            self.matching_net.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
         self.test_tool = TestTool(self.matching_test, data_root=Config.data_root,
                                   num_way=Config.num_way,  num_shot=Config.num_shot,
@@ -176,10 +176,14 @@ class Runner(object):
         Tools.print()
         Tools.print("Training...")
 
-        for epoch in range(Config.train_epoch):
+        for epoch in range(1, 1 + Config.train_epoch):
             self.matching_net.train()
 
             Tools.print()
+            mn_lr= self.adjust_learning_rate(self.matching_net_optim, epoch,
+                                             Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            Tools.print('Epoch: [{}] mn_lr={}'.format(epoch, mn_lr))
+
             all_loss = 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
@@ -206,10 +210,7 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f} lr:{}".format(
-                epoch + 1, all_loss / len(self.task_train_loader), self.matching_net_scheduler.get_last_lr()))
-
-            self.matching_net_scheduler.step()
+            Tools.print("{:6} loss:{:.3f}".format(epoch, all_loss / len(self.task_train_loader)))
             ###########################################################################
 
             ###########################################################################
@@ -235,12 +236,10 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    # train_epoch = 300
-    train_epoch = 180
-    learning_rate = 0.001
+    learning_rate = 0.01
     num_workers = 8
 
     val_freq = 10
@@ -255,16 +254,23 @@ class Config(object):
     hid_dim = 64
     z_dim = 64
 
+    matching_net = MatchingNet(hid_dim=hid_dim, z_dim=z_dim)
+
+    train_epoch = 400
+    first_epoch, t_epoch = 200, 100
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
+
+    ###############################################################################################
     # loss_is_mse = False
     loss_is_mse = True
 
-    is_png = True
-    # is_png = False
+    # is_png = True
+    is_png = False
+    ###############################################################################################
 
-    matching_net = MatchingNet(hid_dim=hid_dim, z_dim=z_dim)
-
-    model_name = "{}_{}_{}_{}_{}{}".format(train_epoch, batch_size, hid_dim, z_dim,
-                                           "mse" if loss_is_mse else "ce", "_png" if is_png else "")
+    model_name = "{}_{}_{}_{}_{}_{}_{}{}_{}".format(
+        gpu_id, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch,
+        "_png" if is_png else "", "mse" if loss_is_mse else "ce")
     Tools.print(model_name)
 
     if "Linux" in platform.platform():
@@ -276,7 +282,7 @@ class Config(object):
     data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
     Tools.print(data_root)
 
-    mn_dir = Tools.new_dir("../models_mn/fsl/{}_mn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    mn_dir = Tools.new_dir("../models_mn/fsl_sgd/{}.pkl".format(model_name))
     pass
 
 
@@ -284,23 +290,17 @@ class Config(object):
 
 
 """
-180_64_64_64_mse_mn_5way_1shot
-2020-12-06 20:16:16 load proto net success from ../models_mn/fsl/180_64_64_64_mse_mn_5way_1shot.pkl
-2020-12-06 20:17:57 Train 180 Accuracy: 0.7238888888888888
-2020-12-06 20:17:57 Val   180 Accuracy: 0.5101111111111111
-2020-12-06 20:21:32 episode=180, Mean Test accuracy=0.5105999999999999
+3_400_64_5_1_200_100_mse
+2020-12-07 04:47:16 load proto net success from ../models_mn/fsl_sgd/3_400_64_5_1_200_100_mse.pkl
+2020-12-07 04:49:00 Train 400 Accuracy: 0.7104444444444444
+2020-12-07 04:49:00 Val   400 Accuracy: 0.5284444444444444
+2020-12-07 04:53:08 episode=400, Mean Test accuracy=0.5143866666666665
 
-180_64_64_64_ce_mn_5way_1shot
-2020-12-06 20:11:16 load proto net success from ../models_mn/fsl/180_64_64_64_ce_mn_5way_1shot.pkl
-2020-12-06 20:12:58 Train 180 Accuracy: 0.6807777777777777
-2020-12-06 20:12:58 Val   180 Accuracy: 0.503
-2020-12-06 20:17:20 episode=180, Mean Test accuracy=0.5060533333333334
-
-180_64_64_64_png_mse_mn_5way_1shot
-2020-12-07 04:10:24 load proto net success from ../models_mn/fsl/180_64_64_64__pngmse_mn_5way_1shot.pkl
-2020-12-07 04:12:29 Train 180 Accuracy: 0.7603333333333333
-2020-12-07 04:12:29 Val   180 Accuracy: 0.5257777777777778
-2020-12-07 04:17:42 episode=180, Mean Test accuracy=0.5266533333333333
+2_400_64_5_1_200_100_png_mse
+2020-12-07 04:56:54 load proto net success from ../models_mn/fsl_sgd/2_400_64_5_1_200_100_png_mse.pkl
+2020-12-07 04:58:44 Train 400 Accuracy: 0.7696666666666667
+2020-12-07 04:58:44 Val   400 Accuracy: 0.5526666666666668
+2020-12-07 05:03:28 episode=400, Mean Test accuracy=0.5332
 """
 
 
