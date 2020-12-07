@@ -11,8 +11,8 @@ import torch.nn.functional as F
 from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
-from pn_miniimagenet_fsl_test_tool import TestTool
-from pn_miniimagenet_tool import ProtoNet, RunnerTool
+from usot_fsl_tool import RunnerTool, Normalize
+from usot_fsl_test_tool import TestTool
 
 
 ##############################################################################################################
@@ -30,10 +30,13 @@ class MiniImageNetDataset(object):
             self.data_dict[label].append((index, label, image_filename))
             pass
 
-        self.transform = transforms.Compose([
-            transforms.RandomCrop(84, padding=8),
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), Config.transforms_normalize])
-        self.transform_test = transforms.Compose([transforms.ToTensor(), Config.transforms_normalize])
+        self.transform = transforms.Compose([transforms.Resize(Config.image_size),
+                                             transforms.RandomCrop(Config.image_size, padding=8),
+                                             transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+                                             transforms.RandomHorizontalFlip(),
+                                             transforms.ToTensor(), Config.transforms_normalize])
+        self.transform_test = transforms.Compose([transforms.Resize(Config.image_size),
+                                                  transforms.ToTensor(), Config.transforms_normalize])
         pass
 
     def __len__(self):
@@ -95,6 +98,82 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
+class AlexNet(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        pass
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = self.conv5(x)
+        return x
+
+    pass
+
+
+class AlexNetV1(AlexNet):
+    output_stride = 8
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Sequential(nn.Conv2d(3, 96, 11, 2), nn.BatchNorm2d(96),
+                                   nn.ReLU(inplace=True), nn.MaxPool2d(3, 2))
+        self.conv2 = nn.Sequential(nn.Conv2d(96, 256, 5, 1, groups=2), nn.BatchNorm2d(256),
+                                   nn.ReLU(inplace=True), nn.MaxPool2d(3, 2))
+        self.conv3 = nn.Sequential(nn.Conv2d(256, 384, 3, 1), nn.BatchNorm2d(384), nn.ReLU(inplace=True))
+        self.conv4 = nn.Sequential(nn.Conv2d(384, 384, 3, 1, groups=2), nn.BatchNorm2d(384), nn.ReLU(inplace=True))
+        self.conv5 = nn.Sequential(nn.Conv2d(384, 256, 3, 1, groups=2))
+        pass
+
+    pass
+
+
+class AlexNetV2(nn.Module):
+    output_stride = 8
+
+    def __init__(self, drop_rate=0.1):
+        super().__init__()
+        self.drop_rate = drop_rate
+        self.conv1 = nn.Sequential(nn.Conv2d(3, 96, 3, 1), nn.BatchNorm2d(96), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv2 = nn.Sequential(nn.Conv2d(96, 256, 3, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv3 = nn.Sequential(nn.Conv2d(256, 384, 3, 1), nn.BatchNorm2d(384), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv4 = nn.Sequential(nn.Conv2d(384, 384, 3, 1), nn.BatchNorm2d(384), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv5 = nn.Sequential(nn.Conv2d(384, 256, 3, 1, padding=1), nn.BatchNorm2d(256), nn.ReLU())
+        pass
+
+    def forward(self, x):
+        out = self.conv1(x)
+        if self.drop_rate > 0:
+            out = F.dropout(out, p=self.drop_rate, training=self.training)
+
+        out = self.conv2(out)
+        if self.drop_rate > 0:
+            out = F.dropout(out, p=self.drop_rate, training=self.training)
+
+        out = self.conv3(out)
+        if self.drop_rate > 0:
+            out = F.dropout(out, p=self.drop_rate, training=self.training)
+
+        out = self.conv4(out)
+        if self.drop_rate > 0:
+            out = F.dropout(out, p=self.drop_rate, training=self.training)
+
+        out = self.conv5(out)
+
+        if self.drop_rate > 0:
+            out = F.dropout(out, p=self.drop_rate, training=self.training)
+        return out
+
+    pass
+
+
+##############################################################################################################
+
+
 class Runner(object):
 
     def __init__(self):
@@ -110,6 +189,7 @@ class Runner(object):
         # model
         self.proto_net = RunnerTool.to_cuda(Config.proto_net)
         RunnerTool.to_cuda(self.proto_net.apply(RunnerTool.weights_init))
+        self.norm = Normalize(2)
         self.loss = RunnerTool.to_cuda(nn.MSELoss())
 
         # optim
@@ -132,16 +212,21 @@ class Runner(object):
         data_batch_size, data_image_num, data_num_channel, data_width, data_weight = task_data.shape
         data_x = task_data.view(-1, data_num_channel, data_width, data_weight)
         net_out = self.proto_net(data_x)
-        out_num, feature_num = net_out.shape
+        out_num, out_channel, out_width, out_weight = net_out.shape
+        feature_num = out_channel * out_width * out_weight
         z = net_out.view(data_batch_size, data_image_num, feature_num)
 
         z_support, z_query = z.split(Config.num_shot * Config.num_way, dim=1)
+        z_query = z_query.expand(data_batch_size, Config.num_way, feature_num)
 
         ######################################################################################################
-        z_query = z_query.expand(data_batch_size, Config.num_way, feature_num)
-        out = torch.sum(z_support * z_query, -1)
+        z_support = self.norm(z_support)
+        similarities = torch.sum(z_support * z_query, -1)
+        similarities = torch.softmax(similarities, dim=1)
+        similarities = similarities.view(data_batch_size, Config.num_way, Config.num_shot)
+        predicts = torch.sum(similarities, dim=-1)
         ######################################################################################################
-        return out
+        return predicts
 
     def proto_test(self, samples, batches, num_way, num_shot):
         batch_num, _, _, _ = batches.shape
@@ -158,8 +243,12 @@ class Runner(object):
         z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, num_way, z_dim)
         z_query_expand = batch_z.unsqueeze(1).expand(batch_num, num_way, z_dim)
 
-        out = torch.sum(z_query_expand * z_proto_expand, -1)
-        return out
+        z_proto_expand = self.norm(z_proto_expand)
+        similarities = torch.sum(z_proto_expand * z_query_expand, -1)
+        similarities = torch.softmax(similarities, dim=1)
+        similarities = similarities.view(batch_num, Config.num_way, Config.num_shot)
+        predicts = torch.sum(similarities, dim=-1)
+        return predicts
 
     def train(self):
         Tools.print()
@@ -231,39 +320,37 @@ transforms_normalize2 = transforms.Normalize(np.array([x / 255.0 for x in [120.3
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
+    image_size = 127
     num_workers = 8
-
-    val_freq = 10
-
-    num_way = 5
-    num_shot = 1
-    batch_size = 64
-
+    val_freq = 5
     episode_size = 15
     test_episode = 600
 
-    hid_dim = 64
-    z_dim = 64
-
-    # is_png = True
-    is_png = False
-
-    proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=True, has_relu=True)
+    num_way = 5
+    num_shot = 1
+    batch_size = 32
 
     learning_rate = 0.01
-
-    train_epoch = 400
-    first_epoch, t_epoch = 200, 100
+    train_epoch = 160
+    first_epoch, t_epoch = 80, 40
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    transforms_normalize, norm_name = transforms_normalize1, "norm1"
-    # transforms_normalize, norm_name = transforms_normalize2, "norm2"
+    ##############################################################################################################
+    is_png = True
+    # is_png = False
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
-        gpu_id, train_epoch, batch_size, num_way, num_shot, hid_dim, z_dim,
+    # proto_net = AlexNetV1()
+    proto_net = AlexNetV2()
+
+    # transforms_normalize, norm_name = transforms_normalize1, "norm1"
+    transforms_normalize, norm_name = transforms_normalize2, "norm2"
+    ##############################################################################################################
+
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}{}_relu".format(
+        gpu_id, train_epoch, batch_size, num_way, num_shot,
         first_epoch, t_epoch, norm_name, "_png" if is_png else "")
     Tools.print(model_name)
 
@@ -276,7 +363,7 @@ class Config(object):
     data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
     Tools.print(data_root)
 
-    pn_dir = Tools.new_dir("../models_pn/fsl_sgd_mse/{}_pn_{}way_{}shot.pkl".format(model_name, num_way, num_shot))
+    pn_dir = Tools.new_dir("../models_usot/alexnet2/{}.pkl".format(model_name))
     pass
 
 
@@ -284,17 +371,12 @@ class Config(object):
 
 
 """
-1_400_64_5_1_64_64_200_100_norm1_pn_5way_1shot
-2020-12-06 23:47:59 load proto net success from ../models_pn/fsl_sgd_mse/1_400_64_5_1_64_64_200_100_norm1_pn_5way_1shot.pkl
-2020-12-06 23:49:42 Train 400 Accuracy: 0.7296666666666667
-2020-12-06 23:49:42 Val   400 Accuracy: 0.48422222222222217
-2020-12-06 23:53:53 episode=400, Test accuracy=0.47546666666666665
+2020-12-03 11:51:50 Test 500 0_500_64_5_1_64_64_300_150_norm1_png .......
+2020-12-03 11:55:16 load proto net success from ../models_usot/alexnet/0_500_64_5_1_64_64_300_150_norm1_png_pn_5way_1shot.pkl
+2020-12-03 11:58:45 Train 500 Accuracy: 0.8536666666666668
+2020-12-03 11:58:45 Val   500 Accuracy: 0.5008888888888888
+2020-12-03 12:07:50 episode=500, Mean Test accuracy=0.48515555555555556
 
-2_400_64_5_1_64_64_200_100_norm1_png_pn_5way_1shot
-2020-12-07 00:01:33 load proto net success from ../models_pn/fsl_sgd_mse/2_400_64_5_1_64_64_200_100_norm1_png_pn_5way_1shot.pkl
-2020-12-07 00:03:36 Train 400 Accuracy: 0.7657777777777778
-2020-12-07 00:03:36 Val   400 Accuracy: 0.5015555555555555
-2020-12-07 00:08:44 episode=400, Mean Test accuracy=0.49047999999999997
 """
 
 
