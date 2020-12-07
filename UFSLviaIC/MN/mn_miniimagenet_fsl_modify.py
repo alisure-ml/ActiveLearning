@@ -13,7 +13,7 @@ from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from mn_miniimagenet_fsl_test_tool import TestTool
-from mn_miniimagenet_tool import MatchingNet, RunnerTool
+from mn_miniimagenet_tool import MatchingNet, Normalize, RunnerTool
 
 
 ##############################################################################################################
@@ -111,6 +111,10 @@ class Runner(object):
         # model
         self.matching_net = RunnerTool.to_cuda(Config.matching_net)
         RunnerTool.to_cuda(self.matching_net.apply(RunnerTool.weights_init))
+        self.norm = Normalize(2)
+
+        self.has_norm = Config.has_norm
+        self.has_softmax = Config.has_softmax
 
         # loss
         self.loss = RunnerTool.to_cuda(nn.MSELoss())
@@ -144,7 +148,10 @@ class Runner(object):
         z_query_expand = z_query.expand(z_batch_size, Config.num_way * Config.num_shot, z_dim)
 
         # 相似性
+        z_support = self.norm(z_support)
+        z_query_expand = self.norm(z_query_expand) if self.has_norm else z_query_expand
         similarities = torch.sum(z_support * z_query_expand, -1)
+        similarities = torch.softmax(similarities, dim=1) if self.has_softmax else similarities
         similarities = similarities.view(z_batch_size, Config.num_way, Config.num_shot)
         predicts = torch.mean(similarities, dim=-1)
         return predicts
@@ -162,7 +169,10 @@ class Runner(object):
         z_query_expand = z_query.unsqueeze(1).expand(batch_num, Config.num_way * Config.num_shot, z_dim)
 
         # 相似性
+        z_support_expand = self.norm(z_support_expand)
+        z_query_expand = self.norm(z_query_expand) if self.has_norm else z_query_expand
         similarities = torch.sum(z_support_expand * z_query_expand, -1)
+        similarities = torch.softmax(similarities, dim=1) if self.has_softmax else similarities
         similarities = similarities.view(batch_num, Config.num_way, Config.num_shot)
         predicts = torch.mean(similarities, dim=-1)
         return predicts
@@ -243,9 +253,17 @@ class Config(object):
     hid_dim = 64
     z_dim = 64
 
-    matching_net = MatchingNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=True)
+    has_norm = False
+    # has_norm = True
 
-    model_name = "{}_{}_{}_{}".format(train_epoch, batch_size, hid_dim, z_dim)
+    has_softmax = True
+    # has_softmax = False
+
+    matching_net = MatchingNet(hid_dim=hid_dim, z_dim=z_dim)
+
+    model_name = "{}_{}_{}_{}_{}_{}{}{}".format(
+        train_epoch, batch_size, hid_dim, z_dim, num_way, num_shot,
+        "norm" if has_norm else "", "softmax" if has_softmax else "")
     Tools.print(model_name)
 
     if "Linux" in platform.platform():
@@ -255,7 +273,7 @@ class Config(object):
     else:
         data_root = "F:\\data\\miniImagenet"
 
-    mn_dir = Tools.new_dir("../models_mn/fsl_modify/{}_{}_{}.pkl".format(model_name, num_way, num_shot))
+    mn_dir = Tools.new_dir("../models_mn/fsl_modify/{}.pkl".format(model_name))
     pass
 
 
@@ -263,10 +281,23 @@ class Config(object):
 
 
 """
-2020-12-07 01:05:13 load proto net success from ../models_mn/fsl_modify/180_64_64_64_5_1.pkl
-2020-12-07 01:07:04 Train 180 Accuracy: 0.6984444444444444
-2020-12-07 01:07:04 Val   180 Accuracy: 0.47388888888888886
-2020-12-07 01:11:30 episode=180, Mean Test accuracy=0.4737688888888889
+has_norm = True, has_softmax = True
+2020-12-07 19:50:11 load proto net success from ../models_mn/fsl_modify/180_64_64_64_norm_softmax_5_1.pkl
+2020-12-07 19:52:05 Train 180 Accuracy: 0.6181111111111112
+2020-12-07 19:52:05 Val   180 Accuracy: 0.43166666666666664
+2020-12-07 19:56:27 episode=180, Mean Test accuracy=0.43640000000000007
+
+has_norm = True, has_softmax = False
+2020-12-07 13:38:55 load proto net success from ../models_mn/fsl_modify/180_64_64_64_5_1.pkl
+2020-12-07 13:40:53 Train 180 Accuracy: 0.7174444444444444
+2020-12-07 13:40:53 Val   180 Accuracy: 0.46277777777777773
+2020-12-07 13:45:25 episode=180, Mean Test accuracy=0.47124444444444447
+
+has_norm = False, has_softmax = True
+2020-12-07 19:44:01 load proto net success from ../models_mn/fsl_modify/180_64_64_64_softmax_5_1.pkl
+2020-12-07 19:45:50 Train 180 Accuracy: 0.716111111111111
+2020-12-07 19:45:50 Val   180 Accuracy: 0.5106666666666666
+2020-12-07 19:51:17 episode=180, Mean Test accuracy=0.5026177777777778
 """
 
 
