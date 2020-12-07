@@ -12,7 +12,7 @@ from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from pn_miniimagenet_fsl_test_tool import TestTool
-from pn_miniimagenet_tool import ProtoNet, RunnerTool, Normalize
+from pn_miniimagenet_tool import ProtoNet, RunnerTool
 
 
 ##############################################################################################################
@@ -110,7 +110,6 @@ class Runner(object):
         # model
         self.proto_net = RunnerTool.to_cuda(Config.proto_net)
         RunnerTool.to_cuda(self.proto_net.apply(RunnerTool.weights_init))
-        self.norm = Normalize(2)
         self.loss = RunnerTool.to_cuda(nn.MSELoss())
 
         # optim
@@ -133,16 +132,13 @@ class Runner(object):
         data_batch_size, data_image_num, data_num_channel, data_width, data_weight = task_data.shape
         data_x = task_data.view(-1, data_num_channel, data_width, data_weight)
         net_out = self.proto_net(data_x)
-        out_num, out_channel, out_width, out_weight = net_out.shape
-        feature_num = out_channel * out_width * out_weight
+        out_num, feature_num = net_out.shape
         z = net_out.view(data_batch_size, data_image_num, feature_num)
 
         z_support, z_query = z.split(Config.num_shot * Config.num_way, dim=1)
 
         ######################################################################################################
         z_query = z_query.expand(data_batch_size, Config.num_way, feature_num)
-        z_support = self.norm(z_support)
-        z_query = self.norm(z_query)
         out = torch.sum(z_support * z_query, -1)
         ######################################################################################################
         return out
@@ -161,9 +157,6 @@ class Runner(object):
 
         z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, num_way, z_dim)
         z_query_expand = batch_z.unsqueeze(1).expand(batch_num, num_way, z_dim)
-
-        z_proto_expand = self.norm(z_proto_expand)
-        z_query_expand = self.norm(z_query_expand)
 
         out = torch.sum(z_query_expand * z_proto_expand, -1)
         return out
@@ -238,7 +231,7 @@ transforms_normalize2 = transforms.Normalize(np.array([x / 255.0 for x in [120.3
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -255,15 +248,15 @@ class Config(object):
     hid_dim = 64
     z_dim = 64
 
-    is_png = True
-    # is_png = False
+    # is_png = True
+    is_png = False
 
-    proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=False)
+    proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=True, has_relu=True)
 
     learning_rate = 0.01
 
-    train_epoch = 500
-    first_epoch, t_epoch = 300, 150
+    train_epoch = 400
+    first_epoch, t_epoch = 200, 100
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     transforms_normalize, norm_name = transforms_normalize1, "norm1"
@@ -291,51 +284,17 @@ class Config(object):
 
 
 """
-2020-11-25 06:56:12 load proto net success from ../models_pn/fsl_sgd/1_500_64_5_1_64_64_300_150_pn_5way_1shot.pkl
-2020-11-25 06:57:50 Train 500 Accuracy: 0.6728888888888889
-2020-11-25 06:57:50 Val   500 Accuracy: 0.504
-2020-11-25 07:01:48 episode=500, Mean Test accuracy=0.5103866666666667
+1_400_64_5_1_64_64_200_100_norm1_pn_5way_1shot
+2020-12-06 23:47:59 load proto net success from ../models_pn/fsl_sgd_mse/1_400_64_5_1_64_64_200_100_norm1_pn_5way_1shot.pkl
+2020-12-06 23:49:42 Train 400 Accuracy: 0.7296666666666667
+2020-12-06 23:49:42 Val   400 Accuracy: 0.48422222222222217
+2020-12-06 23:53:53 episode=400, Test accuracy=0.47546666666666665
 
-norm
-2020-11-28 21:11:12 load proto net success from ../models_pn/fsl_sgd/0_500_64_5_1_64_64_300_150_norm_pn_5way_1shot.pkl
-2020-11-28 21:12:55 Train 500 Accuracy: 0.6346666666666667
-2020-11-28 21:12:55 Val   500 Accuracy: 0.4473333333333334
-2020-11-28 21:17:05 episode=500, Mean Test accuracy=0.45159111111111105
-
-
-jpg normalize2
-2020-12-02 05:13:35 Test 500 3_500_64_5_1_64_64_300_150 .......
-2020-12-02 05:15:21 Train 500 Accuracy: 0.6847777777777778
-2020-12-02 05:15:21 Val   500 Accuracy: 0.5203333333333333
-2020-12-02 05:15:21 Test1 500 Accuracy: 0.5157777777777778
-2020-12-02 05:15:21 Test2 500 Accuracy: 0.516311111111111
-2020-12-02 05:15:21 Save networks for epoch: 500
-2020-12-02 05:15:21 load proto net success from ../models_pn/fsl_sgd/3_500_64_5_1_64_64_300_150_pn_5way_1shot.pkl
-2020-12-02 05:16:57 Train 500 Accuracy: 0.6962222222222223
-2020-12-02 05:16:57 Val   500 Accuracy: 0.5123333333333333
-2020-12-02 05:21:11 episode=500, Mean Test accuracy=0.5158133333333333
-
-png normalize1
-2020-12-02 06:16:57 Test 500 1_500_64_5_1_64_64_300_150norm1_png .......
-2020-12-02 06:18:43 Train 500 Accuracy: 0.7264444444444444
-2020-12-02 06:18:43 Val   500 Accuracy: 0.5384444444444444
-2020-12-02 06:18:43 Test1 500 Accuracy: 0.5304444444444444
-2020-12-02 06:18:43 Test2 500 Accuracy: 0.5390666666666668
-2020-12-02 06:18:43 load proto net success from ../models_pn/fsl_sgd/1_500_64_5_1_64_64_300_150norm1_png_pn_5way_1shot.pkl
-2020-12-02 06:20:29 Train 500 Accuracy: 0.7137777777777777
-2020-12-02 06:20:29 Val   500 Accuracy: 0.5265555555555556
-2020-12-02 06:24:52 episode=500, Mean Test accuracy=0.5280755555555555
-
-png normalize2
-2020-12-02 05:26:53 Test 500 2_500_64_5_1_64_64_300_150_png .......
-2020-12-02 05:28:54 Train 500 Accuracy: 0.7293333333333334
-2020-12-02 05:28:54 Val   500 Accuracy: 0.53
-2020-12-02 05:28:54 Test1 500 Accuracy: 0.5473333333333333
-2020-12-02 05:28:54 Test2 500 Accuracy: 0.5371111111111111
-2020-12-02 05:28:54 load proto net success from ../models_pn/fsl_sgd/2_500_64_5_1_64_64_300_150_png_pn_5way_1shot.pkl
-2020-12-02 05:30:52 Train 500 Accuracy: 0.7393333333333334
-2020-12-02 05:30:52 Val   500 Accuracy: 0.542
-2020-12-02 05:35:37 episode=500, Mean Test accuracy=0.5368444444444445
+2_400_64_5_1_64_64_200_100_norm1_png_pn_5way_1shot
+2020-12-07 00:01:33 load proto net success from ../models_pn/fsl_sgd_mse/2_400_64_5_1_64_64_200_100_norm1_png_pn_5way_1shot.pkl
+2020-12-07 00:03:36 Train 400 Accuracy: 0.7657777777777778
+2020-12-07 00:03:36 Val   400 Accuracy: 0.5015555555555555
+2020-12-07 00:08:44 episode=400, Mean Test accuracy=0.49047999999999997
 """
 
 
