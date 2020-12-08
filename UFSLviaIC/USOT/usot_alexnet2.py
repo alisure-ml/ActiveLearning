@@ -324,6 +324,7 @@ class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     image_size = 127
+
     num_workers = 8
     val_freq = 5
     episode_size = 15
@@ -332,6 +333,9 @@ class Config(object):
     num_way = 5
     num_shot = 1
     batch_size = 32
+
+    image_size = 84
+    batch_size = 64
 
     learning_rate = 0.01
     train_epoch = 160
@@ -371,12 +375,11 @@ class Config(object):
 
 
 """
-2020-12-03 11:51:50 Test 500 0_500_64_5_1_64_64_300_150_norm1_png .......
-2020-12-03 11:55:16 load proto net success from ../models_usot/alexnet/0_500_64_5_1_64_64_300_150_norm1_png_pn_5way_1shot.pkl
-2020-12-03 11:58:45 Train 500 Accuracy: 0.8536666666666668
-2020-12-03 11:58:45 Val   500 Accuracy: 0.5008888888888888
-2020-12-03 12:07:50 episode=500, Mean Test accuracy=0.48515555555555556
-
+2_160_32_5_1_80_40_norm2_png_relu
+2020-12-08 13:28:47 load proto net success from ../models_usot/alexnet2/2_160_32_5_1_80_40_norm2_png_relu.pkl
+2020-12-08 13:30:17 Train 160 Accuracy: 0.9081111111111113
+2020-12-08 13:31:57 Val   160 Accuracy: 0.597111111111111
+2020-12-08 14:09:40 episode=160, Mean Test accuracy=0.566462222222222
 """
 
 
