@@ -334,8 +334,8 @@ class Config(object):
     num_shot = 1
     batch_size = 32
 
-    image_size = 84
-    batch_size = 64
+    # image_size = 84
+    # batch_size = 64
 
     learning_rate = 0.01
     train_epoch = 160
@@ -380,6 +380,12 @@ class Config(object):
 2020-12-08 13:30:17 Train 160 Accuracy: 0.9081111111111113
 2020-12-08 13:31:57 Val   160 Accuracy: 0.597111111111111
 2020-12-08 14:09:40 episode=160, Mean Test accuracy=0.566462222222222
+
+2_160_64_5_1_80_40_norm2_png_relu image_size = 84, batch_size = 64
+2020-12-09 00:04:36 load proto net success from ../models_usot/alexnet2/2_160_64_5_1_80_40_norm2_png_relu.pkl
+2020-12-09 00:04:58 Train 160 Accuracy: 0.891
+2020-12-09 00:05:21 Val   160 Accuracy: 0.5902222222222222
+2020-12-09 00:12:53 episode=160, Mean Test accuracy=0.5456755555555556
 """
 
 
