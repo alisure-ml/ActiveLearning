@@ -163,7 +163,6 @@ class AlexNetV2(nn.Module):
             out = F.dropout(out, p=self.drop_rate, training=self.training)
 
         out = self.conv5(out)
-
         if self.drop_rate > 0:
             out = F.dropout(out, p=self.drop_rate, training=self.training)
         return out
@@ -321,14 +320,17 @@ class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     image_size = 127
+
     num_workers = 8
+
     val_freq = 5
-    episode_size = 15
-    test_episode = 600
 
     num_way = 5
     num_shot = 1
     batch_size = 32
+
+    episode_size = 15
+    test_episode = 600
 
     learning_rate = 0.01
     train_epoch = 160
@@ -368,11 +370,12 @@ class Config(object):
 
 
 """
-2020-12-03 11:51:50 Test 500 0_500_64_5_1_64_64_300_150_norm1_png .......
-2020-12-03 11:55:16 load proto net success from ../models_usot/alexnet/0_500_64_5_1_64_64_300_150_norm1_png_pn_5way_1shot.pkl
-2020-12-03 11:58:45 Train 500 Accuracy: 0.8536666666666668
-2020-12-03 11:58:45 Val   500 Accuracy: 0.5008888888888888
-2020-12-03 12:07:50 episode=500, Mean Test accuracy=0.48515555555555556
+1_250_32_5_1_150_50_norm2_png
+2020-12-08 07:54:11 load proto net success from ../models_usot/alexnet/1_250_32_5_1_150_50_norm2_png.pkl
+2020-12-08 07:54:49 Train 250 Accuracy: 0.9291111111111111
+2020-12-08 07:55:30 Val   250 Accuracy: 0.5738888888888889
+2020-12-08 08:09:58 episode=250, Mean Test accuracy=0.5411511111111111
+
 """
 
 
