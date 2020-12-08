@@ -280,17 +280,17 @@ class Config(object):
 
 
 """
-3_400_64_5_1_200_100_mse
-2020-12-07 04:47:16 load proto net success from ../models_mn/fsl_sgd/3_400_64_5_1_200_100_mse.pkl
-2020-12-07 04:49:00 Train 400 Accuracy: 0.7104444444444444
-2020-12-07 04:49:00 Val   400 Accuracy: 0.5284444444444444
-2020-12-07 04:53:08 episode=400, Mean Test accuracy=0.5143866666666665
+2_400_64_5_1_200_100
+2020-12-08 03:05:10 load proto net success from ../models_mn/fsl_sgd_modify/2_400_64_5_1_200_100.pkl
+2020-12-08 03:07:17 Train 400 Accuracy: 0.7192222222222223
+2020-12-08 03:07:17 Val   400 Accuracy: 0.5171111111111111
+2020-12-08 03:12:07 episode=400, Mean Test accuracy=0.5108444444444444
 
-2_400_64_5_1_200_100_png_mse
-2020-12-07 04:56:54 load proto net success from ../models_mn/fsl_sgd/2_400_64_5_1_200_100_png_mse.pkl
-2020-12-07 04:58:44 Train 400 Accuracy: 0.7696666666666667
-2020-12-07 04:58:44 Val   400 Accuracy: 0.5526666666666668
-2020-12-07 05:03:28 episode=400, Mean Test accuracy=0.5332
+1_400_64_5_1_200_100_png
+2020-12-08 03:40:36 load proto net success from ../models_mn/fsl_sgd_modify/1_400_64_5_1_200_100_png.pkl
+2020-12-08 03:42:50 Train 400 Accuracy: 0.7737777777777778
+2020-12-08 03:42:50 Val   400 Accuracy: 0.5486666666666667
+2020-12-08 03:47:54 episode=400, Mean Test accuracy=0.5298755555555557
 """
 
 
