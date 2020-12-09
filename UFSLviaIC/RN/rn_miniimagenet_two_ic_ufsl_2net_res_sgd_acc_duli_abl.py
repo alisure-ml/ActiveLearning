@@ -485,6 +485,23 @@ resnet34, modify_head = False, is_png = True
 2020-12-06 08:15:46 Train 2100 Accuracy: 0.5373333333333333
 2020-12-06 08:15:46 Val   2100 Accuracy: 0.4773333333333334
 2020-12-06 08:21:01 episode=2100, Mean Test accuracy=0.4897111111111111
+
+
+resnet34, modify_head = True, is_png = True
+0_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_fe_5way_1shot.pkl
+2020-12-09 04:27:52   2100 loss:0.617 fsl:0.074 ic:0.544 ok:0.344(13217/38400)
+2020-12-09 04:27:52 Train: [2099] 4917/1538
+2020-12-09 04:27:52 load feature encoder success from ../models/two_ic_ufsl_2net_res_sgd_acc_duli/0_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_fe_5way_1shot.pkl
+2020-12-09 04:27:52 load relation network success from ../models/two_ic_ufsl_2net_res_sgd_acc_duli/0_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_rn_5way_1shot.pkl
+2020-12-09 04:27:52 load ic model success from ../models/two_ic_ufsl_2net_res_sgd_acc_duli/0_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_ic_5way_1shot.pkl
+2020-12-09 04:27:52 Test 2100 .......
+2020-12-09 04:28:28 Epoch: 2100 Train 0.5570/0.8255 0.0000
+2020-12-09 04:28:28 Epoch: 2100 Val   0.6512/0.9445 0.0000
+2020-12-09 04:28:28 Epoch: 2100 Test  0.6185/0.9384 0.0000
+2020-12-09 04:32:27 Train 2100 Accuracy: 0.5532222222222223
+2020-12-09 04:32:27 Val   2100 Accuracy: 0.49933333333333335
+2020-12-09 04:39:58 episode=2100, Mean Test accuracy=0.5029066666666667
+
 """
 
 
