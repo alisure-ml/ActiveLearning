@@ -14,7 +14,8 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from pn_miniimagenet_fsl_test_tool import TestTool
 from pn_miniimagenet_ic_test_tool import ICTestTool
-from pn_miniimagenet_tool import Normalize, ProduceClass, ProtoNet, RunnerTool
+# from pn_miniimagenet_tool import Normalize, ProtoNet, RunnerTool
+from pn_miniimagenet_tool import RunnerTool
 
 
 ##############################################################################################################
@@ -27,6 +28,7 @@ class MiniImageNetDataset(object):
         self.data_id = np.asarray(range(len(self.data_list)))
 
         self.classes = None
+        self.features = None
 
         self.data_dict = {}
         for index, label, image_filename in self.data_list:
@@ -54,6 +56,10 @@ class MiniImageNetDataset(object):
         self.classes = classes
         pass
 
+    def set_samples_feature(self, features):
+        self.features = features
+        pass
+
     def __getitem__(self, item):
         # 当前样本
         now_label_image_tuple = self.data_list[item]
@@ -61,12 +67,13 @@ class MiniImageNetDataset(object):
         _now_label = self.classes[item]
 
         now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
+        # now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot, now_index=now_index)
 
         is_ok_list = [self.data_list[one][1] == now_label_image_tuple[1] for one in now_label_k_shot_index]
 
         # 其他样本
-        other_label_k_shot_index_list = self._get_samples_by_clustering_label(
-            _now_label, False, num=self.num_shot * (self.num_way - 1))
+        other_label_k_shot_index_list = self._get_samples_by_clustering_label(_now_label, False,
+                                                                              num=self.num_shot * (self.num_way - 1))
 
         # c_way_k_shot
         c_way_k_shot_index_list = now_label_k_shot_index + other_label_k_shot_index_list
@@ -88,8 +95,29 @@ class MiniImageNetDataset(object):
         task_index = torch.Tensor([one[0] for one in task_list]).long()
         return task_data, task_label, task_index, is_ok_list
 
-    def _get_samples_by_clustering_label(self, label, is_same_label=False, num=1):
+    def _get_samples_by_clustering_label(self, label, is_same_label=False, num=1, now_index=None, k=1):
         if is_same_label:
+            if now_index:
+                now_feature = self.features[now_index]
+
+                if k == 1:
+                    search_index = self.data_id[self.classes == label]
+                else:
+                    top_k_class = np.argpartition(now_feature, -k)[-k:]
+                    search_index = np.hstack([self.data_id[self.classes == one] for one in top_k_class])
+                    pass
+
+                search_index_list = list(search_index)
+                if now_index in search_index_list:
+                    search_index_list.remove(now_index)
+                other_features = self.features[search_index_list]
+
+                # sim_result = np.matmul(other_features, now_feature)
+                now_features = np.tile(now_feature[None, ...], reps=[other_features.shape[0], 1])
+                sim_result = np.sum(now_features * other_features, axis=-1)
+
+                sort_result = np.argsort(sim_result)[::-1]
+                return list(search_index[sort_result][0: num])
             return random.sample(list(np.squeeze(np.argwhere(self.classes == label), axis=1)), num)
         else:
             return random.sample(list(np.squeeze(np.argwhere(self.classes != label))), num)
@@ -122,6 +150,54 @@ class MiniImageNetDataset(object):
     pass
 
 
+class Normalize(nn.Module):
+    def __init__(self, power=2):
+        super(Normalize, self).__init__()
+        self.power = power
+        pass
+
+    def forward(self, x, dim=1):
+        norm = x.pow(self.power).sum(dim, keepdim=True).pow(1. / self.power)
+        out = x.div(norm + 1e-16)
+        return out
+
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    pass
+
+
+class ProtoNet(nn.Module):
+
+    def __init__(self, hid_dim, z_dim, has_norm=False):
+        super().__init__()
+        self.conv_block_1 = nn.Sequential(nn.Conv2d(3, hid_dim, 3, padding=1),
+                                          nn.BatchNorm2d(hid_dim), nn.ReLU(), nn.MaxPool2d(2))  # 41
+        self.conv_block_2 = nn.Sequential(nn.Conv2d(hid_dim, hid_dim, 3, padding=1),
+                                          nn.BatchNorm2d(hid_dim), nn.ReLU(), nn.MaxPool2d(2))  # 21
+        self.conv_block_3 = nn.Sequential(nn.Conv2d(hid_dim, hid_dim, 3, padding=1),
+                                          nn.BatchNorm2d(hid_dim), nn.ReLU(), nn.MaxPool2d(2))  # 10
+        self.conv_block_4 = nn.Sequential(nn.Conv2d(hid_dim, z_dim, 3, padding=1),
+                                          nn.BatchNorm2d(z_dim), nn.ReLU(), nn.MaxPool2d(2))  # 5
+
+        self.has_norm = has_norm
+        if self.has_norm:
+            self.l2norm = Normalize(2)
+        pass
+
+    def forward(self, x):
+        out = self.conv_block_1(x)
+        out = self.conv_block_2(out)
+        out = self.conv_block_3(out)
+        out = self.conv_block_4(out)
+        if self.has_norm:
+            out = out.view(out.shape[0], -1)
+            out = self.l2norm(out)
+        return out
+
+    pass
+
+
 ##############################################################################################################
 
 
@@ -144,6 +220,65 @@ class ICResNet(nn.Module):
     pass
 
 
+class ProduceClass(object):
+
+    def __init__(self, n_sample, out_dim, ratio=1.0):
+        super().__init__()
+        self.out_dim = out_dim
+        self.n_sample = n_sample
+        self.class_per_num = self.n_sample // self.out_dim * ratio
+        self.count = 0
+        self.count_2 = 0
+        self.class_num = np.zeros(shape=(self.out_dim,), dtype=np.int)
+        self.classes = np.zeros(shape=(self.n_sample,), dtype=np.int)
+        self.features = np.random.random(size=(self.n_sample, self.out_dim))
+        pass
+
+    def init(self):
+        class_per_num = self.n_sample // self.out_dim
+        self.class_num += class_per_num
+        for i in range(self.out_dim):
+            self.classes[i * class_per_num: (i + 1) * class_per_num] = i
+            pass
+        np.random.shuffle(self.classes)
+        pass
+
+    def reset(self):
+        self.count = 0
+        self.count_2 = 0
+        self.class_num *= 0
+        pass
+
+    def cal_label(self, out, indexes):
+        out_data = out.data.cpu()
+        top_k = out_data.topk(self.out_dim, dim=1)[1].cpu()
+        indexes_cpu = indexes.cpu()
+
+        self.features[indexes_cpu] = out_data
+
+        batch_size = top_k.size(0)
+        class_labels = np.zeros(shape=(batch_size,), dtype=np.int)
+
+        for i in range(batch_size):
+            for j_index, j in enumerate(top_k[i]):
+                if self.class_per_num > self.class_num[j]:
+                    class_labels[i] = j
+                    self.class_num[j] += 1
+                    self.count += 1 if self.classes[indexes_cpu[i]] != j else 0
+                    self.classes[indexes_cpu[i]] = j
+                    self.count_2 += 1 if j_index != 0 else 0
+                    break
+                pass
+            pass
+        pass
+
+    def get_label(self, indexes):
+        _device = indexes.device
+        return torch.tensor(self.classes[indexes.cpu()]).long().to(_device)
+
+    pass
+
+
 ##############################################################################################################
 
 
@@ -162,6 +297,7 @@ class Runner(object):
         self.produce_class = ProduceClass(len(self.data_train), Config.ic_out_dim, Config.ic_ratio)
         self.produce_class.init()
         self.task_train.set_samples_class(self.produce_class.classes)
+        self.task_train.set_samples_feature(self.produce_class.features)
 
         # model
         self.proto_net = RunnerTool.to_cuda(Config.proto_net)
@@ -190,6 +326,10 @@ class Runner(object):
         pass
 
     def load_model(self):
+        if Config.ic_pretrain_dir and os.path.exists(Config.ic_pretrain_dir):
+            self.ic_model.load_state_dict(torch.load(Config.ic_pretrain_dir))
+            Tools.print("load ic pretrain model success from {}".format(Config.ic_pretrain_dir))
+
         if os.path.exists(Config.pn_dir):
             self.proto_net.load_state_dict(torch.load(Config.pn_dir))
             Tools.print("load feature encoder success from {}".format(Config.pn_dir))
@@ -288,9 +428,11 @@ class Runner(object):
                 all_loss_ic += loss_ic.item()
 
                 # 4 backward
-                self.ic_model.zero_grad()
-                loss_ic.backward()
-                self.ic_model_optim.step()
+                if Config.train_ic:
+                    self.ic_model.zero_grad()
+                    loss_ic.backward()
+                    self.ic_model_optim.step()
+                    pass
 
                 self.proto_net.zero_grad()
                 loss_fsl.backward()
@@ -320,12 +462,8 @@ class Runner(object):
                 self.test_tool_ic.val(epoch=epoch)
                 val_accuracy = self.test_tool_fsl.val(episode=epoch, is_print=True)
 
-                if val_accuracy > self.best_accuracy and epoch > Config.train_epoch // 3:
+                if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
-                    torch.save(self.proto_net.state_dict(),
-                               "{}/pn_{}_{}.pkl".format(os.path.split(Config.pn_dir)[0], epoch, val_accuracy))
-                    torch.save(self.ic_model.state_dict(),
-                               "{}/ic_{}_{}.pkl".format(os.path.split(Config.ic_dir)[0], epoch, val_accuracy))
                     torch.save(self.proto_net.state_dict(), Config.pn_dir)
                     torch.save(self.ic_model.state_dict(), Config.ic_dir)
                     Tools.print("Save networks for epoch: {}".format(epoch))
@@ -334,9 +472,6 @@ class Runner(object):
             ###########################################################################
             pass
 
-        Tools.print("Save networks for last")
-        torch.save(self.proto_net.state_dict(), "{}/pn_last.pkl".format(os.path.split(Config.pn_dir)[0]))
-        torch.save(self.ic_model.state_dict(), "{}/ic_last.pkl".format(os.path.split(Config.ic_dir)[0]))
         pass
 
     pass
@@ -420,14 +555,37 @@ Norm=True
 2020-12-06 06:32:53 Train 2100 Accuracy: 0.44122222222222224
 2020-12-06 06:32:53 Val   2100 Accuracy: 0.4073333333333333
 2020-12-06 06:36:58 episode=2100, Mean Test accuracy=0.4207466666666667
+
+0_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/pn_final.pkl
+2020-12-07 19:57:59   2100 loss:2.220 fsl:1.198 ic:1.022 ok:0.259(9942/38400)
+2020-12-07 19:57:59 Train: [2100] 8995/1724
+2020-12-07 19:59:50 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/0_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/pn_final.pkl
+2020-12-07 19:59:50 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/0_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_norm/ic_final.pkl
+2020-12-07 20:00:02 Epoch: 2100 Train 0.4942/0.7814 0.0000
+2020-12-07 20:00:02 Epoch: 2100 Val   0.5776/0.9103 0.0000
+2020-12-07 20:00:02 Epoch: 2100 Test  0.5520/0.9049 0.0000
+2020-12-07 20:01:42 Train 2100 Accuracy: 0.465
+2020-12-07 20:01:42 Val   2100 Accuracy: 0.4293333333333333
+2020-12-07 20:05:43 episode=2100, Mean Test accuracy=0.41913333333333336
+
+3_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_pn_5way_1shot.pkl
+2020-12-09 19:01:29 load feature encoder success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/3_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_pn_5way_1shot.pkl
+2020-12-09 19:01:29 load ic model success from ../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli/3_2100_64_5_1_64_64_500_200_512_1_1.0_1.0_ic_5way_1shot.pkl
+2020-12-09 19:01:29 Test 2100 .......
+2020-12-09 19:01:52 Epoch: 2100 Train 0.4976/0.7848 0.0000
+2020-12-09 19:01:52 Epoch: 2100 Val   0.5846/0.9125 0.0000
+2020-12-09 19:01:52 Epoch: 2100 Test  0.5541/0.9012 0.0000
+2020-12-09 19:03:57 Train 2100 Accuracy: 0.47322222222222216
+2020-12-09 19:03:57 Val   2100 Accuracy: 0.41833333333333333
+2020-12-09 19:10:56 episode=2100, Mean Test accuracy=0.42188444444444445
 """
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    num_workers = 8
+    num_workers = 16
 
     num_way = 5
     num_shot = 1
@@ -440,9 +598,7 @@ class Config(object):
     hid_dim = 64
     z_dim = 64
 
-    has_norm = True
-    # has_norm = False
-    proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=has_norm)
+    proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=True)
 
     # ic
     ic_out_dim = 512
@@ -456,13 +612,25 @@ class Config(object):
     first_epoch, t_epoch = 500, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
+    # train_ic = False
+    train_ic = True
+    ic_pretrain_dir = None
+    if "Linux" in platform.platform() and not train_ic:
+        _ic_pretrain_name = "2_2100_64_5_1_500_200_512_1_1.0_1.0_ic_5way_1shot.pkl"
+        ic_pretrain_dir = "../models/two_ic_ufsl_2net_res_sgd_acc_duli/{}".format(_ic_pretrain_name)
+        if not os.path.isdir(ic_pretrain_dir):
+            ic_pretrain_dir = "../models/ic_res_no_val/1_32_512_1_500_200_0.01_ic.pkl"
+        Tools.print(ic_pretrain_dir)
+        pass
+
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
         gpu_id, train_epoch, batch_size, num_way, num_shot, hid_dim, z_dim, first_epoch,
-        t_epoch, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, "_norm" if has_norm else "")
+        t_epoch, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
+    Tools.print(model_name)
 
     _root_path = "../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli"
-    pn_dir = Tools.new_dir("{}/{}/pn_final.pkl".format(_root_path, model_name))
-    ic_dir = Tools.new_dir("{}/{}/ic_final.pkl".format(_root_path, model_name))
+    pn_dir = Tools.new_dir("{}/{}_pn_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
+    ic_dir = Tools.new_dir("{}/{}_ic_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
