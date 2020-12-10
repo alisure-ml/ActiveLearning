@@ -367,7 +367,12 @@ class Config(object):
 
 
 """
-
+is_png = True, net_name = V1
+2020-12-10 21:23:14 load proto net success from ../models_usot/alexnet4/0_160_32_5_1_80_40_V1_png.pkl
+2020-12-10 21:23:44 Train 160 Accuracy: 0.8320000000000001
+2020-12-10 21:24:13 Val   160 Accuracy: 0.5168888888888888
+2020-12-10 21:24:43 Test1 160 Accuracy: 0.5025555555555555
+2020-12-10 21:33:32 episode=160, Mean Test accuracy=0.49937333333333334
 """
 
 
