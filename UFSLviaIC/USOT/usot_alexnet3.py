@@ -363,7 +363,7 @@ class Config(object):
     data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
     Tools.print(data_root)
 
-    pn_dir = Tools.new_dir("../models_usot/alexnet2/{}.pkl".format(model_name))
+    pn_dir = Tools.new_dir("../models_usot/alexnet3/{}.pkl".format(model_name))
     pass
 
 
@@ -371,7 +371,7 @@ class Config(object):
 
 
 """
-2020-12-09 08:24:21 load proto net success from ../models_usot/alexnet2/3_160_32_5_1_80_40_norm2_png_relu.pkl
+2020-12-09 08:24:21 load proto net success from ../models_usot/alexnet3/3_160_32_5_1_80_40_norm2_png_relu.pkl
 2020-12-09 08:25:00 Train 160 Accuracy: 0.7733333333333333
 2020-12-09 08:25:58 Val   160 Accuracy: 0.5835555555555555
 2020-12-09 08:43:28 episode=160, Test accuracy=0.5645777777777777
