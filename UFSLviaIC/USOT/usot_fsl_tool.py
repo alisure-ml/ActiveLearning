@@ -99,6 +99,25 @@ class RunnerTool(object):
         return x.cuda() if torch.cuda.is_available() else x
 
     @staticmethod
+    def weights_init_sot(net):
+        for m in net.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.xavier_uniform_(m.weight, 1.)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight, 1.)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+                    pass
+                pass
+            pass
+        pass
+
+    @staticmethod
     def weights_init(m):
         class_name = m.__class__.__name__
         if class_name.find('Conv') != -1:

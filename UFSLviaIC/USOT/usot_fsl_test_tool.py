@@ -4,6 +4,7 @@ import random
 import numpy as np
 import torch.nn as nn
 from PIL import Image
+from tqdm import tqdm
 from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
@@ -269,7 +270,7 @@ class TestTool(object):
 
     def _val(self, folders, sampler_test, all_episode):
         accuracies = []
-        for i in range(all_episode):
+        for i in tqdm(range(all_episode)):
             total_rewards = 0
             counter = 0
             # 随机选5类，每类中取出num_shot个作为训练样本，总共取出15个作为测试样本

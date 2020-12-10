@@ -17,6 +17,7 @@ from usot_fsl_test_tool import TestTool
 
 ##############################################################################################################
 
+
 class ToTensor(object):
 
     def __call__(self, img):
@@ -193,7 +194,7 @@ class Runner(object):
 
         # model
         self.proto_net = RunnerTool.to_cuda(Config.proto_net)
-        RunnerTool.to_cuda(self.proto_net.apply(RunnerTool.weights_init))
+        RunnerTool.weights_init_sot(self.proto_net)
         self.norm = Normalize(2)
         self.loss = RunnerTool.to_cuda(nn.MSELoss())
 
@@ -226,7 +227,7 @@ class Runner(object):
 
         ######################################################################################################
         z_support = self.norm(z_support)
-        similarities = torch.sum(z_support * z_query, -1)
+        similarities = torch.sum(z_support * z_query, -1) * Config.out_scale
         similarities = torch.softmax(similarities, dim=1)
         similarities = similarities.view(data_batch_size, Config.num_way, Config.num_shot)
         predicts = torch.sum(similarities, dim=-1)
@@ -249,7 +250,7 @@ class Runner(object):
         z_query_expand = batch_z.unsqueeze(1).expand(batch_num, num_way, z_dim)
 
         z_proto_expand = self.norm(z_proto_expand)
-        similarities = torch.sum(z_proto_expand * z_query_expand, -1)
+        similarities = torch.sum(z_proto_expand * z_query_expand, -1) * Config.out_scale
         similarities = torch.softmax(similarities, dim=1)
         similarities = similarities.view(batch_num, Config.num_way, Config.num_shot)
         predicts = torch.sum(similarities, dim=-1)
@@ -318,7 +319,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     image_size = 127
@@ -337,11 +338,13 @@ class Config(object):
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     ##############################################################################################################
+    out_scale = 0.01
+
     is_png = True
     # is_png = False
 
-    # proto_net, net_name = AlexNetV1(), "V1"
-    proto_net, net_name = AlexNetV2(), "V2"
+    proto_net, net_name = AlexNetV1(), "V1"
+    # proto_net, net_name = AlexNetV2(), "V2"
     ##############################################################################################################
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}{}".format(
@@ -373,8 +376,8 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    # runner.proto_net.eval()
-    # runner.test_tool.val(episode=0, is_print=True)
+    runner.proto_net.eval()
+    runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 
