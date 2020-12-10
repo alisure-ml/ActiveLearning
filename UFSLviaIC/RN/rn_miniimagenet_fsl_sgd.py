@@ -124,7 +124,7 @@ class Runner(object):
         self.loss = RunnerTool.to_cuda(nn.MSELoss())
 
         self.test_tool = TestTool(self.compare_fsl_test, data_root=Config.data_root,
-                                  num_way=Config.num_way,  num_shot=Config.num_shot,
+                                  num_way=Config.num_way_test,  num_shot=Config.num_shot,
                                   episode_size=Config.episode_size, test_episode=Config.test_episode,
                                   transform=self.task_train.transform_test)
         pass
@@ -170,14 +170,14 @@ class Runner(object):
 
         # calculate
         sample_features_ext = sample_features.unsqueeze(0).repeat(batch_size, 1, 1, 1, 1)
-        batch_features_ext = batch_features.unsqueeze(1).repeat(1, Config.num_shot * Config.num_way, 1, 1, 1)
+        batch_features_ext = batch_features.unsqueeze(1).repeat(1, Config.num_shot * Config.num_way_test, 1, 1, 1)
 
         # calculate relations
         relation_pairs = torch.cat((sample_features_ext, batch_features_ext), 2)
         relation_pairs = relation_pairs.view(-1, feature_dim * 2, feature_width, feature_height)
 
         relations = self.relation_network(relation_pairs)
-        relations = relations.view(-1, Config.num_way * Config.num_shot)
+        relations = relations.view(-1, Config.num_way_test * Config.num_shot)
         return relations
 
     def train(self):
@@ -247,7 +247,8 @@ class Runner(object):
 
 
 class Config(object):
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    gpu_id = 3
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     learning_rate = 0.01
     num_workers = 8
@@ -267,11 +268,14 @@ class Config(object):
     is_png = True
     # is_png = False
 
-    # feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
-    feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+    num_way = 10
+    num_way_test = 5
 
-    model_name = "2_{}_{}_{}_{}_{}_{}{}".format(train_epoch, batch_size, num_way, num_shot,
-                                                first_epoch, t_epoch, "_png" if is_png else "")
+    feature_encoder, relation_network = CNNEncoder(), RelationNetwork()
+    # feature_encoder, relation_network = CNNEncoder1(), RelationNetwork1()
+
+    model_name = "{}_{}_{}_{}_{}_{}_{}{}".format(gpu_id, train_epoch, batch_size, num_way, num_shot,
+                                                 first_epoch, t_epoch, "_png" if is_png else "")
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'

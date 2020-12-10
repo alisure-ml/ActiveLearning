@@ -440,6 +440,21 @@ class Runner(object):
 
 
 """
+is_png = False, resnet = resnet18, modify_head = False
+0_2100_64_5_1_500_200_512_1_1.0_1.0_mn.pkl
+2020-12-10 05:17:18   2101 loss:1.092 fsl:0.069 ic:1.023 ok:0.258(9911/38400)
+2020-12-10 05:17:18 Train: [2100] 8957/1725
+2020-12-10 05:19:20 load matching net success from ../models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_2100_64_5_1_500_200_512_1_1.0_1.0_mn.pkl
+2020-12-10 05:19:20 load ic model success from ../models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_2100_64_5_1_500_200_512_1_1.0_1.0_ic.pkl
+2020-12-10 05:19:20 Test 2100 .......
+2020-12-10 05:19:34 Epoch: 2100 Train 0.4955/0.7817 0.0000
+2020-12-10 05:19:34 Epoch: 2100 Val   0.5825/0.9148 0.0000
+2020-12-10 05:19:34 Epoch: 2100 Test  0.5555/0.9013 0.0000
+2020-12-10 05:21:17 Train 2100 Accuracy: 0.4896666666666667
+2020-12-10 05:21:17 Val   2100 Accuracy: 0.45155555555555554
+2020-12-10 05:25:17 episode=2100, Mean Test accuracy=0.45596
+
+
 
 """
 
