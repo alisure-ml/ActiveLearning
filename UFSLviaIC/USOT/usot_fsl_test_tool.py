@@ -262,10 +262,10 @@ class TestTool(object):
         if is_print:
             Tools.print("Test1 {} Accuracy: {}".format(episode, acc_test1))
             pass
-        acc_test2 = self.val_test2()
-        if is_print:
-            Tools.print("Test2 {} Accuracy: {}".format(episode, acc_test2))
-            pass
+        # acc_test2 = self.val_test2()
+        # if is_print:
+        #     Tools.print("Test2 {} Accuracy: {}".format(episode, acc_test2))
+        #     pass
         return acc_val
 
     def _val(self, folders, sampler_test, all_episode):
