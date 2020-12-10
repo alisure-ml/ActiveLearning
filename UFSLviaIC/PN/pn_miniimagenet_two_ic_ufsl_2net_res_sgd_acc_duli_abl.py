@@ -9,12 +9,12 @@ from tqdm import tqdm
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-from torchvision.models import resnet18
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
+from torchvision.models import resnet18, resnet34
 from pn_miniimagenet_fsl_test_tool import TestTool
 from pn_miniimagenet_ic_test_tool import ICTestTool
-from pn_miniimagenet_tool import Normalize, ProtoNet, RunnerTool
+from pn_miniimagenet_tool import Normalize, ProduceClass, ICResNet, ProtoNet, ProtoNetLarge, RunnerTool
 
 
 ##############################################################################################################
@@ -125,215 +125,6 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
-class ICResNet(nn.Module):
-
-    def __init__(self, low_dim=512):
-        super().__init__()
-        self.resnet = resnet18(num_classes=low_dim)
-        self.l2norm = Normalize(2)
-        pass
-
-    def forward(self, x):
-        out_logits = self.resnet(x)
-        out_l2norm = self.l2norm(out_logits)
-        return out_logits, out_l2norm
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class ProduceClass(object):
-
-    def __init__(self, n_sample, out_dim, ratio=1.0):
-        super().__init__()
-        self.out_dim = out_dim
-        self.n_sample = n_sample
-        self.class_per_num = self.n_sample // self.out_dim * ratio
-        self.count = 0
-        self.count_2 = 0
-        self.class_num = np.zeros(shape=(self.out_dim,), dtype=np.int)
-        self.classes = np.zeros(shape=(self.n_sample,), dtype=np.int)
-        pass
-
-    def init(self):
-        class_per_num = self.n_sample // self.out_dim
-        self.class_num += class_per_num
-        for i in range(self.out_dim):
-            self.classes[i * class_per_num: (i + 1) * class_per_num] = i
-            pass
-        np.random.shuffle(self.classes)
-        pass
-
-    def reset(self):
-        self.count = 0
-        self.count_2 = 0
-        self.class_num *= 0
-        pass
-
-    def cal_label(self, out, indexes):
-        out_data = out.data.cpu()
-        top_k = out_data.topk(self.out_dim, dim=1)[1].cpu()
-        indexes_cpu = indexes.cpu()
-
-        batch_size = top_k.size(0)
-        class_labels = np.zeros(shape=(batch_size,), dtype=np.int)
-
-        for i in range(batch_size):
-            for j_index, j in enumerate(top_k[i]):
-                if self.class_per_num > self.class_num[j]:
-                    class_labels[i] = j
-                    self.class_num[j] += 1
-                    self.count += 1 if self.classes[indexes_cpu[i]] != j else 0
-                    self.classes[indexes_cpu[i]] = j
-                    self.count_2 += 1 if j_index != 0 else 0
-                    break
-                pass
-            pass
-        pass
-
-    def get_label(self, indexes):
-        _device = indexes.device
-        return torch.tensor(self.classes[indexes.cpu()]).long().to(_device)
-
-    pass
-
-
-def conv3x3(in_planes, out_planes, stride=1):
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
-
-
-class BasicBlock(nn.Module):
-    expansion = 1
-
-    def __init__(self, inplanes, planes, stride=1, downsample=None, drop_rate=0.0, drop_block=False, block_size=1):
-        super(BasicBlock, self).__init__()
-        self.conv1 = conv3x3(inplanes, planes)
-        self.bn1 = nn.BatchNorm2d(planes)
-        self.relu = nn.LeakyReLU(0.1)
-
-        self.conv2 = conv3x3(planes, planes)
-        self.bn2 = nn.BatchNorm2d(planes)
-
-        self.conv3 = conv3x3(planes, planes)
-        self.bn3 = nn.BatchNorm2d(planes)
-
-        self.maxpool = nn.MaxPool2d(stride)
-        self.downsample = downsample
-
-        self.drop_rate = drop_rate
-        pass
-
-    def forward(self, x):
-        residual = x
-
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-
-        out = self.conv2(out)
-        out = self.bn2(out)
-        out = self.relu(out)
-
-        out = self.conv3(out)
-        out = self.bn3(out)
-
-        if self.downsample is not None:
-            residual = self.downsample(x)
-
-        out += residual
-        out = self.relu(out)
-        out = self.maxpool(out)
-
-        if self.drop_rate > 0:
-            out = F.dropout(out, p=self.drop_rate, training=self.training, inplace=True)
-            pass
-
-        return out
-
-    pass
-
-
-class ResNet12(nn.Module):
-
-    def __init__(self, block=BasicBlock, keep_prob=1.0, avg_pool=False, drop_rate=0.0, dropblock_size=5):
-        super().__init__()
-
-        self.inplanes = 3
-
-        self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
-        self.layer2 = self._make_layer(block, 160, stride=2, drop_rate=drop_rate)
-        self.layer3 = self._make_layer(block, 320, stride=2, drop_rate=drop_rate,
-                                       drop_block=True, block_size=dropblock_size)
-        self.layer4 = self._make_layer(block, 640, stride=2, drop_rate=drop_rate,
-                                       drop_block=True, block_size=dropblock_size)
-
-        self.keep_avg_pool = avg_pool
-        self.avgpool = nn.AvgPool2d(5, stride=1)
-
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-            pass
-
-        pass
-
-    def _make_layer(self, block, planes, stride=1, drop_rate=0.0, drop_block=False, block_size=1):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(nn.Conv2d(self.inplanes, planes * block.expansion, 1, stride=1, bias=False),
-                                       nn.BatchNorm2d(planes * block.expansion))
-            pass
-
-        layers = [block(self.inplanes, planes, stride, downsample, drop_rate, drop_block, block_size)]
-        self.inplanes = planes * block.expansion
-        return nn.Sequential(*layers)
-
-    def forward(self, x):
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-
-        if self.keep_avg_pool:
-            x = self.avgpool(x)
-
-        return x
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class ProtoNetLarge(nn.Module):
-
-    def __init__(self, has_norm=False):
-        super().__init__()
-        self.proto_net = ResNet12(block=BasicBlock, avg_pool=True, drop_rate=0.1, dropblock_size=5)
-
-        self.has_norm = has_norm
-        if self.has_norm:
-            self.l2norm = Normalize(2)
-        pass
-
-    def forward(self, x):
-        out = self.proto_net(x)
-        if self.has_norm:
-            out = out.view(out.shape[0], -1)
-            out = self.l2norm(out)
-        return out
-
-    pass
-
-
-##############################################################################################################
-
-
 class Runner(object):
 
     def __init__(self):
@@ -352,7 +143,7 @@ class Runner(object):
 
         # model
         self.proto_net = RunnerTool.to_cuda(Config.proto_net)
-        self.ic_model = RunnerTool.to_cuda(ICResNet(low_dim=Config.ic_out_dim))
+        self.ic_model = RunnerTool.to_cuda(ICResNet(resnet=Config.resnet, low_dim=Config.ic_out_dim))
 
         RunnerTool.to_cuda(self.proto_net.apply(RunnerTool.weights_init))
         RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
@@ -403,18 +194,18 @@ class Runner(object):
         log_p_y = F.log_softmax(-dists, dim=1)
         return log_p_y
 
-    def proto_test(self, samples, batches):
+    def proto_test(self, samples, batches, num_way=5, num_shot=1):
         batch_num, _, _, _ = batches.shape
 
         sample_z = self.proto_net(samples)  # 5x64*5*5
         batch_z = self.proto_net(batches)  # 75x64*5*5
-        sample_z = sample_z.view(Config.num_way, Config.num_shot, -1)
+        sample_z = sample_z.view(num_way, num_shot, -1)
         batch_z = batch_z.view(batch_num, -1)
         _, z_dim = batch_z.shape
 
         z_proto = sample_z.mean(1)
-        z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, Config.num_way, z_dim)
-        z_query_expand = batch_z.unsqueeze(1).expand(batch_num, Config.num_way, z_dim)
+        z_proto_expand = z_proto.unsqueeze(0).expand(batch_num, num_way, z_dim)
+        z_query_expand = batch_z.unsqueeze(1).expand(batch_num, num_way, z_dim)
 
         dists = torch.pow(z_query_expand - z_proto_expand, 2).sum(2)
         log_p_y = F.log_softmax(-dists, dim=1)
@@ -481,7 +272,7 @@ class Runner(object):
 
                 self.proto_net.zero_grad()
                 loss_fsl.backward()
-                torch.nn.utils.clip_grad_norm_(self.proto_net.parameters(), 0.5)
+                # torch.nn.utils.clip_grad_norm_(self.proto_net.parameters(), 0.5)
                 self.proto_net_optim.step()
 
                 # is ok
@@ -550,50 +341,40 @@ class Config(object):
     gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    num_workers = 16
-
+    num_workers = 8
     num_way = 5
     num_shot = 1
-    # batch_size = 64
-    batch_size = 32
-
     val_freq = 10
     episode_size = 15
     test_episode = 600
-
-    hid_dim, z_dim = 64, 64
-
-    # has_norm = True
-    has_norm = False
-    # proto_net = ProtoNet(hid_dim=hid_dim, z_dim=z_dim, has_norm=has_norm)
-    proto_net = ProtoNetLarge(has_norm=has_norm)
-
-    # ic
-    ic_out_dim = 512
-    ic_ratio = 1
-
     learning_rate = 0.01
     loss_fsl_ratio = 1.0
     loss_ic_ratio = 1.0
+    train_epoch = 2100
+    first_epoch, t_epoch = 500, 200
+    adjust_learning_rate = RunnerTool.adjust_learning_rate1
+    ic_out_dim = 512
+    ic_ratio = 1
 
-    train_epoch = 200
-    first_epoch, t_epoch = 100, 50
-    adjust_learning_rate = RunnerTool.adjust_learning_rate2
+    ##############################################################################################################
+    is_png = True
+    # is_png = False
 
-    # train_epoch = 2100
-    # first_epoch, t_epoch = 500, 200
-    # adjust_learning_rate = RunnerTool.adjust_learning_rate1
+    # has_l2norm = True
+    has_l2norm = False
 
-    # model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
-    #     gpu_id, train_epoch, batch_size, num_way, num_shot, hid_dim, z_dim, first_epoch,
-    #     t_epoch, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, "_norm" if has_norm else "")
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
-        gpu_id, train_epoch, batch_size, num_way, num_shot, first_epoch,
-        t_epoch, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, "_norm" if has_norm else "")
+    resnet, resnet_name = resnet18, "resnet18"
+    # resnet, resnet_name = resnet34, "resnet34"
 
-    _root_path = "../models_pn/two_ic_ufsl_2net_res_sgd_acc_duli"
-    pn_dir = Tools.new_dir("{}/{}_pn_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
-    ic_dir = Tools.new_dir("{}/{}_ic_{}way_{}shot.pkl".format(_root_path, model_name, num_way, num_shot))
+    # proto_net, proto_name, batch_size = ProtoNet(hid_dim=64, z_dim=64, has_norm=has_norm), "ProtoNet", 64
+    proto_net, proto_name, batch_size = ProtoNetLarge(has_norm=has_l2norm), "ProtoNetLarge", 32
+    ##############################################################################################################
+
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}{}".format(
+        gpu_id, train_epoch, first_epoch, t_epoch, batch_size, num_way, num_shot,
+        ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, resnet_name, proto_name,
+        "_l2norm" if has_l2norm else "", "_png" if is_png else "")
+    Tools.print(model_name)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/miniImagenet'
@@ -601,7 +382,12 @@ class Config(object):
             data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
     else:
         data_root = "F:\\data\\miniImagenet"
+    data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
+    Tools.print(data_root)
 
+    _root_path = "../models_pn/ufsl_abl"
+    pn_dir = Tools.new_dir("{}/{}_pn_{}_{}.pkl".format(_root_path, model_name, num_way, num_shot))
+    ic_dir = Tools.new_dir("{}/{}_ic_{}_{}.pkl".format(_root_path, model_name, num_way, num_shot))
     pass
 
 

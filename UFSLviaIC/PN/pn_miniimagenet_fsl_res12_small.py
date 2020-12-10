@@ -349,39 +349,50 @@ class Config(object):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     train_epoch = 100
-    # learning_rate = 0.05
     learning_rate = 0.01
-    # learning_rate = 0.1
     learning_rate_decay_epochs = [50, 80]
     num_workers = 8
 
     val_freq = 5
 
-    num_way = 10
-    # num_way = 5
-    # num_way = 3
-    # num_way = 2
-    num_way_test = 5
-
-    num_shot = 1
-    # batch_size = 64
-    # batch_size = 32
-    batch_size = 16
-
     episode_size = 15
     test_episode = 600
+
+    num_way_test = 5
+    num_shot = 1
+
+    ##############################################################################################################
+    # num_way = 10
+    # batch_size = 16
+
+    num_way = 5
+    batch_size = 32
+
+    # num_way = 3
+    # batch_size = 64
+
+    # num_way = 2
+    # batch_size = 64
+
+    # num_way = 20
+    # batch_size = 8
 
     is_png = True
     # is_png = False
 
+    # drop_rate = 0.1
+    drop_rate = 0.2
+
     block, block_name = BasicBlock, "BasicBlock1"
-    proto_net = ResNet12(block=block, avg_pool=True, drop_rate=0.1)
+    proto_net = ResNet12(block=block, avg_pool=True, drop_rate=drop_rate)
 
     # transforms_normalize, norm_name = transforms_normalize1, "norm1"
     transforms_normalize, norm_name = transforms_normalize2, "norm2"
+    ##############################################################################################################
 
-    model_name = "{}_{}_{}_{}_{}_{}{}".format(
-        gpu_id, train_epoch, batch_size, block_name, learning_rate, norm_name, "_png" if is_png else "")
+    model_name = "{}_{}_{}_{}_{}_{}{}_{}".format(
+        gpu_id, train_epoch, batch_size, block_name, learning_rate, norm_name,
+        "_png" if is_png else "", "drop_rate_{}".format(int(drop_rate * 10)))
     Tools.print(model_name)
 
     if "Linux" in platform.platform():

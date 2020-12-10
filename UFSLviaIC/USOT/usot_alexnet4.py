@@ -227,7 +227,7 @@ class Runner(object):
 
         ######################################################################################################
         z_support = self.norm(z_support)
-        similarities = torch.sum(z_support * z_query, -1) * Config.out_scale
+        similarities = torch.sum(z_support * z_query, -1)
         similarities = torch.softmax(similarities, dim=1)
         similarities = similarities.view(data_batch_size, Config.num_way, Config.num_shot)
         predicts = torch.sum(similarities, dim=-1)
@@ -250,7 +250,7 @@ class Runner(object):
         z_query_expand = batch_z.unsqueeze(1).expand(batch_num, num_way, z_dim)
 
         z_proto_expand = self.norm(z_proto_expand)
-        similarities = torch.sum(z_proto_expand * z_query_expand, -1) * Config.out_scale
+        similarities = torch.sum(z_proto_expand * z_query_expand, -1)
         similarities = torch.softmax(similarities, dim=1)
         similarities = similarities.view(batch_num, Config.num_way, Config.num_shot)
         predicts = torch.sum(similarities, dim=-1)
@@ -319,7 +319,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     image_size = 127
@@ -333,18 +333,17 @@ class Config(object):
     batch_size = 32
 
     learning_rate = 0.01
+
     train_epoch = 160
     first_epoch, t_epoch = 80, 40
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     ##############################################################################################################
-    out_scale = 0.01
-
     is_png = True
     # is_png = False
 
-    proto_net, net_name = AlexNetV1(), "V1"
-    # proto_net, net_name = AlexNetV2(), "V2"
+    # proto_net, net_name = AlexNetV1(), "V1"
+    proto_net, net_name = AlexNetV2(), "V2"
     ##############################################################################################################
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}{}".format(
@@ -376,8 +375,8 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    runner.proto_net.eval()
-    runner.test_tool.val(episode=0, is_print=True)
+    # runner.proto_net.eval()
+    # runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 
