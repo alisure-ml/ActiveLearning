@@ -466,9 +466,13 @@ class Config(object):
     loss_fsl_ratio = 1.0
     loss_ic_ratio = 1.0
 
-    train_epoch = 700
+    # train_epoch = 700
+    # first_epoch, t_epoch = 300, 200
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
+
+    train_epoch = 1500
     first_epoch, t_epoch = 300, 200
-    adjust_learning_rate = RunnerTool.adjust_learning_rate2
+    adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
     ###############################################################################################
     is_png = True
