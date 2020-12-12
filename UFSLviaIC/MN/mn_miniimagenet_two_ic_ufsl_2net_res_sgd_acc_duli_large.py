@@ -445,7 +445,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -470,8 +470,12 @@ class Config(object):
     # first_epoch, t_epoch = 300, 200
     # adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
+    # train_epoch = 1500
+    # first_epoch, t_epoch = 300, 200
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate1
+
     train_epoch = 1500
-    first_epoch, t_epoch = 300, 200
+    first_epoch, t_epoch = 500, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
     ###############################################################################################
