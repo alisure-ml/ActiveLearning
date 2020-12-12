@@ -441,6 +441,19 @@ class Config(object):
 2020-12-10 06:09:16 Train 100 Accuracy: 0.9756666666666668
 2020-12-10 06:09:16 Val   100 Accuracy: 0.637888888888889
 2020-12-10 06:15:46 episode=100, Mean Test accuracy=0.5988311111111111
+
+0.01 5 way 1 shot, drop_rate = 0.2
+2020-12-10 23:11:21 load proto net success from ../models_pn/fsl_res12_small/2_100_32_BasicBlock1_0.01_norm2_png_drop_rate_2_pn_5_1.pkl
+2020-12-10 23:14:13 Train 100 Accuracy: 0.9233333333333333
+2020-12-10 23:14:13 Val   100 Accuracy: 0.6268888888888888
+2020-12-10 23:21:53 episode=100, Mean Test accuracy=0.5763777777777778
+
+0.01, num_way = 20, batch_size = 8, drop_rate = 0.1
+0_100_8_BasicBlock1_0.01_norm2_png_pn_20_1.pkl
+2020-12-12 03:37:24 load proto net success from ../models_pn/fsl_res12_small/0_100_8_BasicBlock1_0.01_norm2_png_pn_20_1.pkl
+2020-12-12 03:40:13 Train 100 Accuracy: 0.960888888888889
+2020-12-12 03:40:13 Val   100 Accuracy: 0.624
+2020-12-12 03:47:42 episode=100, Mean Test accuracy=0.5916400000000002
 """
 
 
