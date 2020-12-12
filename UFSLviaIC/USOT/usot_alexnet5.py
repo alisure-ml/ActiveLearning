@@ -8,6 +8,7 @@ from tqdm import tqdm
 import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
+from torchvision.transforms import functional as vis_f
 from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
@@ -26,6 +27,20 @@ class ToTensor(object):
     pass
 
 
+class Padding(object):
+
+    def __init__(self, padding):
+        self.padding = padding
+        self.padding_mode = "reflect"
+        pass
+
+    def __call__(self, img):
+
+        return vis_f.pad(img, self.padding, padding_mode=self.padding_mode)
+
+    pass
+
+
 class MiniImageNetDataset(object):
 
     def __init__(self, data_list, num_way, num_shot):
@@ -38,10 +53,17 @@ class MiniImageNetDataset(object):
             self.data_dict[label].append((index, label, image_filename))
             pass
 
-        self.transform = transforms.Compose([transforms.Resize(Config.image_size),
-                                             transforms.RandomCrop(Config.image_size, padding=8),
-                                             transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-                                             transforms.RandomHorizontalFlip(), ToTensor()])
+        self.transform = transforms.Compose([
+            transforms.Resize(int(Config.image_size * 1.2)),
+            # Padding(padding=20),
+            transforms.RandomRotation(degrees=30),
+            transforms.CenterCrop(Config.image_size),
+            # transforms.RandomCrop(Config.image_size, padding=8, padding_mode="reflect"),
+            # transforms.RandomCrop(Config.image_size, padding=8),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+            transforms.RandomHorizontalFlip(), ToTensor(),
+            # transforms.RandomErasing()
+        ])
         self.transform_test = transforms.Compose([transforms.Resize(Config.image_size), ToTensor()])
         pass
 
@@ -69,7 +91,12 @@ class MiniImageNetDataset(object):
         # 当前样本
         now_label_image_tuple = self.data_list[item]
         now_index, now_label, now_image_filename = now_label_image_tuple
-        now_label_k_shot_image_tuple = random.sample(self.data_dict[now_label], self.num_shot)
+
+        # 当前样本的另一个样本
+        if Config.sample_same and random.randint(0, 1) == 0:
+            now_label_k_shot_image_tuple = [now_label_image_tuple]
+        else:
+            now_label_k_shot_image_tuple = random.sample(self.data_dict[now_label], self.num_shot)
 
         # 其他样本
         other_label = list(self.data_dict.keys())
@@ -176,6 +203,20 @@ class AlexNetV2(nn.Module):
 
     pass
 
+
+class AlexNetV4(AlexNet):
+    output_stride = 8
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Sequential(nn.Conv2d(3, 96, 3, 1), nn.BatchNorm2d(96), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv2 = nn.Sequential(nn.Conv2d(96, 256, 3, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv3 = nn.Sequential(nn.Conv2d(256, 384, 3, 1), nn.BatchNorm2d(384), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv4 = nn.Sequential(nn.Conv2d(384, 384, 3, 1), nn.BatchNorm2d(384), nn.ReLU(), nn.MaxPool2d(2, 2))
+        self.conv5 = nn.Sequential(nn.Conv2d(384, 256, 3, 1, padding=1))
+        pass
+
+    pass
 
 ##############################################################################################################
 
@@ -319,7 +360,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     image_size = 127
@@ -342,12 +383,17 @@ class Config(object):
     # is_png = True
     is_png = False
 
+    # sample_same = True
+    sample_same = False
+
     # proto_net, net_name = AlexNetV1(), "V1"
-    proto_net, net_name = AlexNetV2(), "V2"
+    # proto_net, net_name = AlexNetV2(), "V2"
+    proto_net, net_name = AlexNetV4(), "V4"
     ##############################################################################################################
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}{}".format(
-        gpu_id, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch, net_name, "_png" if is_png else "")
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}{}{}".format(
+        gpu_id, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch, net_name,
+        "_png" if is_png else "", "_same" if sample_same else "")
     Tools.print(model_name)
 
     if "Linux" in platform.platform():
@@ -359,7 +405,7 @@ class Config(object):
     data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
     Tools.print(data_root)
 
-    pn_dir = Tools.new_dir("../models_usot/alexnet4/{}.pkl".format(model_name))
+    pn_dir = Tools.new_dir("../models_usot/alexnet5/{}.pkl".format(model_name))
     pass
 
 
@@ -367,31 +413,15 @@ class Config(object):
 
 
 """
-is_png = True, net_name = V1
-2020-12-10 21:23:14 load proto net success from ../models_usot/alexnet4/0_160_32_5_1_80_40_V1_png.pkl
-2020-12-10 21:23:44 Train 160 Accuracy: 0.8320000000000001
-2020-12-10 21:24:13 Val   160 Accuracy: 0.5168888888888888
-2020-12-10 21:24:43 Test1 160 Accuracy: 0.5025555555555555
-2020-12-10 21:33:32 episode=160, Mean Test accuracy=0.49937333333333334
+2020-12-11 22:21:43 load proto net success from ../models_usot/alexnet5/3_160_32_5_1_80_40_V1.pkl
+2020-12-11 22:23:15 Train 160 Accuracy: 0.7325555555555555
+2020-12-11 22:24:50 Val   160 Accuracy: 0.5112222222222222
+2020-12-11 22:49:09 episode=160, Mean Test accuracy=0.4800755555555556
 
-is_png = True, net_name = V2
-2020-12-11 06:45:27 load proto net success from ../models_usot/alexnet4/2_160_32_5_1_80_40_V2_png.pkl
-2020-12-11 06:45:58 Train 160 Accuracy: 0.7631111111111111
-2020-12-11 06:46:28 Val   160 Accuracy: 0.5688888888888889
-2020-12-11 06:56:05 episode=160, Mean Test accuracy=0.5625777777777777
-
-
-is_png = False, net_name = V1
-2020-12-11 15:38:19 load proto net success from ../models_usot/alexnet4/0_160_32_5_1_80_40_V1.pkl
-2020-12-11 15:39:10 Train 160 Accuracy: 0.8151111111111112
-2020-12-11 15:40:01 Val   160 Accuracy: 0.5167777777777777
-2020-12-11 15:50:03 episode=160, Mean Test accuracy=0.4907644444444445
-
-is_png = False, net_name = V2
-2020-12-12 00:46:54 load proto net success from ../models_usot/alexnet4/2_160_32_5_1_80_40_V2.pkl
-2020-12-12 00:47:34 Train 160 Accuracy: 0.7242222222222222
-2020-12-12 00:48:13 Val   160 Accuracy: 0.5529999999999999
-2020-12-12 00:59:23 episode=160, Mean Test accuracy=0.5441644444444445
+2020-12-11 22:17:13 load proto net success from ../models_usot/alexnet5/3_160_32_5_1_80_40_V1_same.pkl
+2020-12-11 22:18:46 Train 160 Accuracy: 0.6286666666666666
+2020-12-11 22:20:08 Val   160 Accuracy: 0.46388888888888885
+2020-12-11 22:48:06 episode=160, Mean Test accuracy=0.44662666666666667
 """
 
 
