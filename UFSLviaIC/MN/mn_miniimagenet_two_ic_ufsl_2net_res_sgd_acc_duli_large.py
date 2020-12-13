@@ -440,7 +440,19 @@ class Runner(object):
 
 
 """
-
+is_png = True, resnet = resnet34, modify_head = True
+ResNet12Small(block=BasicBlock, avg_pool=True, drop_rate=0.1), 32, "R12S"
+1_R12S_700_32_5_1_300_200_512_1_1.0_1.0_head_png_mn.pkl
+2020-12-13 23:02:27    701 loss:1.614 fsl:0.034 ic:1.581 ok:0.263(10101/38400)
+2020-12-13 23:02:27 Train: [700] 15839/2266
+2020-12-13 23:05:32 load matching net success from ../models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_large/1_R12S_700_32_5_1_300_200_512_1_1.0_1.0_head_png_mn.pkl
+2020-12-13 23:05:32 load ic model success from ../models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_large/1_R12S_700_32_5_1_300_200_512_1_1.0_1.0_head_png_ic.pkl
+2020-12-13 23:06:05 Epoch: 700 Train 0.5225/0.8137 0.0000
+2020-12-13 23:06:05 Epoch: 700 Val   0.6234/0.9324 0.0000
+2020-12-13 23:06:05 Epoch: 700 Test  0.6006/0.9237 0.0000
+2020-12-13 23:08:34 Train 700 Accuracy: 0.603
+2020-12-13 23:08:34 Val   700 Accuracy: 0.5086666666666666
+2020-12-13 23:16:11 episode=700, Mean Test accuracy=0.5114533333333333
 """
 
 
