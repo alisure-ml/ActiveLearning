@@ -469,6 +469,19 @@ is_png = True, resnet = resnet18, modify_head = True
 2020-12-10 22:09:29 Val   2100 Accuracy: 0.46588888888888885
 2020-12-10 22:14:46 episode=2100, Mean Test accuracy=0.48175111111111113
 
+
+is_png = True, resnet = resnet34, modify_head = True
+3_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl
+2020-12-13 03:43:38   2101 loss:0.576 fsl:0.061 ic:0.516 ok:0.342(13121/38400)
+2020-12-13 03:43:38 Train: [2100] 4749/1470
+2020-12-13 03:46:17 load matching net success from ../models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl
+2020-12-13 03:46:17 load ic model success from ../models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_ic.pkl
+2020-12-13 03:46:57 Epoch: 2100 Train 0.5535/0.8241 0.0000
+2020-12-13 03:46:57 Epoch: 2100 Val   0.6543/0.9418 0.0000
+2020-12-13 03:46:57 Epoch: 2100 Test  0.6264/0.9372 0.0000
+2020-12-13 03:48:55 Train 2100 Accuracy: 0.5393333333333333
+2020-12-13 03:48:55 Val   2100 Accuracy: 0.4755555555555556
+2020-12-13 03:54:18 episode=2100, Mean Test accuracy=0.49805777777777777
 """
 
 
