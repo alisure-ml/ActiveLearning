@@ -174,10 +174,11 @@ class KNN(object):
 
 class ICTestTool(object):
 
-    def __init__(self, feature_encoder, ic_model, data_root, batch_size=64, num_workers=8, ic_out_dim=512):
+    def __init__(self, feature_encoder, ic_model, data_root, batch_size=64, num_workers=8, ic_out_dim=512, k=100):
         self.feature_encoder = feature_encoder if feature_encoder is None else self.to_cuda(feature_encoder)
         self.ic_model = self.to_cuda(ic_model)
         self.ic_out_dim = ic_out_dim
+        self.k = k
 
         # data
         self.data_train, self.data_val, self.data_test = MiniImageNetIC.get_data_all(data_root)
@@ -191,7 +192,7 @@ class ICTestTool(object):
         return x.cuda() if torch.cuda.is_available() else x
 
     def val_ic(self, ic_loader):
-        acc_1, acc_2, acc_3 = KNN.knn(self.feature_encoder, self.ic_model, self.ic_out_dim, ic_loader, 100)
+        acc_1, acc_2, acc_3 = KNN.knn(self.feature_encoder, self.ic_model, self.ic_out_dim, ic_loader, self.k)
         return acc_1, acc_2, acc_3
 
     def val(self, epoch, is_print=True):

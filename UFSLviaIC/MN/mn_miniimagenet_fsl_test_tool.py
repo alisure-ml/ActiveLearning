@@ -224,14 +224,19 @@ class TestTool(object):
 
     def val(self, episode=0, is_print=True):
         acc_train = self.val_train()
-        acc_val = self.val_val()
-        acc_test1 = self.val_test()
-        acc_test2 = self.val_test2()
-
         if is_print:
             Tools.print("Train {} Accuracy: {}".format(episode, acc_train))
+
+        acc_val = self.val_val()
+        if is_print:
             Tools.print("Val   {} Accuracy: {}".format(episode, acc_val))
+
+        acc_test1 = self.val_test()
+        if is_print:
             Tools.print("Test1 {} Accuracy: {}".format(episode, acc_test1))
+
+        acc_test2 = self.val_test2()
+        if is_print:
             Tools.print("Test2 {} Accuracy: {}".format(episode, acc_test2))
             pass
         return acc_val
