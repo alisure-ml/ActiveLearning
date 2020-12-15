@@ -12,8 +12,8 @@ import torch.nn.functional as F
 from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
-from mn_miniimagenet_fsl_test_tool import TestTool
-from mn_miniimagenet_tool import MatchingNet, Normalize, RunnerTool
+from mn_tool_fsl_test import FSLTestTool
+from mn_tool_net import MatchingNet, Normalize, RunnerTool
 
 
 ##############################################################################################################
@@ -139,10 +139,10 @@ class Runner(object):
         self.matching_net_optim = torch.optim.SGD(
             self.matching_net.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
-        self.test_tool = TestTool(self.matching_test, data_root=Config.data_root,
-                                  num_way=Config.num_way_test,  num_shot=Config.num_shot,
-                                  episode_size=Config.episode_size, test_episode=Config.test_episode,
-                                  transform=self.task_train.transform_test)
+        self.test_tool = FSLTestTool(self.matching_test, data_root=Config.data_root,
+                                     num_way=Config.num_way_test, num_shot=Config.num_shot,
+                                     episode_size=Config.episode_size, test_episode=Config.test_episode,
+                                     transform=self.task_train.transform_test)
         pass
 
     def load_model(self):
@@ -267,7 +267,7 @@ class Config(object):
     matching_net = MatchingNet(hid_dim=64, z_dim=64)
 
     train_epoch = 800
-    first_epoch, t_epoch = 500, 150
+    first_epoch, t_epoch = 400, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     ###############################################################################################

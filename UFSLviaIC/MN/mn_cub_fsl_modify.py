@@ -12,9 +12,9 @@ import torch.nn.functional as F
 from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
-from mn_miniimagenet_fsl_test_tool import TestTool
 from torch.optim.lr_scheduler import StepLR, MultiStepLR
-from mn_miniimagenet_tool import MatchingNet, Normalize, RunnerTool, ResNet12Small
+from mn_tool_fsl_test import FSLTestTool
+from mn_tool_net import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
 
 ##############################################################################################################
@@ -137,13 +137,12 @@ class Runner(object):
 
         # optim
         self.matching_net_optim = torch.optim.Adam(self.matching_net.parameters(), lr=Config.learning_rate)
-        # self.matching_net_scheduler = StepLR(self.matching_net_optim, Config.train_epoch // 3, gamma=0.5)
         self.matching_net_scheduler = MultiStepLR(self.matching_net_optim, Config.train_epoch_lr, gamma=0.5)
 
-        self.test_tool = TestTool(self.matching_test, data_root=Config.data_root,
-                                  num_way=Config.num_way,  num_shot=Config.num_shot,
-                                  episode_size=Config.episode_size, test_episode=Config.test_episode,
-                                  transform=self.task_train.transform_test)
+        self.test_tool = FSLTestTool(self.matching_test, data_root=Config.data_root,
+                                     num_way=Config.num_way, num_shot=Config.num_shot,
+                                     episode_size=Config.episode_size, test_episode=Config.test_episode,
+                                     transform=self.task_train.transform_test)
         pass
 
     def load_model(self):

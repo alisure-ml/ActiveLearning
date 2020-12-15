@@ -10,12 +10,12 @@ from PIL import Image
 from PIL import ImageEnhance
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
+from mn_tool_ic_test import ICTestTool
+from mn_tool_fsl_test import FSLTestTool
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from torchvision.models import resnet18, resnet34
-from mn_miniimagenet_fsl_test_tool import TestTool
-from mn_miniimagenet_ic_test_tool import ICTestTool
-from mn_miniimagenet_tool import MatchingNet, Normalize, RunnerTool
+from mn_tool_net import MatchingNet, Normalize, RunnerTool
 
 
 ##############################################################################################################
@@ -293,12 +293,12 @@ class Runner(object):
         self.fsl_loss = RunnerTool.to_cuda(nn.MSELoss())
 
         # Eval
-        self.test_tool_fsl = TestTool(self.matching_test, data_root=Config.data_root,
-                                      num_way=Config.num_way, num_shot=Config.num_shot,
-                                      episode_size=Config.episode_size, test_episode=Config.test_episode,
-                                      transform=self.task_train.transform_test)
-        self.test_tool_ic = ICTestTool(feature_encoder=None, ic_model=self.ic_model,
-                                       data_root=Config.data_root, batch_size=Config.batch_size,
+        self.test_tool_fsl = FSLTestTool(self.matching_test, data_root=Config.data_root,
+                                         num_way=Config.num_way, num_shot=Config.num_shot,
+                                         episode_size=Config.episode_size, test_episode=Config.test_episode,
+                                         transform=self.task_train.transform_test)
+        self.test_tool_ic = ICTestTool(feature_encoder=None, ic_model=self.ic_model, data_root=Config.data_root,
+                                       transform=self.task_train.transform_test, batch_size=Config.batch_size,
                                        num_workers=Config.num_workers, ic_out_dim=Config.ic_out_dim, k=Config.knn)
         pass
 
