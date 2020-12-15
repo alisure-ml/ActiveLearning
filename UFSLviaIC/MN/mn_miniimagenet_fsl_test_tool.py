@@ -222,7 +222,7 @@ class TestTool(object):
             pass
         return mean_acc
 
-    def val(self, episode=0, is_print=True):
+    def val(self, episode=0, is_print=True, has_test=True):
         acc_train = self.val_train()
         if is_print:
             Tools.print("Train {} Accuracy: {}".format(episode, acc_train))
@@ -235,10 +235,11 @@ class TestTool(object):
         if is_print:
             Tools.print("Test1 {} Accuracy: {}".format(episode, acc_test1))
 
-        acc_test2 = self.val_test2()
-        if is_print:
-            Tools.print("Test2 {} Accuracy: {}".format(episode, acc_test2))
-            pass
+        if has_test:
+            acc_test2 = self.val_test2()
+            if is_print:
+                Tools.print("Test2 {} Accuracy: {}".format(episode, acc_test2))
+                pass
         return acc_val
 
     def _val(self, folders, sampler_test, all_episode):

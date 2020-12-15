@@ -7,6 +7,7 @@ import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
 from PIL import Image
+from PIL import ImageEnhance
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
@@ -18,6 +19,24 @@ from mn_miniimagenet_tool import MatchingNet, Normalize, RunnerTool
 
 
 ##############################################################################################################
+
+
+class ImageJitter(object):
+
+    def __init__(self):
+        self.transforms = [(ImageEnhance.Brightness, 0.4),
+                           (ImageEnhance.Contrast, 0.4), (ImageEnhance.Brightness, 0.4)]
+        pass
+
+    def __call__(self, img):
+        out = img
+        rand_tensor = torch.rand(len(self.transforms))
+        for i, (transformer, alpha) in enumerate(self.transforms):
+            r = alpha*(rand_tensor[i]*2.0 -1.0) + 1
+            out = transformer(out).enhance(r).convert('RGB')
+        return out
+
+    pass
 
 
 class CUBDataset(object):
@@ -40,12 +59,13 @@ class CUBDataset(object):
         self.transform_train_ic = transforms.Compose([
             transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
+            # transforms.RandomResizedCrop(84), ImageJitter(),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform_train_fsl = transforms.Compose([
-            transforms.RandomResizedCrop(84),
-            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+            transforms.RandomResizedCrop(84), ImageJitter(),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.CenterCrop(84), transforms.ToTensor(), normalize])
+        self.transform_test = transforms.Compose([transforms.Resize([int(84 * 1.15), int(84 * 1.15)]),
+                                                  transforms.CenterCrop(84), transforms.ToTensor(), normalize])
         pass
 
     def __len__(self):
@@ -453,8 +473,8 @@ class Config(object):
     matching_net = MatchingNet(hid_dim=64, z_dim=64)
 
     # ic
-    # ic_out_dim = 512
-    ic_out_dim = 256
+    ic_out_dim = 512
+    # ic_out_dim = 256
     ic_ratio = 1
     knn = 50
 

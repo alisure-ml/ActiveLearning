@@ -7,6 +7,7 @@ import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
 from PIL import Image
+from PIL import ImageEnhance
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
 from torch.optim.lr_scheduler import StepLR
@@ -17,6 +18,24 @@ from mn_miniimagenet_tool import MatchingNet, Normalize, RunnerTool
 
 
 ##############################################################################################################
+
+
+class ImageJitter(object):
+
+    def __init__(self):
+        self.transforms = [(ImageEnhance.Brightness, 0.4),
+                           (ImageEnhance.Contrast, 0.4), (ImageEnhance.Brightness, 0.4)]
+        pass
+
+    def __call__(self, img):
+        out = img
+        rand_tensor = torch.rand(len(self.transforms))
+        for i, (transformer, alpha) in enumerate(self.transforms):
+            r = alpha*(rand_tensor[i]*2.0 -1.0) + 1
+            out = transformer(out).enhance(r).convert('RGB')
+        return out
+
+    pass
 
 
 class CUBDataset(object):
@@ -33,10 +52,10 @@ class CUBDataset(object):
 
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406] , std=[0.229, 0.224, 0.225])
         self.transform = transforms.Compose([
-            transforms.RandomResizedCrop(84),
-            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+            transforms.RandomResizedCrop(84), ImageJitter(),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.CenterCrop(84), transforms.ToTensor(), normalize])
+        self.transform_test = transforms.Compose([transforms.Resize([int(84 * 1.15), int(84 * 1.15)]),
+                                                  transforms.CenterCrop(84), transforms.ToTensor(), normalize])
         pass
 
     def __len__(self):
@@ -213,7 +232,7 @@ class Runner(object):
                 Tools.print("Test {} {} .......".format(epoch, Config.model_name))
                 self.matching_net.eval()
 
-                val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
+                val_accuracy = self.test_tool.val(episode=epoch, is_print=True, has_test=False)
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
                     torch.save(self.matching_net.state_dict(), Config.mn_dir)
@@ -247,7 +266,7 @@ class Config(object):
 
     matching_net = MatchingNet(hid_dim=64, z_dim=64)
 
-    model_name = "{}_{}_{}_{}{}{}".format(train_epoch, batch_size, num_way, num_shot)
+    model_name = "{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
     Tools.print(model_name)
 
     if "Linux" in platform.platform():
@@ -266,7 +285,17 @@ class Config(object):
 
 
 """
-
+2020-12-15 13:45:09 load proto net success from ../cub/models_mn/fsl_modify/180_64_5_1.pkl
+2020-12-15 13:46:20 Train 180 Accuracy: 0.5908888888888888
+2020-12-15 13:47:34 Val   180 Accuracy: 0.5558888888888889
+2020-12-15 13:48:45 Test1 180 Accuracy: 0.5667777777777778
+2020-12-15 13:53:41 Test2 180 Accuracy: 0.5677333333333333
+2020-12-15 14:18:02 episode=180, Test accuracy=0.5790666666666666
+2020-12-15 14:18:02 episode=180, Test accuracy=0.5735555555555556
+2020-12-15 14:18:02 episode=180, Test accuracy=0.5795111111111112
+2020-12-15 14:18:02 episode=180, Test accuracy=0.5840444444444445
+2020-12-15 14:18:02 episode=180, Test accuracy=0.5776666666666667
+2020-12-15 14:18:02 episode=180, Mean Test accuracy=0.5787688888888889
 """
 
 
