@@ -249,7 +249,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     learning_rate = 0.01
@@ -266,8 +266,8 @@ class Config(object):
 
     matching_net = MatchingNet(hid_dim=64, z_dim=64)
 
-    train_epoch = 400
-    first_epoch, t_epoch = 200, 100
+    train_epoch = 800
+    first_epoch, t_epoch = 500, 150
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     ###############################################################################################

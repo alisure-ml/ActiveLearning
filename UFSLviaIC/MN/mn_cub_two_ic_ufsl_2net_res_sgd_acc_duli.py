@@ -514,6 +514,21 @@ class Config(object):
     pass
 
 
+"""
+2020-12-15 14:29:28   2100 loss:0.710 fsl:0.065 ic:0.645 ok:0.106(626/5885)
+2020-12-15 14:29:28 Train: [2100] 919/344
+2020-12-15 14:35:58 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_2100_64_5_1_500_200_256_1_1.0_1.0_mn.pkl
+2020-12-15 14:35:58 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_2100_64_5_1_500_200_256_1_1.0_1.0_ic.pkl
+2020-12-15 14:35:58 Test 2100 .......
+2020-12-15 14:36:06 Epoch: 2100 Train 0.1271/0.3291 0.0000
+2020-12-15 14:36:06 Epoch: 2100 Val   0.1929/0.4814 0.0000
+2020-12-15 14:36:06 Epoch: 2100 Test  0.1910/0.4782 0.0000
+2020-12-15 14:37:05 Train 2100 Accuracy: 0.34077777777777785
+2020-12-15 14:38:03 Val   2100 Accuracy: 0.369
+2020-12-15 15:00:42 episode=2100, Mean Test accuracy=0.3596488888888889
+"""
+
+
 if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()

@@ -10,10 +10,10 @@ from PIL import Image
 from PIL import ImageEnhance
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from mn_miniimagenet_fsl_test_tool import TestTool
+from torch.optim.lr_scheduler import StepLR, MultiStepLR
 from mn_miniimagenet_tool import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
 
@@ -137,7 +137,8 @@ class Runner(object):
 
         # optim
         self.matching_net_optim = torch.optim.Adam(self.matching_net.parameters(), lr=Config.learning_rate)
-        self.matching_net_scheduler = StepLR(self.matching_net_optim, Config.train_epoch // 3, gamma=0.5)
+        # self.matching_net_scheduler = StepLR(self.matching_net_optim, Config.train_epoch // 3, gamma=0.5)
+        self.matching_net_scheduler = MultiStepLR(self.matching_net_optim, Config.train_epoch_lr, gamma=0.5)
 
         self.test_tool = TestTool(self.matching_test, data_root=Config.data_root,
                                   num_way=Config.num_way,  num_shot=Config.num_shot,
@@ -248,12 +249,14 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    train_epoch = 180
+    # train_epoch = 180
     learning_rate = 0.001
-    num_workers = 8
+    num_workers = 16
+    train_epoch = 300
+    train_epoch_lr = [200, 250]
 
     num_way = 5
     num_shot = 1
@@ -298,6 +301,18 @@ class Config(object):
 2020-12-15 14:18:02 episode=180, Test accuracy=0.5840444444444445
 2020-12-15 14:18:02 episode=180, Test accuracy=0.5776666666666667
 2020-12-15 14:18:02 episode=180, Mean Test accuracy=0.5787688888888889
+
+2020-12-15 20:14:50 load proto net success from ../cub/models_mn/fsl_modify/180_32_5_1_res12.pkl
+2020-12-15 20:16:15 Train 180 Accuracy: 0.8231111111111111
+2020-12-15 20:17:36 Val   180 Accuracy: 0.6944444444444444
+2020-12-15 20:18:55 Test1 180 Accuracy: 0.7018888888888889
+2020-12-15 20:24:15 Test2 180 Accuracy: 0.7086666666666668
+2020-12-15 20:52:27 episode=180, Test accuracy=0.7160000000000001
+2020-12-15 20:52:27 episode=180, Test accuracy=0.7121555555555555
+2020-12-15 20:52:27 episode=180, Test accuracy=0.7142666666666667
+2020-12-15 20:52:27 episode=180, Test accuracy=0.723488888888889
+2020-12-15 20:52:27 episode=180, Test accuracy=0.7181333333333333
+2020-12-15 20:52:27 episode=180, Mean Test accuracy=0.7168088888888888
 """
 
 
