@@ -14,7 +14,7 @@ from torch.optim.lr_scheduler import StepLR
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from mn_miniimagenet_fsl_test_tool import TestTool
-from mn_miniimagenet_tool import MatchingNet, Normalize, RunnerTool
+from mn_miniimagenet_tool import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
 
 ##############################################################################################################
@@ -253,31 +253,33 @@ class Config(object):
 
     train_epoch = 180
     learning_rate = 0.001
-    num_workers = 16
-
-    val_freq = 10
+    num_workers = 8
 
     num_way = 5
     num_shot = 1
-    batch_size = 64
+    # batch_size = 64
+    batch_size = 32
 
+    val_freq = 10
     episode_size = 15
     test_episode = 600
 
-    matching_net = MatchingNet(hid_dim=64, z_dim=64)
-
     model_name = "{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
-    Tools.print(model_name)
 
+    # matching_net, model_name = MatchingNet(hid_dim=64, z_dim=64), "{}_{}".format(model_name, "conv4")
+    matching_net, model_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "{}_{}".format(model_name, "res12")
+
+    mn_dir = Tools.new_dir("../cub/models_mn/fsl_modify/{}.pkl".format(model_name))
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/UFSL/CUB'
         if not os.path.isdir(data_root):
             data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/CUB'
     else:
         data_root = "F:\\data\\CUB"
-    Tools.print(data_root)
 
-    mn_dir = Tools.new_dir("../cub/models_mn/fsl_modify/{}.pkl".format(model_name))
+    Tools.print(model_name)
+    Tools.print(data_root)
+    Tools.print(mn_dir)
     pass
 
 

@@ -57,9 +57,9 @@ class CUBDataset(object):
 
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         self.transform_train_ic = transforms.Compose([
-            transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
-            transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
-            # transforms.RandomResizedCrop(84), ImageJitter(),
+            # transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
+            # transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
+            transforms.RandomResizedCrop(84), ImageJitter(),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform_train_fsl = transforms.Compose([
             transforms.RandomResizedCrop(84), ImageJitter(),
@@ -439,7 +439,7 @@ class Runner(object):
                 self.ic_model.eval()
 
                 self.test_tool_ic.val(epoch=epoch)
-                val_accuracy = self.test_tool_fsl.val(episode=epoch, is_print=True)
+                val_accuracy = self.test_tool_fsl.val(episode=epoch, is_print=True, has_test=False)
 
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
@@ -457,7 +457,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 3
+    gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
@@ -497,7 +497,6 @@ class Config(object):
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
         gpu_id, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch,
         ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, "_head" if modify_head else "")
-    Tools.print(model_name)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/UFSL/CUB'
@@ -505,11 +504,13 @@ class Config(object):
             data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/CUB'
     else:
         data_root = "F:\\data\\CUB"
-    Tools.print(data_root)
 
     _root_path = "../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli"
     mn_dir = Tools.new_dir("{}/{}_mn.pkl".format(_root_path, model_name))
     ic_dir = Tools.new_dir("{}/{}_ic.pkl".format(_root_path, model_name))
+
+    Tools.print(model_name)
+    Tools.print(data_root)
     pass
 
 
