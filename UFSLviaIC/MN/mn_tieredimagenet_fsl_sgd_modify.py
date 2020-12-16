@@ -241,7 +241,7 @@ class Config(object):
     batch_size = 64
     # batch_size = 32
 
-    val_freq = 20
+    val_freq = 5
     episode_size = 15
     test_episode = 600
 
