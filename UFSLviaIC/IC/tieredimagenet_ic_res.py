@@ -31,8 +31,7 @@ class DatasetIC(Dataset):
             transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.15), int(image_size * 1.15)]),
-                                                  transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
+        self.transform_test = transforms.Compose([transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
         pass
 
     def __len__(self):
@@ -390,7 +389,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8

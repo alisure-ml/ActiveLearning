@@ -423,7 +423,8 @@ class Config(object):
     val_freq = 50
     knn = 50
 
-    ic_out_dim = 512
+    # ic_out_dim = 512
+    ic_out_dim = 64
     ic_ratio = 1
 
     resnet, vggnet, net_name = resnet18, None, "resnet_18"
