@@ -46,12 +46,13 @@ class DatasetIC(Dataset):
 
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         self.transform = transforms.Compose([
-            # transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
+            # transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
             # transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
-            transforms.RandomResizedCrop(84), ImageJitter(),
+            transforms.Resize([int(image_size * 1.15), int(image_size * 1.15)]),
+            transforms.RandomResizedCrop(image_size, scale=(0.2, 1.)), ImageJitter(),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.Resize([int(84 * 1.15), int(84 * 1.15)]),
-                                                  transforms.CenterCrop(84), transforms.ToTensor(), normalize])
+        self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.15), int(image_size * 1.15)]),
+                                                  transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
         pass
 
     def __len__(self):
@@ -415,13 +416,16 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
-    batch_size = 64
     val_freq = 50
+
     knn = 50
+    # knn = 20
+
+    batch_size = 64
 
     # ic_out_dim = 512
     ic_out_dim = 64
