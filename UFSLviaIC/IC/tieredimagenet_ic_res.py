@@ -390,7 +390,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 3
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -401,13 +401,13 @@ class Config(object):
     ic_out_dim = 512
     ic_ratio = 1
 
-    resnet, vggnet, net_name = resnet18, None, "resnet_18"
-    # resnet, vggnet, net_name = resnet34, None, "resnet_34"
+    # resnet, vggnet, net_name = resnet18, None, "resnet_18"
+    resnet, vggnet, net_name = resnet34, None, "resnet_34"
     # resnet, vggnet, net_name = resnet50, None, "resnet_50"
     # resnet, vggnet, net_name = None, vgg16_bn, "vgg16_bn"
 
-    modify_head = False
-    # modify_head = True
+    # modify_head = False
+    modify_head = True
 
     learning_rate = 0.01
     train_epoch = 2100

@@ -526,6 +526,30 @@ class Config(object):
 2020-12-15 14:37:05 Train 2100 Accuracy: 0.34077777777777785
 2020-12-15 14:38:03 Val   2100 Accuracy: 0.369
 2020-12-15 15:00:42 episode=2100, Mean Test accuracy=0.3596488888888889
+
+
+2020-12-16 12:21:41   2100 loss:1.049 fsl:0.042 ic:1.007 ok:0.146(859/5885)
+2020-12-16 12:21:41 Train: [2100] 1368/483
+2020-12-16 12:30:23 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_2100_64_5_1_500_200_512_1_1.0_1.0_mn.pkl
+2020-12-16 12:30:23 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_2100_64_5_1_500_200_512_1_1.0_1.0_ic.pkl
+2020-12-16 12:30:31 Epoch: 2100 Train 0.1737/0.4163 0.0000
+2020-12-16 12:30:31 Epoch: 2100 Val   0.2759/0.6047 0.0000
+2020-12-16 12:30:31 Epoch: 2100 Test  0.2692/0.5791 0.0000
+2020-12-16 12:31:44 Train 2100 Accuracy: 0.36233333333333334
+2020-12-16 12:32:56 Val   2100 Accuracy: 0.372
+2020-12-16 13:02:13 episode=2100, Mean Test accuracy=0.3652222222222223
+
+
+2020-12-16 12:23:22   2100 loss:0.809 fsl:0.059 ic:0.751 ok:0.155(912/5885)
+2020-12-16 12:23:22 Train: [2100] 1047/431
+2020-12-16 12:31:49 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_2100_64_5_1_500_200_512_1_1.0_1.0_mn.pkl
+2020-12-16 12:31:50 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_2100_64_5_1_500_200_512_1_1.0_1.0_ic.pkl
+2020-12-16 12:31:58 Epoch: 2100 Train 0.1354/0.3431 0.0000
+2020-12-16 12:31:58 Epoch: 2100 Val   0.1993/0.4871 0.0000
+2020-12-16 12:31:58 Epoch: 2100 Test  0.2079/0.4775 0.0000
+2020-12-16 12:33:10 Train 2100 Accuracy: 0.3768888888888889
+2020-12-16 12:34:19 Val   2100 Accuracy: 0.39055555555555554
+2020-12-16 13:03:36 episode=2100, Mean Test accuracy=0.3785199999999999
 """
 
 
