@@ -13,7 +13,7 @@ from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from mn_tool_fsl_test import FSLTestTool
-from mn_tool_net import MatchingNet, Normalize, RunnerTool
+from mn_tool_net import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
 
 ##############################################################################################################
@@ -249,22 +249,20 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     learning_rate = 0.01
     num_workers = 16
 
-    val_freq = 20
-
     num_way = 5
     num_shot = 1
-    batch_size = 64
+    # batch_size = 64
+    batch_size = 32
 
+    val_freq = 20
     episode_size = 15
     test_episode = 600
-
-    matching_net = MatchingNet(hid_dim=64, z_dim=64)
 
     train_epoch = 800
     first_epoch, t_epoch = 400, 200
@@ -277,17 +275,21 @@ class Config(object):
 
     model_name = "{}_{}_{}_{}_{}_{}_{}".format(
         gpu_id, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch)
-    Tools.print(model_name)
 
+    # matching_net, model_name = MatchingNet(hid_dim=64, z_dim=64), "{}_{}".format(model_name, "conv4")
+    matching_net, model_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "{}_{}".format(model_name, "res12")
+
+    mn_dir = Tools.new_dir("../cub/models_mn/fsl_sgd_modify/{}.pkl".format(model_name))
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/UFSL/CUB'
         if not os.path.isdir(data_root):
             data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/CUB'
     else:
         data_root = "F:\\data\\CUB"
-    Tools.print(data_root)
 
-    mn_dir = Tools.new_dir("../cub/models_mn/fsl_sgd_modify/{}.pkl".format(model_name))
+    Tools.print(model_name)
+    Tools.print(data_root)
+    Tools.print(mn_dir)
     pass
 
 
@@ -306,6 +308,19 @@ class Config(object):
 2020-12-15 15:30:16 episode=400, Test accuracy=0.5528888888888889
 2020-12-15 15:30:16 episode=400, Test accuracy=0.5535333333333333
 2020-12-15 15:30:16 episode=400, Mean Test accuracy=0.5531644444444443
+
+
+2020-12-16 08:35:13 load proto net success from ../cub/models_mn/fsl_sgd_modify/1_800_64_5_1_500_150.pkl
+2020-12-16 08:36:14 Train 800 Accuracy: 0.7065555555555556
+2020-12-16 08:37:13 Val   800 Accuracy: 0.6307777777777778
+2020-12-16 08:38:14 Test1 800 Accuracy: 0.6435555555555555
+2020-12-16 08:42:14 Test2 800 Accuracy: 0.6393777777777778
+2020-12-16 09:02:17 episode=800, Test accuracy=0.6413555555555555
+2020-12-16 09:02:17 episode=800, Test accuracy=0.6362666666666666
+2020-12-16 09:02:17 episode=800, Test accuracy=0.6350222222222223
+2020-12-16 09:02:17 episode=800, Test accuracy=0.6402444444444444
+2020-12-16 09:02:17 episode=800, Test accuracy=0.6340222222222222
+2020-12-16 09:02:17 episode=800, Mean Test accuracy=0.6373822222222222
 """
 
 
