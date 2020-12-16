@@ -264,8 +264,8 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    train_epoch = 800
-    first_epoch, t_epoch = 400, 200
+    train_epoch = 500
+    first_epoch, t_epoch = 300, 100
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     ###############################################################################################
@@ -297,19 +297,6 @@ class Config(object):
 
 
 """
-2020-12-15 15:00:52 load proto net success from ../cub/models_mn/fsl_sgd_modify/0_400_64_5_1_200_100.pkl
-2020-12-15 15:02:00 Train 400 Accuracy: 0.5907777777777778
-2020-12-15 15:03:03 Val   400 Accuracy: 0.5373333333333333
-2020-12-15 15:04:06 Test1 400 Accuracy: 0.5655555555555556
-2020-12-15 15:08:30 Test2 400 Accuracy: 0.5561777777777779
-2020-12-15 15:30:16 episode=400, Test accuracy=0.5529777777777777
-2020-12-15 15:30:16 episode=400, Test accuracy=0.5549333333333334
-2020-12-15 15:30:16 episode=400, Test accuracy=0.5514888888888888
-2020-12-15 15:30:16 episode=400, Test accuracy=0.5528888888888889
-2020-12-15 15:30:16 episode=400, Test accuracy=0.5535333333333333
-2020-12-15 15:30:16 episode=400, Mean Test accuracy=0.5531644444444443
-
-
 2020-12-16 08:35:13 load proto net success from ../cub/models_mn/fsl_sgd_modify/1_800_64_5_1_500_150.pkl
 2020-12-16 08:36:14 Train 800 Accuracy: 0.7065555555555556
 2020-12-16 08:37:13 Val   800 Accuracy: 0.6307777777777778
