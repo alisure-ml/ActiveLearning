@@ -395,6 +395,14 @@ class Runner(object):
 2020-12-18 04:27:33 Epoch: 2100 Train 0.1786/0.4126 0.0000
 2020-12-18 04:27:33 Epoch: 2100 Val   0.2322/0.5417 0.0000
 2020-12-18 04:27:33 Epoch: 2100 Test  0.2374/0.5367 0.0000
+
+2020-12-18 15:16:24 load ic model success from ../cub/models/ic_res_xx/2_resnet_18_64_512_1_1500_300_200_False_2_ic.pkl
+2020-12-18 15:16:24 Test 0 .......
+2020-12-18 15:16:31 Epoch: 0 Train 0.2698/0.5529 0.0000
+2020-12-18 15:16:31 Epoch: 0 Val   0.3034/0.6268 0.0000
+2020-12-18 15:16:31 Epoch: 0 Test  0.3136/0.6417 0.0000
+
+
 """
 
 
@@ -402,7 +410,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -413,9 +421,8 @@ class Config(object):
     batch_size = 64
 
     ic_out_dim = 512
-    # ic_out_dim = 64
+    # ic_out_dim = 128
     ic_ratio = 1
-    ic_times = 2
 
     resnet, vggnet, net_name = resnet18, None, "resnet_18"
     # resnet, vggnet, net_name = resnet34, None, "resnet_34"
@@ -425,10 +432,16 @@ class Config(object):
     modify_head = False
     # modify_head = True
 
-    learning_rate = 0.01
-    train_epoch = 1500
-    first_epoch, t_epoch = 300, 200
-    adjust_learning_rate = Runner.adjust_learning_rate1
+    learning_rate = 0.1
+    ic_times = 5
+
+    # train_epoch = 1300
+    # first_epoch, t_epoch = 400, 200
+    # adjust_learning_rate = Runner.adjust_learning_rate1
+
+    train_epoch = 800
+    first_epoch, t_epoch = 400, 200
+    adjust_learning_rate = Runner.adjust_learning_rate2
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
         gpu_id, net_name, batch_size, ic_out_dim, ic_ratio, train_epoch, first_epoch, t_epoch, modify_head, ic_times)

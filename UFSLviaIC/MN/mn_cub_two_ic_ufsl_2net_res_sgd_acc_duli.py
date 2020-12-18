@@ -7,7 +7,6 @@ import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
 from PIL import Image
-from PIL import ImageEnhance
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
 from mn_tool_ic_test import ICTestTool
@@ -21,27 +20,9 @@ from mn_tool_net import MatchingNet, Normalize, RunnerTool
 ##############################################################################################################
 
 
-class ImageJitter(object):
-
-    def __init__(self):
-        self.transforms = [(ImageEnhance.Brightness, 0.4),
-                           (ImageEnhance.Contrast, 0.4), (ImageEnhance.Brightness, 0.4)]
-        pass
-
-    def __call__(self, img):
-        out = img
-        rand_tensor = torch.rand(len(self.transforms))
-        for i, (transformer, alpha) in enumerate(self.transforms):
-            r = alpha*(rand_tensor[i]*2.0 -1.0) + 1
-            out = transformer(out).enhance(r).convert('RGB')
-        return out
-
-    pass
-
-
 class CUBDataset(object):
 
-    def __init__(self, data_list, num_way, num_shot):
+    def __init__(self, data_list, num_way, num_shot, image_size=84):
         self.data_list, self.num_way, self.num_shot = data_list, num_way, num_shot
         self.data_id = np.asarray(range(len(self.data_list)))
 
@@ -57,15 +38,14 @@ class CUBDataset(object):
 
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         self.transform_train_ic = transforms.Compose([
-            # transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
-            # transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
-            transforms.RandomResizedCrop(84), ImageJitter(),
+            transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
+            transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform_train_fsl = transforms.Compose([
-            transforms.RandomResizedCrop(84), ImageJitter(),
+            transforms.RandomResizedCrop(image_size), transforms.ColorJitter(0.4, 0.4, 0.4),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.Resize([int(84 * 1.15), int(84 * 1.15)]),
-                                                  transforms.CenterCrop(84), transforms.ToTensor(), normalize])
+        self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.05), int(image_size * 1.05)]),
+                                                  transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
         pass
 
     def __len__(self):
@@ -154,17 +134,25 @@ class CUBDataset(object):
         train_folder = os.path.join(data_root, "train")
 
         count_image, count_class, data_train_list = 0, 0, []
-        for label in os.listdir(train_folder):
+        image_list = os.listdir(train_folder)
+        for label in image_list:
             now_class_path = os.path.join(train_folder, label)
             if os.path.isdir(now_class_path):
-                for name in os.listdir(now_class_path):
-                    data_train_list.append((count_image, count_class, os.path.join(now_class_path, name)))
-                    count_image += 1
+                for time in range(Config.ic_times):
+                    for name in os.listdir(now_class_path):
+                        data_train_list.append((count_class, os.path.join(now_class_path, name)))
+                        pass
                     pass
                 count_class += 1
             pass
 
-        return data_train_list
+        np.random.shuffle(data_train_list)
+        data_train_list_final = []
+        for index, data_train in enumerate(data_train_list):
+            data_train_list_final.append((index, data_train[0], data_train[1]))
+            pass
+
+        return data_train_list_final
 
     pass
 
@@ -472,9 +460,6 @@ class Config(object):
 
     matching_net = MatchingNet(hid_dim=64, z_dim=64)
 
-    # ic
-    ic_out_dim = 512
-    # ic_out_dim = 256
     ic_ratio = 1
     knn = 50
 
@@ -482,8 +467,8 @@ class Config(object):
     loss_fsl_ratio = 1.0
     loss_ic_ratio = 1.0
 
-    train_epoch = 2100
-    first_epoch, t_epoch = 500, 200
+    train_epoch = 1100
+    first_epoch, t_epoch = 300, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
     ###############################################################################################
@@ -492,6 +477,11 @@ class Config(object):
 
     modify_head = False
     # modify_head = True
+
+    ic_times = 5
+
+    # ic_out_dim = 512
+    ic_out_dim = 128
     ###############################################################################################
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
@@ -504,6 +494,7 @@ class Config(object):
             data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/CUB'
     else:
         data_root = "F:\\data\\CUB"
+    data_root = os.path.join(data_root, "CUBSeg")
 
     _root_path = "../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli"
     mn_dir = Tools.new_dir("{}/{}_mn.pkl".format(_root_path, model_name))

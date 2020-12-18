@@ -247,7 +247,7 @@ class Config(object):
     test_episode = 600
 
     train_epoch = 30
-    train_epoch_lr = [15, 20]
+    train_epoch_lr = [1, 4]
     val_freq = 1
 
     model_name = "{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
@@ -282,10 +282,10 @@ class Config(object):
 
 if __name__ == '__main__':
     runner = Runner()
-    # runner.load_model()
+    runner.load_model()
 
-    # runner.matching_net.eval()
-    # runner.test_tool.val(episode=0, is_print=True)
+    runner.matching_net.eval()
+    runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 

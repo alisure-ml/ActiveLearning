@@ -25,10 +25,9 @@ class CUBIC(Dataset):
         self.train_label = [one[1] for one in self.data_list]
 
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        self.transform = transforms.Compose([transforms.Resize([int(image_size * 1.15), int(image_size * 1.15)]),
-                                                  transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
-        self.transform2 = transforms.Compose([transforms.Resize([int(image_size * 1.15), int(image_size * 1.15)]),
-                                              transforms.CenterCrop(image_size), transforms.ToTensor()])
+        self.transform = transforms.Compose([transforms.Resize([image_size, image_size]),
+                                             transforms.ToTensor(), normalize])
+        self.transform2 = transforms.Compose([transforms.Resize([image_size, image_size]), transforms.ToTensor()])
         pass
 
     def __len__(self):
@@ -229,7 +228,6 @@ class Config(object):
     ic_out_dim = 512
 
     ic_dir = "../cub/models/ic_res_xx/2_resnet_18_64_512_1_2100_500_200_False_ic.pkl"
-
     vis_dir = Tools.new_dir("../vis/CUB/ic_res_xx/2_resnet_18_64_512_1_2100_500_200_False_ic")
 
     if "Linux" in platform.platform():
@@ -238,6 +236,10 @@ class Config(object):
             data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/CUB'
     else:
         data_root = "F:\\data\\CUB"
+
+    data_root = os.path.join(data_root, "CUBSeg")
+    vis_dir = Tools.new_dir("../vis/CUBSeg/ic_res_xx/2_resnet_18_64_512_1_2100_500_200_False_ic")
+
     Tools.print(data_root)
     pass
 
