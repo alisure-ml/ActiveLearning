@@ -453,11 +453,33 @@ ResNet12Small(block=BasicBlock, avg_pool=True, drop_rate=0.1), 32, "R12S"
 2020-12-13 23:08:34 Train 700 Accuracy: 0.603
 2020-12-13 23:08:34 Val   700 Accuracy: 0.5086666666666666
 2020-12-13 23:16:11 episode=700, Mean Test accuracy=0.5114533333333333
+
+
+is_png = True, resnet = resnet34, modify_head = True
+ResNet12Small(block=BasicBlock, avg_pool=True, drop_rate=0.1), 32, "R12S"
+2020-12-19 07:25:10 1_R12S_1500_32_5_1_300_200_512_1_1.0_1.0_head_png
+2020-12-19 07:25:10 /mnt/4T/Data/data/miniImagenet/miniImageNet_png
+2020-12-19 07:25:13 load matching net success from ../models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_large/1_R12S_1500_32_5_1_300_200_512_1_1.0_1.0_head_png_mn.pkl
+2020-12-19 07:25:13 load ic model success from ../models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_large/1_R12S_1500_32_5_1_300_200_512_1_1.0_1.0_head_png_ic.pkl
+2020-12-19 07:25:13 Test 1500 .......
+2020-12-19 07:25:53 Epoch: 1500 Train 0.5944/0.8573 0.0000
+2020-12-19 07:25:53 Epoch: 1500 Val   0.6653/0.9453 0.0000
+2020-12-19 07:25:53 Epoch: 1500 Test  0.6435/0.9401 0.0000
+2020-12-19 07:26:21 Train 1500 Accuracy: 0.6686666666666666
+2020-12-19 07:26:49 Val   1500 Accuracy: 0.5307777777777778
+2020-12-19 07:27:17 Test1 1500 Accuracy: 0.5434444444444444
+2020-12-19 07:28:50 Test2 1500 Accuracy: 0.5425333333333333
+2020-12-19 07:36:39 episode=1500, Test accuracy=0.5373777777777778
+2020-12-19 07:36:39 episode=1500, Test accuracy=0.5442444444444445
+2020-12-19 07:36:39 episode=1500, Test accuracy=0.538088888888889
+2020-12-19 07:36:39 episode=1500, Test accuracy=0.5435333333333333
+2020-12-19 07:36:39 episode=1500, Test accuracy=0.5429555555555555
+2020-12-19 07:36:39 episode=1500, Mean Test accuracy=0.5412399999999999
 """
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -482,13 +504,13 @@ class Config(object):
     # first_epoch, t_epoch = 300, 200
     # adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    # train_epoch = 1500
-    # first_epoch, t_epoch = 300, 200
-    # adjust_learning_rate = RunnerTool.adjust_learning_rate1
-
     train_epoch = 1500
-    first_epoch, t_epoch = 500, 200
+    first_epoch, t_epoch = 300, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
+
+    # train_epoch = 1500
+    # first_epoch, t_epoch = 500, 200
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
     ###############################################################################################
     is_png = True
@@ -533,7 +555,7 @@ if __name__ == '__main__':
     # runner.test_tool_ic.val(epoch=0, is_print=True)
     # runner.test_tool_fsl.val(episode=0, is_print=True)
 
-    runner.train()
+    # runner.train()
 
     runner.load_model()
     runner.matching_net.eval()
