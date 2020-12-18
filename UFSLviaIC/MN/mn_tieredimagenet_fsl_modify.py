@@ -235,22 +235,25 @@ class Config(object):
     train_epoch = 180
     learning_rate = 0.001
     num_workers = 16
-    # train_epoch = 300
     train_epoch_lr = [100, 150]
 
     num_way = 5
     num_shot = 1
-    batch_size = 64
-    # batch_size = 32
+    # batch_size = 64
+    batch_size = 32
 
     val_freq = 5
     episode_size = 15
     test_episode = 600
 
+    train_epoch = 30
+    train_epoch_lr = [15, 20]
+    val_freq = 1
+
     model_name = "{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
 
-    matching_net, model_name = MatchingNet(hid_dim=64, z_dim=64), "{}_{}".format(model_name, "conv4")
-    # matching_net, model_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "{}_{}".format(model_name, "res12")
+    # matching_net, model_name = MatchingNet(hid_dim=64, z_dim=64), "{}_{}".format(model_name, "conv4")
+    matching_net, model_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "{}_{}".format(model_name, "res12")
 
     mn_dir = Tools.new_dir("../tiered_imagenet/models_mn/fsl_modify/{}.pkl".format(model_name))
     if "Linux" in platform.platform():
@@ -270,7 +273,10 @@ class Config(object):
 
 
 """
-
+2020-12-18 05:29:09 load proto net success from ../tiered_imagenet/models_mn/fsl_modify/180_64_5_1_conv4.pkl
+2020-12-18 05:29:36 Train 180 Accuracy: 0.6886666666666666
+2020-12-18 05:30:04 Val   180 Accuracy: 0.5344444444444444
+2020-12-18 05:37:20 episode=180, Mean Test accuracy=0.5606311111111111
 """
 
 

@@ -91,6 +91,7 @@ class KNN(object):
     def cal(cls, labels, dist, train_labels, max_c, k, t):
         # ---------------------------------------------------------------------------------- #
         batch_size = labels.size(0)
+        k = k if k < dist.shape[-1] - 1 else dist.shape[-1] - 1
         yd, yi = dist.topk(k + 1, dim=1, largest=True, sorted=True)
         yd, yi = yd[:, 1:], yi[:, 1:]
         retrieval = train_labels[yi]

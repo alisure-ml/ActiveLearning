@@ -7,7 +7,6 @@ import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
 from PIL import Image
-from PIL import ImageEnhance
 import torch.nn.functional as F
 from tool_ic_test import ICTestTool
 from alisuretool.Tools import Tools
@@ -20,24 +19,6 @@ from torchvision.models import resnet18, resnet34, resnet50, vgg16_bn
 ##############################################################################################################
 
 
-class ImageJitter(object):
-
-    def __init__(self):
-        self.transforms = [(ImageEnhance.Brightness, 0.4),
-                           (ImageEnhance.Contrast, 0.4), (ImageEnhance.Brightness, 0.4)]
-        pass
-
-    def __call__(self, img):
-        out = img
-        rand_tensor = torch.rand(len(self.transforms))
-        for i, (transformer, alpha) in enumerate(self.transforms):
-            r = alpha*(rand_tensor[i]*2.0 -1.0) + 1
-            out = transformer(out).enhance(r).convert('RGB')
-        return out
-
-    pass
-
-
 class DatasetIC(Dataset):
 
     def __init__(self, data_list, image_size=84):
@@ -48,10 +29,8 @@ class DatasetIC(Dataset):
         self.transform = transforms.Compose([
             transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
-            # transforms.Resize([int(image_size * 1.15), int(image_size * 1.15)]),
-            # transforms.RandomResizedCrop(image_size, scale=(0.2, 1.)), ImageJitter(),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.15), int(image_size * 1.15)]),
+        self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.05), int(image_size * 1.05)]),
                                                   transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
         pass
 
@@ -410,30 +389,6 @@ class Runner(object):
 
 
 """
-2020-12-16 14:52:59 Train: [2100] 1411/458
-2020-12-16 14:53:16 load ic model success from ../cub/models/ic_res_xx/1_resnet_18_64_512_1_2100_500_200_False_ic.pkl
-2020-12-16 14:53:16 Test 2100 .......
-2020-12-16 14:53:34 Epoch: 2100 Train 0.1698/0.4049 0.0000
-2020-12-16 14:53:34 Epoch: 2100 Val   0.2308/0.5708 0.0000
-2020-12-16 14:53:34 Epoch: 2100 Test  0.2370/0.5584 0.0000
-
-
-2020-12-17 03:32:26 Train: [2100] 698/323
-2020-12-17 03:32:38 load ic model success from ../cub/models/ic_res_xx/2_resnet_18_64_64_1_2100_500_200_False_ic.pkl
-2020-12-17 03:32:38 Test 2100 .......
-2020-12-17 03:32:49 Epoch: 2100 Train 0.1242/0.3395 0.0000
-2020-12-17 03:32:49 Epoch: 2100 Val   0.2010/0.5424 0.0000
-2020-12-17 03:32:49 Epoch: 2100 Test  0.2049/0.5286 0.0000
-
-
-2020-12-17 03:32:09 Train: [2100] 736/313
-2020-12-17 03:32:23 load ic model success from ../cub/models/ic_res_xx/2_resnet_18_64_64_1_2100_500_200_False_ic.pkl
-2020-12-17 03:32:23 Test 2100 .......
-2020-12-17 03:32:37 Epoch: 2100 Train 0.1246/0.3523 0.0000
-2020-12-17 03:32:37 Epoch: 2100 Val   0.2129/0.5590 0.0000
-2020-12-17 03:32:37 Epoch: 2100 Test  0.2167/0.5442 0.0000
-
-
 2020-12-18 04:27:10 Train: [2100] 2924/1535
 2020-12-18 04:27:22 load ic model success from ../cub/models/ic_res_xx/2_resnet_18_64_512_1_2100_500_200_False_ic.pkl
 2020-12-18 04:27:22 Test 2100 .......
@@ -460,7 +415,7 @@ class Config(object):
     ic_out_dim = 512
     # ic_out_dim = 64
     ic_ratio = 1
-    ic_times = 5
+    ic_times = 2
 
     resnet, vggnet, net_name = resnet18, None, "resnet_18"
     # resnet, vggnet, net_name = resnet34, None, "resnet_34"
@@ -471,12 +426,12 @@ class Config(object):
     # modify_head = True
 
     learning_rate = 0.01
-    train_epoch = 2100
-    first_epoch, t_epoch = 500, 200
+    train_epoch = 1500
+    first_epoch, t_epoch = 300, 200
     adjust_learning_rate = Runner.adjust_learning_rate1
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        gpu_id, net_name, batch_size, ic_out_dim, ic_ratio, train_epoch, first_epoch, t_epoch, modify_head)
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
+        gpu_id, net_name, batch_size, ic_out_dim, ic_ratio, train_epoch, first_epoch, t_epoch, modify_head, ic_times)
 
     ic_dir = Tools.new_dir("../cub/models/ic_res_xx/{}_ic.pkl".format(model_name))
     if "Linux" in platform.platform():
