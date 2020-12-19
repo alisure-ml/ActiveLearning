@@ -475,11 +475,30 @@ ResNet12Small(block=BasicBlock, avg_pool=True, drop_rate=0.1), 32, "R12S"
 2020-12-19 07:36:39 episode=1500, Test accuracy=0.5435333333333333
 2020-12-19 07:36:39 episode=1500, Test accuracy=0.5429555555555555
 2020-12-19 07:36:39 episode=1500, Mean Test accuracy=0.5412399999999999
+
+
+跑到1200
+2020-12-19 08:10:31 load matching net success from ../models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_large/2_R12S_1500_32_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl
+2020-12-19 08:10:31 load ic model success from ../models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_large/2_R12S_1500_32_5_1_500_200_512_1_1.0_1.0_head_png_ic.pkl
+2020-12-19 08:10:31 Test 1500 .......
+2020-12-19 08:11:12 Epoch: 1500 Train 0.5699/0.8455 0.0000
+2020-12-19 08:11:12 Epoch: 1500 Val   0.6484/0.9435 0.0000
+2020-12-19 08:11:12 Epoch: 1500 Test  0.6235/0.9373 0.0000
+2020-12-19 08:11:35 Train 1500 Accuracy: 0.6416666666666667
+2020-12-19 08:11:58 Val   1500 Accuracy: 0.5274444444444445
+2020-12-19 08:12:21 Test1 1500 Accuracy: 0.5396666666666667
+2020-12-19 08:13:38 Test2 1500 Accuracy: 0.5386222222222221
+2020-12-19 08:19:58 episode=1500, Test accuracy=0.5391555555555556
+2020-12-19 08:19:58 episode=1500, Test accuracy=0.5410666666666667
+2020-12-19 08:19:58 episode=1500, Test accuracy=0.5316444444444445
+2020-12-19 08:19:58 episode=1500, Test accuracy=0.5410222222222223
+2020-12-19 08:19:58 episode=1500, Test accuracy=0.5349111111111112
+2020-12-19 08:19:58 episode=1500, Mean Test accuracy=0.53756
 """
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -504,13 +523,13 @@ class Config(object):
     # first_epoch, t_epoch = 300, 200
     # adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    train_epoch = 1500
-    first_epoch, t_epoch = 300, 200
-    adjust_learning_rate = RunnerTool.adjust_learning_rate1
-
     # train_epoch = 1500
-    # first_epoch, t_epoch = 500, 200
+    # first_epoch, t_epoch = 300, 200
     # adjust_learning_rate = RunnerTool.adjust_learning_rate1
+
+    train_epoch = 1500
+    first_epoch, t_epoch = 500, 200
+    adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
     ###############################################################################################
     is_png = True
