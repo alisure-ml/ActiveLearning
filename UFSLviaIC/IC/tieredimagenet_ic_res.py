@@ -286,8 +286,10 @@ class Runner(object):
             learning_rate = init_learning_rate
         elif epoch < first_epoch + t_epoch * 1:  # 500-1000
             learning_rate = init_learning_rate / 10
-        else:  # 1000-1500
+        elif epoch < first_epoch + t_epoch * 2:  # 1000-1500
             learning_rate = init_learning_rate / 100
+        else:  # 1500-2000
+            learning_rate = init_learning_rate / 1000
             pass
 
         for param_group in optimizer.param_groups:
@@ -381,7 +383,19 @@ class Runner(object):
 
 
 """
+resnet = "resnet_18", modify_head = False
+2020-12-18 23:41:05 Train: [760] 292761/21807
+2020-12-18 23:41:05 Test 760 .......
+2020-12-18 23:44:55 Epoch: 760 Train 0.1896/0.4227 0.0000
+2020-12-18 23:44:55 Epoch: 760 Val   0.2810/0.5945 0.0000
+2020-12-18 23:44:55 Epoch: 760 Test  0.2335/0.5155 0.0000
 
+resnet = "resnet_34", modify_head = True
+2020-12-18 23:49:52 Train: [280] 322442/22835
+2020-12-18 23:49:52 Test 280 .......
+2020-12-18 23:57:34 Epoch: 280 Train 0.1676/0.3879 0.0000
+2020-12-18 23:57:34 Epoch: 280 Val   0.2601/0.5720 0.0000
+2020-12-18 23:57:34 Epoch: 280 Test  0.2117/0.4819 0.0000
 """
 
 
@@ -389,29 +403,85 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 3
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
     batch_size = 64
     val_freq = 10
-    knn = 100
+    knn = 200
 
-    ic_out_dim = 512
+    ##############################################################################################################
+    ic_out_dim = 2048
     ic_ratio = 1
 
-    # resnet, vggnet, net_name = resnet18, None, "resnet_18"
-    resnet, vggnet, net_name = resnet34, None, "resnet_34"
+    resnet, vggnet, net_name = resnet18, None, "resnet_18"
+    # resnet, vggnet, net_name = resnet34, None, "resnet_34"
     # resnet, vggnet, net_name = resnet50, None, "resnet_50"
     # resnet, vggnet, net_name = None, vgg16_bn, "vgg16_bn"
 
-    # modify_head = False
-    modify_head = True
+    modify_head = False
+    # modify_head = True
 
     learning_rate = 0.01
-    train_epoch = 2100
-    first_epoch, t_epoch = 500, 200
+    train_epoch = 1900
+    first_epoch, t_epoch = 300, 200
     adjust_learning_rate = Runner.adjust_learning_rate1
+    ##############################################################################################################
+
+    ##############################################################################################################
+    ic_out_dim = 2048
+    ic_ratio = 2
+
+    resnet, vggnet, net_name = resnet18, None, "resnet_18"
+    # resnet, vggnet, net_name = resnet34, None, "resnet_34"
+    # resnet, vggnet, net_name = resnet50, None, "resnet_50"
+    # resnet, vggnet, net_name = None, vgg16_bn, "vgg16_bn"
+
+    modify_head = False
+    # modify_head = True
+
+    learning_rate = 0.01
+    train_epoch = 1900
+    first_epoch, t_epoch = 300, 200
+    adjust_learning_rate = Runner.adjust_learning_rate1
+    ##############################################################################################################
+
+    ##############################################################################################################
+    ic_out_dim = 2048
+    ic_ratio = 2
+
+    resnet, vggnet, net_name = resnet18, None, "resnet_18"
+    # resnet, vggnet, net_name = resnet34, None, "resnet_34"
+    # resnet, vggnet, net_name = resnet50, None, "resnet_50"
+    # resnet, vggnet, net_name = None, vgg16_bn, "vgg16_bn"
+
+    modify_head = False
+    # modify_head = True
+
+    learning_rate = 0.1
+    train_epoch = 800
+    first_epoch, t_epoch = 200, 200
+    adjust_learning_rate = Runner.adjust_learning_rate2
+    ##############################################################################################################
+
+    ##############################################################################################################
+    ic_out_dim = 2048
+    ic_ratio = 5
+
+    # resnet, vggnet, net_name = resnet18, None, "resnet_18"
+    # resnet, vggnet, net_name = resnet34, None, "resnet_34"
+    # resnet, vggnet, net_name = resnet50, None, "resnet_50"
+    # resnet, vggnet, net_name = None, vgg16_bn, "vgg16_bn"
+
+    modify_head = False
+    # modify_head = True
+
+    learning_rate = 0.1
+    train_epoch = 800
+    first_epoch, t_epoch = 200, 200
+    adjust_learning_rate = Runner.adjust_learning_rate2
+    ##############################################################################################################
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
         gpu_id, net_name, batch_size, ic_out_dim, ic_ratio, train_epoch, first_epoch, t_epoch, modify_head)

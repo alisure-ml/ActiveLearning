@@ -212,6 +212,7 @@ class Runner(object):
         # model
         self.ic_model = self.to_cuda(ICResNet(Config.ic_out_dim, modify_head=Config.modify_head,
                                               resnet=Config.resnet, vggnet=Config.vggnet))
+        # self.to_cuda(self.ic_model.apply(self._weights_init))
         self.ic_loss = self.to_cuda(nn.CrossEntropyLoss())
 
         self.ic_model_optim = torch.optim.SGD(
@@ -403,6 +404,64 @@ class Runner(object):
 2020-12-18 15:16:31 Epoch: 0 Test  0.3136/0.6417 0.0000
 
 
+learning_rate = 0.1, ic_out_dim = 128
+2020-12-19 06:08:10 load ic model success from ../cub/models/ic_res_xx/3_resnet_18_64_128_1_800_400_200_False_5_ic.pkl
+2020-12-19 06:08:10 Test 800 .......
+2020-12-19 06:08:18 Epoch: 800 Train 0.2306/0.5159 0.0000
+2020-12-19 06:08:18 Epoch: 800 Val   0.2790/0.6075 0.0000
+2020-12-19 06:08:18 Epoch: 800 Test  0.2814/0.6231 0.0000
+
+learning_rate = 0.1, ic_out_dim = 512
+2020-12-19 06:19:11 load ic model success from ../cub/models/ic_res_xx/3_resnet_18_64_512_1_800_400_200_False_5_ic.pkl
+2020-12-19 06:19:11 Test 800 .......
+2020-12-19 06:19:17 Epoch: 800 Train 0.2676/0.5606 0.0000
+2020-12-19 06:19:17 Epoch: 800 Val   0.3088/0.6339 0.0000
+2020-12-19 06:19:17 Epoch: 800 Test  0.3183/0.6387 0.0000
+
+
+learning_rate = 0.01, ic_out_dim = 512 init
+2020-12-19 22:13:55 load ic model success from ../cub/models/ic_res_xx/3_resnet_18_64_512_1_800_400_200_False_5_init_ic.pkl
+2020-12-19 22:13:55 Test 800 .......
+2020-12-19 22:14:00 Epoch: 800 Train 0.2868/0.5713 0.0000
+2020-12-19 22:14:00 Epoch: 800 Val   0.2997/0.6559 0.0000
+2020-12-19 22:14:00 Epoch: 800 Test  0.3329/0.6631 0.0000
+
+learning_rate = 0.01, ic_out_dim = 512
+2020-12-19 22:10:08 load ic model success from ../cub/models/ic_res_xx/2_resnet_18_64_512_1_800_400_200_False_5_ic.pkl
+2020-12-19 22:10:08 Test 800 .......
+2020-12-19 22:10:13 Epoch: 800 Train 0.2946/0.5694 0.0000
+2020-12-19 22:10:13 Epoch: 800 Val   0.3075/0.6519 0.0000
+2020-12-19 22:10:13 Epoch: 800 Test  0.3356/0.6763 0.0000
+
+learning_rate = 0.1, ic_out_dim = 1024
+2020-12-19 22:43:07 load ic model success from ../cub/models/ic_res_xx/0_resnet_18_64_1024_1_800_400_200_False_5_ic.pkl
+2020-12-19 22:43:07 Test 800 .......
+2020-12-19 22:43:12 Epoch: 800 Train 0.2936/0.5777 0.0000
+2020-12-19 22:43:12 Epoch: 800 Val   0.3281/0.6661 0.0000
+2020-12-19 22:43:12 Epoch: 800 Test  0.3478/0.6614 0.0000
+
+learning_rate = 0.01, ic_out_dim = 1024
+2020-12-19 22:42:42 load ic model success from ../cub/models/ic_res_xx/1_resnet_18_64_1024_1_800_400_200_False_5_ic.pkl
+2020-12-19 22:42:42 Test 800 .......
+2020-12-19 22:42:48 Epoch: 800 Train 0.2814/0.5721 0.0000
+2020-12-19 22:42:48 Epoch: 800 Val   0.3302/0.6736 0.0000
+2020-12-19 22:42:48 Epoch: 800 Test  0.3485/0.6715 0.0000
+
+
+learning_rate = 0.01, ic_out_dim = 1024, resnet = "resnet_34"
+2020-12-20 11:20:24 load ic model success from ../cub/models/ic_res_xx/0_resnet_34_64_1024_1_800_400_200_True_5_ic.pkl
+2020-12-20 11:20:24 Test 800 .......
+2020-12-20 11:20:33 Epoch: 800 Train 0.3128/0.6093 0.0000
+2020-12-20 11:20:33 Epoch: 800 Val   0.3414/0.6990 0.0000
+2020-12-20 11:20:33 Epoch: 800 Test  0.3810/0.7064 0.0000
+
+
+learning_rate = 0.1, ic_out_dim = 1024, resnet = "resnet_34"
+2020-12-20 11:57:52 load ic model success from ../cub/models/ic_res_xx/1_resnet_34_64_1024_1_800_400_200_True_5_ic.pkl
+2020-12-20 11:57:52 Test 800 .......
+2020-12-20 11:58:00 Epoch: 800 Train 0.2991/0.5978 0.0000
+2020-12-20 11:58:00 Epoch: 800 Val   0.3451/0.6888 0.0000
+2020-12-20 11:58:00 Epoch: 800 Test  0.3623/0.6837 0.0000
 """
 
 
@@ -410,7 +469,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 3
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -420,19 +479,23 @@ class Config(object):
 
     batch_size = 64
 
-    ic_out_dim = 512
-    # ic_out_dim = 128
+    ic_out_dim = 1024
+    # ic_out_dim = 512
     ic_ratio = 1
 
-    resnet, vggnet, net_name = resnet18, None, "resnet_18"
-    # resnet, vggnet, net_name = resnet34, None, "resnet_34"
+    # resnet, vggnet, net_name = resnet18, None, "resnet_18"
+    resnet, vggnet, net_name = resnet34, None, "resnet_34"
     # resnet, vggnet, net_name = resnet50, None, "resnet_50"
     # resnet, vggnet, net_name = None, vgg16_bn, "vgg16_bn"
 
-    modify_head = False
-    # modify_head = True
+    # modify_head = False
+    modify_head = True
 
-    learning_rate = 0.1
+    ################################################################################
+    # learning_rate = 0.1
+    learning_rate = 0.01
+    ################################################################################
+
     ic_times = 5
 
     # train_epoch = 1300

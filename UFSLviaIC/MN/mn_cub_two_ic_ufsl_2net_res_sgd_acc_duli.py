@@ -14,7 +14,7 @@ from mn_tool_fsl_test import FSLTestTool
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from torchvision.models import resnet18, resnet34
-from mn_tool_net import MatchingNet, Normalize, RunnerTool
+from mn_tool_net import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
 
 ##############################################################################################################
@@ -267,8 +267,9 @@ class Runner(object):
                                                     resnet=Config.resnet, modify_head=Config.modify_head))
         self.norm = Normalize(2)
 
-        RunnerTool.to_cuda(self.matching_net.apply(RunnerTool.weights_init))
-        RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
+        if Config.is_init:
+            RunnerTool.to_cuda(self.matching_net.apply(RunnerTool.weights_init))
+            RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
 
         # optim
         self.matching_net_optim = torch.optim.SGD(
@@ -445,20 +446,18 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
 
     num_way = 5
     num_shot = 1
-    batch_size = 64
+    # batch_size = 64
 
-    val_freq = 50
+    val_freq = 20
     episode_size = 15
     test_episode = 600
-
-    matching_net = MatchingNet(hid_dim=64, z_dim=64)
 
     ic_ratio = 1
     knn = 50
@@ -467,26 +466,38 @@ class Config(object):
     loss_fsl_ratio = 1.0
     loss_ic_ratio = 1.0
 
-    train_epoch = 1100
-    first_epoch, t_epoch = 300, 200
+    ###############################################################################################
+    # resnet = resnet18
+    resnet = resnet34
+
+    # modify_head = False
+    modify_head = True
+
+    ###############################################################################
+    matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+    # matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
+    ###############################################################################
+
+    ic_times = 2
+
+    # is_init = True
+    is_init = False
+
+    ic_out_dim = 512
+    # ic_out_dim = 1024
+
+    train_epoch = 1200
+    first_epoch, t_epoch = 400, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
-    ###############################################################################################
-    resnet = resnet18
-    # resnet = resnet34
-
-    modify_head = False
-    # modify_head = True
-
-    ic_times = 5
-
-    # ic_out_dim = 512
-    ic_out_dim = 128
+    # train_epoch = 800
+    # first_epoch, t_epoch = 400, 200
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
     ###############################################################################################
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
-        gpu_id, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch,
-        ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, "_head" if modify_head else "")
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}{}".format(
+        gpu_id, net_name, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch,
+        ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, ic_times, "_head" if modify_head else "", "_noinit" if not is_init else "")
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/UFSL/CUB'
@@ -541,6 +552,101 @@ class Config(object):
 2020-12-16 12:33:10 Train 2100 Accuracy: 0.3768888888888889
 2020-12-16 12:34:19 Val   2100 Accuracy: 0.39055555555555554
 2020-12-16 13:03:36 episode=2100, Mean Test accuracy=0.3785199999999999
+
+
+
+2020-12-20 15:52:03 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/2_800_64_5_1_400_200_1024_1_1.0_1.0_mn.pkl
+2020-12-20 15:52:03 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/2_800_64_5_1_400_200_1024_1_1.0_1.0_ic.pkl
+2020-12-20 15:52:03 Test 800 .......
+2020-12-20 15:52:08 Epoch: 800 Train 0.2824/0.5703 0.0000
+2020-12-20 15:52:08 Epoch: 800 Val   0.3254/0.6753 0.0000
+2020-12-20 15:52:08 Epoch: 800 Test  0.3518/0.6786 0.0000
+2020-12-20 15:52:42 Train 800 Accuracy: 0.4474444444444445
+2020-12-20 15:53:14 Val   800 Accuracy: 0.44566666666666666
+2020-12-20 15:53:48 Test1 800 Accuracy: 0.4318888888888889
+2020-12-20 15:56:02 Test2 800 Accuracy: 0.4392
+2020-12-20 16:06:47 episode=800, Test accuracy=0.443
+2020-12-20 16:06:47 episode=800, Test accuracy=0.43700000000000006
+2020-12-20 16:06:47 episode=800, Test accuracy=0.4366
+2020-12-20 16:06:47 episode=800, Test accuracy=0.4298888888888889
+2020-12-20 16:06:47 episode=800, Test accuracy=0.4275111111111111
+2020-12-20 16:06:47 episode=800, Mean Test accuracy=0.43479999999999996
+
+
+ic_times = 2, resnet = resnet18, ic_out_dim = 512
+2020-12-21 04:13:54 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/2_1200_64_5_1_400_200_512_1_1.0_1.0_mn.pkl
+2020-12-21 04:13:54 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/2_1200_64_5_1_400_200_512_1_1.0_1.0_ic.pkl
+2020-12-21 04:13:54 Test 1200 .......
+2020-12-21 04:13:58 Epoch: 1200 Train 0.2722/0.5517 0.0000
+2020-12-21 04:13:58 Epoch: 1200 Val   0.2929/0.6302 0.0000
+2020-12-21 04:13:58 Epoch: 1200 Test  0.3217/0.6444 0.0000
+2020-12-21 04:14:24 Train 1200 Accuracy: 0.4574444444444445
+2020-12-21 04:14:50 Val   1200 Accuracy: 0.44133333333333324
+2020-12-21 04:15:16 Test1 1200 Accuracy: 0.4528888888888889
+2020-12-21 04:16:59 Test2 1200 Accuracy: 0.43875555555555557
+2020-12-21 04:25:31 episode=1200, Test accuracy=0.44051111111111113
+2020-12-21 04:25:31 episode=1200, Test accuracy=0.4398888888888889
+2020-12-21 04:25:31 episode=1200, Test accuracy=0.4430444444444444
+2020-12-21 04:25:31 episode=1200, Test accuracy=0.43553333333333333
+2020-12-21 04:25:31 episode=1200, Test accuracy=0.4451111111111111
+2020-12-21 04:25:31 episode=1200, Mean Test accuracy=0.44081777777777775
+
+
+ic_times = 2, modify_head = True, resnet = resnet34, ic_out_dim = 512
+2020-12-21 02:49:10 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_800_64_5_1_400_200_512_1_1.0_1.0_head_mn.pkl
+2020-12-21 02:49:10 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_800_64_5_1_400_200_512_1_1.0_1.0_head_ic.pkl
+2020-12-21 02:49:10 Test 800 .......
+2020-12-21 02:49:19 Epoch: 800 Train 0.2768/0.5908 0.0000
+2020-12-21 02:49:19 Epoch: 800 Val   0.3203/0.6712 0.0000
+2020-12-21 02:49:19 Epoch: 800 Test  0.3508/0.6915 0.0000
+2020-12-21 02:49:48 Train 800 Accuracy: 0.4524444444444445
+2020-12-21 02:50:17 Val   800 Accuracy: 0.4504444444444444
+2020-12-21 02:50:45 Test1 800 Accuracy: 0.44133333333333336
+2020-12-21 02:52:42 Test2 800 Accuracy: 0.44335555555555556
+2020-12-21 03:02:02 episode=800, Test accuracy=0.4424444444444445
+2020-12-21 03:02:02 episode=800, Test accuracy=0.4394888888888889
+2020-12-21 03:02:02 episode=800, Test accuracy=0.43897777777777774
+2020-12-21 03:02:02 episode=800, Test accuracy=0.43375555555555556
+2020-12-21 03:02:02 episode=800, Test accuracy=0.4298222222222222
+2020-12-21 03:02:02 episode=800, Mean Test accuracy=0.4368977777777777
+
+
+ic_times = 5, modify_head = True, resnet = resnet34, ic_out_dim = 1024
+2020-12-21 00:32:00 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_800_64_5_1_400_200_1024_1_1.0_1.0_head_mn.pkl
+2020-12-21 00:32:00 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_800_64_5_1_400_200_1024_1_1.0_1.0_head_ic.pkl
+2020-12-21 00:32:00 Test 800 .......
+2020-12-21 00:32:08 Epoch: 800 Train 0.2805/0.5835 0.0000
+2020-12-21 00:32:08 Epoch: 800 Val   0.3434/0.7041 0.0000
+2020-12-21 00:32:08 Epoch: 800 Test  0.3769/0.7067 0.0000
+2020-12-21 00:32:39 Train 800 Accuracy: 0.4467777777777778
+2020-12-21 00:33:10 Val   800 Accuracy: 0.4391111111111112
+2020-12-21 00:33:40 Test1 800 Accuracy: 0.4251111111111111
+2020-12-21 00:35:42 Test2 800 Accuracy: 0.4365555555555555
+2020-12-21 00:45:36 episode=800, Test accuracy=0.43751111111111113
+2020-12-21 00:45:36 episode=800, Test accuracy=0.4330888888888889
+2020-12-21 00:45:36 episode=800, Test accuracy=0.43288888888888893
+2020-12-21 00:45:36 episode=800, Test accuracy=0.42648888888888886
+2020-12-21 00:45:36 episode=800, Test accuracy=0.4251333333333333
+2020-12-21 00:45:36 episode=800, Mean Test accuracy=0.43102222222222225
+
+
+ic_times = 2, resnet = resnet18, ic_out_dim = 512
+2020-12-20 23:57:02 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/1_800_64_5_1_400_200_512_1_1.0_1.0_mn.pkl
+2020-12-20 23:57:02 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/1_800_64_5_1_400_200_512_1_1.0_1.0_ic.pkl
+2020-12-20 23:57:02 Test 800 .......
+2020-12-20 23:57:07 Epoch: 800 Train 0.2710/0.5494 0.0000
+2020-12-20 23:57:07 Epoch: 800 Val   0.2942/0.6461 0.0000
+2020-12-20 23:57:07 Epoch: 800 Test  0.3163/0.6492 0.0000
+2020-12-20 23:57:40 Train 800 Accuracy: 0.4431111111111111
+2020-12-20 23:58:12 Val   800 Accuracy: 0.4324444444444444
+2020-12-20 23:58:45 Test1 800 Accuracy: 0.42933333333333334
+2020-12-21 00:00:52 Test2 800 Accuracy: 0.4348444444444445
+2020-12-21 00:11:17 episode=800, Test accuracy=0.4331333333333333
+2020-12-21 00:11:17 episode=800, Test accuracy=0.43088888888888893
+2020-12-21 00:11:17 episode=800, Test accuracy=0.4323555555555555
+2020-12-21 00:11:17 episode=800, Test accuracy=0.4244666666666666
+2020-12-21 00:11:17 episode=800, Test accuracy=0.42173333333333335
+2020-12-21 00:11:17 episode=800, Mean Test accuracy=0.4285155555555556
 """
 
 
