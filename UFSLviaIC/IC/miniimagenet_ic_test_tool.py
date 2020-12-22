@@ -194,10 +194,10 @@ class ICTestTool(object):
         acc_1, acc_2, acc_3 = KNN.knn(self.feature_encoder, self.ic_model, self.ic_out_dim, ic_loader, 100)
         return acc_1, acc_2, acc_3
 
-    def val(self, epoch, is_print=True):
+    def val(self, epoch, is_print=True, txt_path=None):
         if is_print:
             Tools.print()
-            Tools.print("Test {} .......".format(epoch))
+            Tools.print("Test {} .......".format(epoch), txt_path=txt_path)
             pass
 
         acc_1_train, acc_2_train, acc_3_train = self.val_ic(ic_loader=self.train_loader)
@@ -205,9 +205,12 @@ class ICTestTool(object):
         acc_1_test, acc_2_test, acc_3_test = self.val_ic(ic_loader=self.test_loader)
 
         if is_print:
-            Tools.print("Epoch: {} Train {:.4f}/{:.4f} {:.4f}".format(epoch, acc_1_train, acc_2_train, acc_3_train))
-            Tools.print("Epoch: {} Val   {:.4f}/{:.4f} {:.4f}".format(epoch, acc_1_val, acc_2_val, acc_3_val))
-            Tools.print("Epoch: {} Test  {:.4f}/{:.4f} {:.4f}".format(epoch, acc_1_test, acc_2_test, acc_3_test))
+            Tools.print("Epoch: {} Train {:.4f}/{:.4f} {:.4f}".format(
+                epoch, acc_1_train, acc_2_train, acc_3_train), txt_path=txt_path)
+            Tools.print("Epoch: {} Val   {:.4f}/{:.4f} {:.4f}".format(
+                epoch, acc_1_val, acc_2_val, acc_3_val), txt_path=txt_path)
+            Tools.print("Epoch: {} Test  {:.4f}/{:.4f} {:.4f}".format(
+                epoch, acc_1_test, acc_2_test, acc_3_test), txt_path=txt_path)
             pass
         return acc_1_val
 
