@@ -147,7 +147,7 @@ class Runner(object):
         Tools.print("Training...")
         best_accuracy = 0.0
 
-        for epoch in range(1 + Config.train_epoch):
+        for epoch in range(1, 1 + Config.train_epoch):
             self.net.train()
 
             Tools.print()
@@ -186,7 +186,7 @@ class Runner(object):
 
                 self.net.eval()
 
-                val_accuracy = self.test_tool.val(episode=epoch, is_print=True)
+                val_accuracy = self.test_tool_fsl.val(episode=epoch, is_print=True)
                 if val_accuracy > best_accuracy:
                     best_accuracy = val_accuracy
                     torch.save(self.net.state_dict(), Config.fe_dir)
@@ -260,6 +260,6 @@ if __name__ == '__main__':
 
     runner.load_model()
     runner.net.eval()
-    runner.test_tool.val(episode=Config.train_epoch, is_print=True)
-    runner.test_tool.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
+    runner.test_tool_fsl.val(episode=Config.train_epoch, is_print=True)
+    runner.test_tool_fsl.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
     pass
