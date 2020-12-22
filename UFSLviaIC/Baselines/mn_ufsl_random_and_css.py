@@ -189,7 +189,7 @@ class Runner(object):
                 val_accuracy = self.test_tool_fsl.val(episode=epoch, is_print=True)
                 if val_accuracy > best_accuracy:
                     best_accuracy = val_accuracy
-                    torch.save(self.net.state_dict(), Config.fe_dir)
+                    torch.save(self.net.state_dict(), Config.net_dir)
                     Tools.print("Save networks for epoch: {}".format(epoch))
                     pass
                 pass
