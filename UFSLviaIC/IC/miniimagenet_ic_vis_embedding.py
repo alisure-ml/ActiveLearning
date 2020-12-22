@@ -95,8 +95,9 @@ class MyTSNE(object):
                      color=color_shape[label[i]][0], fontdict={'size': color_shape[label[i]][1][1]})
             pass
         plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0, wspace=0)
-        plt.xticks([])
-        plt.yticks([])
+        plt.axis('off')
+        # plt.xticks([])
+        # plt.yticks([])
         # plt.title(title)
         return fig
 

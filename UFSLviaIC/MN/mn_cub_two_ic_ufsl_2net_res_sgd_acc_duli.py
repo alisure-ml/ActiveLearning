@@ -480,8 +480,8 @@ class Config(object):
 
     ic_times = 2
 
-    # is_init = True
-    is_init = False
+    is_init = True
+    # is_init = False
 
     ic_out_dim = 512
     # ic_out_dim = 1024
@@ -639,14 +639,43 @@ ic_times = 2, resnet = resnet18, ic_out_dim = 512
 2020-12-20 23:57:07 Epoch: 800 Test  0.3163/0.6492 0.0000
 2020-12-20 23:57:40 Train 800 Accuracy: 0.4431111111111111
 2020-12-20 23:58:12 Val   800 Accuracy: 0.4324444444444444
-2020-12-20 23:58:45 Test1 800 Accuracy: 0.42933333333333334
-2020-12-21 00:00:52 Test2 800 Accuracy: 0.4348444444444445
-2020-12-21 00:11:17 episode=800, Test accuracy=0.4331333333333333
-2020-12-21 00:11:17 episode=800, Test accuracy=0.43088888888888893
-2020-12-21 00:11:17 episode=800, Test accuracy=0.4323555555555555
-2020-12-21 00:11:17 episode=800, Test accuracy=0.4244666666666666
-2020-12-21 00:11:17 episode=800, Test accuracy=0.42173333333333335
 2020-12-21 00:11:17 episode=800, Mean Test accuracy=0.4285155555555556
+
+
+ic_times = 2, resnet = resnet18, ic_out_dim = 512, noinit
+2020-12-21 20:54:31 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/1_conv4_1200_64_5_1_400_200_512_1_1.0_1.0_2_noinit_mn.pkl
+2020-12-21 20:54:31 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/1_conv4_1200_64_5_1_400_200_512_1_1.0_1.0_2_noinit_ic.pkl
+2020-12-21 20:54:35 Epoch: 1200 Train 0.2624/0.5359 0.0000
+2020-12-21 20:54:35 Epoch: 1200 Val   0.2881/0.6475 0.0000
+2020-12-21 20:54:35 Epoch: 1200 Test  0.3251/0.6448 0.0000
+2020-12-21 20:55:03 Train 1200 Accuracy: 0.45811111111111114
+2020-12-21 20:55:33 Val   1200 Accuracy: 0.4527777777777777
+2020-12-21 20:56:02 Test1 1200 Accuracy: 0.4431111111111111
+2020-12-21 20:58:00 Test2 1200 Accuracy: 0.43626666666666664
+2020-12-21 21:07:52 episode=1200, Test accuracy=0.43902222222222215
+2020-12-21 21:07:52 episode=1200, Test accuracy=0.43902222222222226
+2020-12-21 21:07:52 episode=1200, Test accuracy=0.44326666666666664
+2020-12-21 21:07:52 episode=1200, Test accuracy=0.42917777777777777
+2020-12-21 21:07:52 episode=1200, Test accuracy=0.4418222222222223
+2020-12-21 21:07:52 episode=1200, Mean Test accuracy=0.4384622222222222
+
+
+ic_times = 2, modify_head = True, resnet = resnet34, ic_out_dim = 512, noinit
+2020-12-22 01:42:05 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_conv4_1200_64_5_1_400_200_512_1_1.0_1.0_2_head_noinit_mn.pkl
+2020-12-22 01:42:05 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_conv4_1200_64_5_1_400_200_512_1_1.0_1.0_2_head_noinit_ic.pkl
+2020-12-22 01:42:14 Epoch: 1200 Train 0.2625/0.5526 0.0000
+2020-12-22 01:42:14 Epoch: 1200 Val   0.3224/0.6688 0.0000
+2020-12-22 01:42:14 Epoch: 1200 Test  0.3525/0.6973 0.0000
+2020-12-22 01:42:43 Train 1200 Accuracy: 0.4577777777777778
+2020-12-22 01:43:12 Val   1200 Accuracy: 0.4556666666666666
+2020-12-22 01:43:41 Test1 1200 Accuracy: 0.44655555555555554
+2020-12-22 01:45:35 Test2 1200 Accuracy: 0.43895555555555554
+2020-12-22 01:55:01 episode=1200, Test accuracy=0.4392666666666666
+2020-12-22 01:55:01 episode=1200, Test accuracy=0.43797777777777774
+2020-12-22 01:55:01 episode=1200, Test accuracy=0.4444444444444445
+2020-12-22 01:55:01 episode=1200, Test accuracy=0.4342222222222222
+2020-12-22 01:55:01 episode=1200, Test accuracy=0.4455111111111112
+2020-12-22 01:55:01 episode=1200, Mean Test accuracy=0.44028444444444437
 """
 
 
