@@ -24,6 +24,11 @@ class RandomAndCssDataset(object):
     def __init__(self, data_list, num_way, num_shot, transform_train, transform_test):
         self.data_list, self.num_way, self.num_shot = data_list, num_way, num_shot
 
+        if Config.baseline_type == "cluster":
+            cluster_data = Tools.read_from_pkl(Config.cluster_path)
+            self.data_list, self.cluster_list = cluster_data["info"], cluster_data["cluster"]
+            pass
+
         self.transform_train, self.transform_test = transform_train, transform_test
         pass
 
@@ -31,6 +36,15 @@ class RandomAndCssDataset(object):
         return len(self.data_list)
 
     def __getitem__(self, item):
+        if Config.baseline_type == "random" or Config.baseline_type == "css":
+            return self._getitem_random_and_css(item)
+        elif Config.baseline_type == "cluster":
+            return self._getitem_cluster(item)
+        else:
+            raise Exception("..........")
+        pass
+
+    def _getitem_random_and_css(self, item):
         # 当前样本
         now_label_image_tuple = self.data_list[item]
         now_index, _, now_image_filename = now_label_image_tuple
@@ -40,7 +54,7 @@ class RandomAndCssDataset(object):
         index_list.remove(now_index)
         c_way_k_shot_index_list = random.sample(index_list, self.num_shot * self.num_way)
 
-        if not Config.is_random:
+        if Config.baseline_type == "css":
             c_way_k_shot_index_list[0] = now_index
         label_index = c_way_k_shot_index_list[0]
         random.shuffle(c_way_k_shot_index_list)
@@ -61,6 +75,42 @@ class RandomAndCssDataset(object):
         #######################################################################################
 
         task_label = torch.Tensor([int(index == label_index) for index in c_way_k_shot_index_list])
+        task_index = torch.Tensor([one[0] for one in task_list]).long()
+        return task_data, task_label, task_index
+
+    def _getitem_cluster(self, item):
+        # 当前样本
+        now_label_image_tuple = self.data_list[item]
+        now_index, _, now_image_filename = now_label_image_tuple
+
+        now_cluster = self.cluster_list[item]
+        now_label_k_shot_index = random.sample(list(np.squeeze(np.argwhere(self.cluster_list == now_cluster),
+                                                               axis=1)), self.num_shot)
+
+        # 其他样本
+        index_list = list(range(len(self.data_list)))
+        index_list.remove(now_index)
+        other_label_k_shot_index_list = random.sample(index_list, self.num_shot * (self.num_way - 1))
+
+        c_way_k_shot_index_list = now_label_k_shot_index + other_label_k_shot_index_list
+        random.shuffle(c_way_k_shot_index_list)
+
+        if len(c_way_k_shot_index_list) != self.num_shot * self.num_way:
+            return self.__getitem__(random.sample(list(range(0, len(self.data_list))), 1)[0])
+
+        #######################################################################################
+        query_list = [now_label_image_tuple]
+        support_list = [self.data_list[index] for index in c_way_k_shot_index_list]
+        task_list = support_list + query_list
+
+        support_data = [torch.unsqueeze(
+            MyDataset.read_image(one[2], self.transform_train), dim=0) for one in support_list]
+        query_data = [torch.unsqueeze(
+            MyDataset.read_image(one[2], self.transform_train), dim=0) for one in query_list]
+        task_data = torch.cat(support_data + query_data)
+        #######################################################################################
+
+        task_label = torch.Tensor([int(index in now_label_k_shot_index) for index in c_way_k_shot_index_list])
         task_index = torch.Tensor([one[0] for one in task_list]).long()
         return task_data, task_label, task_index
 
@@ -205,7 +255,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -223,27 +273,30 @@ class Config(object):
     first_epoch, t_epoch = 500, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
+    baseline_type_list = ["random", "css", "cluster"]
+
     ###############################################################################################
-    is_random = True
+    baseline_type = "cluster"
 
     dataset_name = "miniimagenet"
 
     is_png = True
-    # is_png = False
 
     net, net_name = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4"
     # net, net_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12"
     ###############################################################################################
 
-    method_name = "random" if is_random else "css"
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
-        gpu_id, method_name, net_name, train_epoch, batch_size,
+        gpu_id, baseline_type, net_name, train_epoch, batch_size,
         num_way, num_shot, first_epoch, t_epoch, "_png" if is_png else "")
-    net_dir = Tools.new_dir("../models_baseline/{}/{}.pkl".format(method_name, model_name))
+    net_dir = Tools.new_dir("../models_baseline/{}/{}.pkl".format(baseline_type, model_name))
 
     data_root = MyDataset.get_data_root(dataset_name=dataset_name, is_png=is_png)
     transform_train, transform_test = MyTransforms.get_transform(dataset_name=dataset_name,
                                                                  has_ic=False, is_fsl_simple=False)
+    if baseline_type == "cluster":
+        cluster_path = os.path.join("{}_feature".format(data_root), "train_cluster.pkl")
+
     Tools.print(model_name)
     Tools.print(net_dir)
     Tools.print(data_root)
