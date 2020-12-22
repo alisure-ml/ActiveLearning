@@ -442,7 +442,7 @@ class Config(object):
     net_name_res34 = "res34"
     net_name_res50 = "res50"
 
-    def __init__(self, gpu_id, ic_out_dim=512, net_name=net_name_conv4):
+    def __init__(self, gpu_id, ic_out_dim=512, modify_head=False, net_name=net_name_conv4):
         self.gpu_id = gpu_id
         os.environ["CUDA_VISIBLE_DEVICES"] = str(self.gpu_id)
 
@@ -454,8 +454,7 @@ class Config(object):
         self.ic_out_dim = ic_out_dim
         self.ic_ratio = 1
 
-        # self.modify_head = False
-        self.modify_head = True
+        self.modify_head = modify_head
 
         self.net_name = net_name
         self.net = self.get_net(self.net_name)
@@ -515,10 +514,11 @@ if __name__ == '__main__':
     net_name_list = [Config.net_name_conv4, Config.net_name_vgg16_bn,
                      Config.net_name_res18, Config.net_name_res34, Config.net_name_res50]
 
-    _gpu_id = 1
-    now_net_name = net_name_list[0]
+    _gpu_id = 0
+    now_net_name = net_name_list[2]
+    modify_head = False
     for _ic_out_dim in ic_out_dim_list:
-        _config = Config(gpu_id=_gpu_id, ic_out_dim=_ic_out_dim, net_name=now_net_name)
+        _config = Config(gpu_id=_gpu_id, ic_out_dim=_ic_out_dim, modify_head=modify_head, net_name=now_net_name)
 
         runner = Runner(config=_config)
         runner.ic_model.eval()
