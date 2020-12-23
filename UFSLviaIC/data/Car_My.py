@@ -7,8 +7,8 @@ import scipy.io as scio
 from alisuretool.Tools import Tools
 
 
-# data_dir = "/mnt/4T/Data/data/UFSL/Cars"
-data_dir = '/media/ubuntu/4T/ALISURE/Data/UFSL/Cars'
+data_dir = "/mnt/4T/Data/data/UFSL/Cars"
+# data_dir = '/media/ubuntu/4T/ALISURE/Data/UFSL/Cars'
 car_anno_path = os.path.join(data_dir, "cars_annos.mat")
 
 
@@ -35,13 +35,13 @@ is_png = True
 # is_png = False
 
 for index, class_id in tqdm(enumerate(list(anno_dict.keys()))):
-    split = 0
-    if index < 100:
+    split = index % 7
+    if split in [0, 1, 2, 3]:
         split = 0
-    elif index < 136:
-        split = 1
-    else:
+    elif split in [4, 5]:
         split = 2
+    else:
+        split = 1
         pass
 
     for anno in anno_dict[class_id]:
@@ -53,9 +53,9 @@ for index, class_id in tqdm(enumerate(list(anno_dict.keys()))):
             dst_filename = Tools.new_dir(os.path.join(data_dir, dataset_list[split], str(class_id), result_filename))
             shutil.copy(src_filename, dst_filename)
         else:
-            dst_filename = Tools.new_dir(os.path.join(data_dir, "{}_png".format(result_size),
+            dst_filename = Tools.new_dir(os.path.join(data_dir, "{}_png_7".format(result_size),
                                                       dataset_list[split], str(class_id), basename))
-            Image.open(src_filename).resize((256, 256)).save(dst_filename)
+            Image.open(src_filename).resize((result_size, result_size)).save(dst_filename)
         pass
     pass
 

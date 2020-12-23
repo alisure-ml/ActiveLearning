@@ -207,7 +207,7 @@ class FSLTestTool(object):
     def val_test2(self):
         return self._val(self.folders_test, sampler_test=True, all_episode=self.test_episode)
 
-    def test(self, test_avg_num, episode=0, is_print=True):
+    def test(self, test_avg_num, episode=0, is_print=True, txt_path=None):
         acc_list = []
         for _ in range(test_avg_num):
             acc = self._val(self.folders_test, sampler_test=True, all_episode=self.test_episode)
@@ -217,29 +217,29 @@ class FSLTestTool(object):
         mean_acc = np.mean(acc_list)
         if is_print:
             for acc in acc_list:
-                Tools.print("episode={}, Test accuracy={}".format(episode, acc))
+                Tools.print("episode={}, Test accuracy={}".format(episode, acc), txt_path=txt_path)
                 pass
-            Tools.print("episode={}, Mean Test accuracy={}".format(episode, mean_acc))
+            Tools.print("episode={}, Mean Test accuracy={}".format(episode, mean_acc), txt_path=txt_path)
             pass
         return mean_acc
 
-    def val(self, episode=0, is_print=True, has_test=True):
+    def val(self, episode=0, is_print=True, has_test=True, txt_path=None):
         acc_train = self.val_train()
         if is_print:
-            Tools.print("Train {} Accuracy: {}".format(episode, acc_train))
+            Tools.print("Train {} Accuracy: {}".format(episode, acc_train), txt_path=txt_path)
 
         acc_val = self.val_val()
         if is_print:
-            Tools.print("Val   {} Accuracy: {}".format(episode, acc_val))
+            Tools.print("Val   {} Accuracy: {}".format(episode, acc_val), txt_path=txt_path)
 
         acc_test1 = self.val_test()
         if is_print:
-            Tools.print("Test1 {} Accuracy: {}".format(episode, acc_test1))
+            Tools.print("Test1 {} Accuracy: {}".format(episode, acc_test1), txt_path=txt_path)
 
         if has_test:
             acc_test2 = self.val_test2()
             if is_print:
-                Tools.print("Test2 {} Accuracy: {}".format(episode, acc_test2))
+                Tools.print("Test2 {} Accuracy: {}".format(episode, acc_test2), txt_path=txt_path)
                 pass
         return acc_val
 

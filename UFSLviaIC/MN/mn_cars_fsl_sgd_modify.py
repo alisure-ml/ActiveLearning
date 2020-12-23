@@ -131,7 +131,7 @@ class Runner(object):
     def load_model(self):
         if os.path.exists(Config.mn_dir):
             self.matching_net.load_state_dict(torch.load(Config.mn_dir))
-            Tools.print("load proto net success from {}".format(Config.mn_dir))
+            Tools.print("load proto net success from {}".format(Config.mn_dir), txt_path=Config.log_file)
         pass
 
     def matching(self, task_data):
@@ -176,15 +176,15 @@ class Runner(object):
 
     def train(self):
         Tools.print()
-        Tools.print("Training...")
+        Tools.print("Training...", txt_path=Config.log_file)
 
         for epoch in range(1, 1 + Config.train_epoch):
             self.matching_net.train()
 
             Tools.print()
-            mn_lr= self.adjust_learning_rate(self.matching_net_optim, epoch,
+            mn_lr= self.adjust_learning_rate(self.matching_net_optim, epoch - 1,
                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
-            Tools.print('Epoch: [{}] mn_lr={}'.format(epoch, mn_lr))
+            Tools.print('Epoch: [{}] mn_lr={}'.format(epoch, mn_lr), txt_path=Config.log_file)
 
             all_loss = 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
@@ -206,21 +206,21 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f}".format(epoch, all_loss / len(self.task_train_loader)))
+            Tools.print("{:6} loss:{:.3f}".format(epoch, all_loss / len(self.task_train_loader)), txt_path=Config.log_file)
             ###########################################################################
 
             ###########################################################################
             # Val
             if epoch % Config.val_freq == 0:
                 Tools.print()
-                Tools.print("Test {} {} .......".format(epoch, Config.model_name))
+                Tools.print("Test {} {} .......".format(epoch, Config.model_name), txt_path=Config.log_file)
                 self.matching_net.eval()
 
                 val_accuracy = self.test_tool.val(episode=epoch, is_print=True, has_test=False)
                 if val_accuracy > self.best_accuracy:
                     self.best_accuracy = val_accuracy
                     torch.save(self.matching_net.state_dict(), Config.mn_dir)
-                    Tools.print("Save networks for epoch: {}".format(epoch))
+                    Tools.print("Save networks for epoch: {}".format(epoch), txt_path=Config.log_file)
                     pass
                 pass
             ###########################################################################
@@ -247,33 +247,38 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    train_epoch = 500
-    first_epoch, t_epoch = 300, 100
+    train_epoch = 600
+    first_epoch, t_epoch = 300, 150
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     ###############################################################################################
     # num_way = 10
     num_way_test = 5
+
+    # class_split = "256_png"
+    class_split = "256_png_7"
     ###############################################################################################
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}".format(
-        gpu_id, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch)
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}".format(
+        gpu_id, class_split, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch)
 
     matching_net, model_name = MatchingNet(hid_dim=64, z_dim=64), "{}_{}".format(model_name, "conv4")
     # matching_net, model_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "{}_{}".format(model_name, "res12")
 
     mn_dir = Tools.new_dir("../cars/models_mn/fsl_sgd_modify/{}.pkl".format(model_name))
+    log_file = mn_dir.replace(".pkl", ".txt")
+
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/UFSL/Cars'
         if not os.path.isdir(data_root):
             data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/Cars'
     else:
         data_root = "F:\\data\\Cars"
-    data_root = os.path.join(data_root, "256_png")
+    data_root = os.path.join(data_root, class_split)
 
-    Tools.print(model_name)
-    Tools.print(data_root)
-    Tools.print(mn_dir)
+    Tools.print(model_name, txt_path=log_file)
+    Tools.print(data_root, txt_path=log_file)
+    Tools.print(mn_dir, txt_path=log_file)
     pass
 
 
@@ -296,6 +301,6 @@ if __name__ == '__main__':
 
     runner.load_model()
     runner.matching_net.eval()
-    runner.test_tool.val(episode=Config.train_epoch, is_print=True)
-    runner.test_tool.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
+    runner.test_tool.val(episode=Config.train_epoch, is_print=True, txt_path=Config.log_file)
+    runner.test_tool.test(test_avg_num=5, episode=Config.train_epoch, is_print=True, txt_path=Config.log_file)
     pass
