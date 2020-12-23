@@ -242,20 +242,24 @@ class Config(object):
 
     num_way = 5
     num_shot = 1
-    batch_size = 64
-    # batch_size = 32
+    # batch_size = 64
 
     val_freq = 10
     episode_size = 15
     test_episode = 600
 
+    ##############################################################################################################
     # class_split = "256_png"
     class_split = "256_png_7"
+
+    batch_size = 64
+    # batch_size = 32
 
     model_name = "{}_{}_{}_{}_{}_{}".format(gpu_id, class_split, train_epoch, batch_size, num_way, num_shot)
 
     matching_net, model_name = MatchingNet(hid_dim=64, z_dim=64), "{}_{}".format(model_name, "conv4")
     # matching_net, model_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "{}_{}".format(model_name, "res12")
+    ##############################################################################################################
 
     mn_dir = Tools.new_dir("../cars/models_mn/fsl_modify/{}.pkl".format(model_name))
     log_file = mn_dir.replace(".pkl", ".txt")
