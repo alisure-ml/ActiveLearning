@@ -266,10 +266,8 @@ class Runner(object):
         self.ic_model = RunnerTool.to_cuda(ICResNet(low_dim=Config.ic_out_dim,
                                                     resnet=Config.resnet, modify_head=Config.modify_head))
         self.norm = Normalize(2)
-
-        if Config.is_init:
-            RunnerTool.to_cuda(self.matching_net.apply(RunnerTool.weights_init))
-            RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
+        RunnerTool.to_cuda(self.matching_net.apply(RunnerTool.weights_init))
+        RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
 
         # optim
         self.matching_net_optim = torch.optim.SGD(
@@ -473,15 +471,10 @@ class Config(object):
     # modify_head = False
     modify_head = True
 
-    ###############################################################################
     matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
     # matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
-    ###############################################################################
 
     ic_times = 2
-
-    is_init = True
-    # is_init = False
 
     ic_out_dim = 512
     # ic_out_dim = 1024
@@ -489,15 +482,11 @@ class Config(object):
     train_epoch = 1200
     first_epoch, t_epoch = 400, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
-
-    # train_epoch = 800
-    # first_epoch, t_epoch = 400, 200
-    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
     ###############################################################################################
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}{}".format(
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
         gpu_id, net_name, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch,
-        ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, ic_times, "_head" if modify_head else "", "_noinit" if not is_init else "")
+        ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, ic_times, "_head" if modify_head else "")
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/UFSL/CUB'
@@ -676,6 +665,22 @@ ic_times = 2, modify_head = True, resnet = resnet34, ic_out_dim = 512, noinit
 2020-12-22 01:55:01 episode=1200, Test accuracy=0.4342222222222222
 2020-12-22 01:55:01 episode=1200, Test accuracy=0.4455111111111112
 2020-12-22 01:55:01 episode=1200, Mean Test accuracy=0.44028444444444437
+
+"""
+
+"""
+resnet12, resnet34, modify_head, ic_times = 2, ic_out_dim = 512
+2020-12-23 09:10:00   1200 loss:0.679 fsl:0.022 ic:0.657 ok:0.226(2656/11770)
+2020-12-23 09:10:00 Train: [1200] 1786/721
+2020-12-23 09:11:58 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/2_resnet12_1200_32_5_1_400_200_512_1_1.0_1.0_mn.pkl
+2020-12-23 09:11:58 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/2_resnet12_1200_32_5_1_400_200_512_1_1.0_1.0_ic.pkl
+2020-12-23 09:11:58 Test 1200 .......
+2020-12-23 09:12:04 Epoch: 1200 Train 0.3065/0.5873 0.0000
+2020-12-23 09:12:04 Epoch: 1200 Val   0.3064/0.6647 0.0000
+2020-12-23 09:12:04 Epoch: 1200 Test  0.3369/0.6610 0.0000
+2020-12-23 09:12:41 Train 1200 Accuracy: 0.5277777777777777
+2020-12-23 09:13:18 Val   1200 Accuracy: 0.4874444444444444
+2020-12-23 09:29:22 episode=1200, Mean Test accuracy=0.48347555555555555
 """
 
 

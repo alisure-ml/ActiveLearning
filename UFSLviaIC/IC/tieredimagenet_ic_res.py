@@ -396,6 +396,38 @@ resnet = "resnet_34", modify_head = True
 2020-12-18 23:57:34 Epoch: 280 Train 0.1676/0.3879 0.0000
 2020-12-18 23:57:34 Epoch: 280 Val   0.2601/0.5720 0.0000
 2020-12-18 23:57:34 Epoch: 280 Test  0.2117/0.4819 0.0000
+
+
+ic_out_dim = 2048
+ic_ratio = 2
+resnet, vggnet, net_name = resnet18, None, "resnet_18"
+modify_head = False
+learning_rate = 0.1
+train_epoch = 800
+first_epoch, t_epoch = 200, 200
+adjust_learning_rate = Runner.adjust_learning_rate2
+2020-12-23 06:31:52 Train: [800] 265843/20209
+2020-12-23 06:38:53 load ic model success from ../tiered_imagenet/models/ic_res_xx/1_resnet_18_64_2048_2_800_200_200_False_ic.pkl
+2020-12-23 06:38:53 Test 800 .......
+2020-12-23 06:45:48 Epoch: 800 Train 0.2216/0.4771 0.0000
+2020-12-23 06:45:48 Epoch: 800 Val   0.3096/0.6367 0.0000
+2020-12-23 06:45:48 Epoch: 800 Test  0.2607/0.5589 0.0000
+
+
+ic_out_dim = 2048
+ic_ratio = 5
+resnet, vggnet, net_name = resnet18, None, "resnet_18"
+modify_head = False
+learning_rate = 0.1
+train_epoch = 800
+first_epoch, t_epoch = 200, 200
+adjust_learning_rate = Runner.adjust_learning_rate2
+2020-12-23 07:08:21 Train: [800] 258360/18586
+2020-12-23 07:14:46 load ic model success from ../tiered_imagenet/models/ic_res_xx/2_resnet_18_64_2048_5_800_200_200_False_ic.pkl
+2020-12-23 07:14:46 Test 800 .......
+2020-12-23 07:21:11 Epoch: 800 Train 0.1795/0.4115 0.0000
+2020-12-23 07:21:11 Epoch: 800 Val   0.2659/0.5850 0.0000
+2020-12-23 07:21:11 Epoch: 800 Test  0.2227/0.5055 0.0000
 """
 
 
@@ -445,42 +477,6 @@ class Config(object):
     train_epoch = 1900
     first_epoch, t_epoch = 300, 200
     adjust_learning_rate = Runner.adjust_learning_rate1
-    ##############################################################################################################
-
-    ##############################################################################################################
-    ic_out_dim = 2048
-    ic_ratio = 2
-
-    resnet, vggnet, net_name = resnet18, None, "resnet_18"
-    # resnet, vggnet, net_name = resnet34, None, "resnet_34"
-    # resnet, vggnet, net_name = resnet50, None, "resnet_50"
-    # resnet, vggnet, net_name = None, vgg16_bn, "vgg16_bn"
-
-    modify_head = False
-    # modify_head = True
-
-    learning_rate = 0.1
-    train_epoch = 800
-    first_epoch, t_epoch = 200, 200
-    adjust_learning_rate = Runner.adjust_learning_rate2
-    ##############################################################################################################
-
-    ##############################################################################################################
-    ic_out_dim = 2048
-    ic_ratio = 5
-
-    # resnet, vggnet, net_name = resnet18, None, "resnet_18"
-    # resnet, vggnet, net_name = resnet34, None, "resnet_34"
-    # resnet, vggnet, net_name = resnet50, None, "resnet_50"
-    # resnet, vggnet, net_name = None, vgg16_bn, "vgg16_bn"
-
-    modify_head = False
-    # modify_head = True
-
-    learning_rate = 0.1
-    train_epoch = 800
-    first_epoch, t_epoch = 200, 200
-    adjust_learning_rate = Runner.adjust_learning_rate2
     ##############################################################################################################
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
