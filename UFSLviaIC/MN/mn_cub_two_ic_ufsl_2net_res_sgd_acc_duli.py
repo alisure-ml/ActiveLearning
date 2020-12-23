@@ -471,13 +471,12 @@ class Config(object):
     # modify_head = False
     modify_head = True
 
-    matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
-    # matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
+    # matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+    matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
 
     ic_times = 2
 
     ic_out_dim = 512
-    # ic_out_dim = 1024
 
     train_epoch = 1200
     first_epoch, t_epoch = 400, 200
@@ -668,6 +667,7 @@ ic_times = 2, modify_head = True, resnet = resnet34, ic_out_dim = 512, noinit
 
 """
 
+
 """
 resnet12, resnet34, modify_head, ic_times = 2, ic_out_dim = 512
 2020-12-23 09:10:00   1200 loss:0.679 fsl:0.022 ic:0.657 ok:0.226(2656/11770)
@@ -681,6 +681,21 @@ resnet12, resnet34, modify_head, ic_times = 2, ic_out_dim = 512
 2020-12-23 09:12:41 Train 1200 Accuracy: 0.5277777777777777
 2020-12-23 09:13:18 Val   1200 Accuracy: 0.4874444444444444
 2020-12-23 09:29:22 episode=1200, Mean Test accuracy=0.48347555555555555
+
+
+resnet12, resnet34, modify_head, ic_times = 2, ic_out_dim = 512
+2020-12-23 14:00:44   1200 loss:0.509 fsl:0.019 ic:0.489 ok:0.237(2785/11770)
+2020-12-23 14:00:44 Train: [1200] 1448/647
+2020-12-23 14:00:44 Test 1200 .......
+2020-12-23 14:02:50 load matching net success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_resnet12_1200_32_5_1_400_200_512_1_1.0_1.0_head_mn.pkl
+2020-12-23 14:02:50 load ic model success from ../cub/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_resnet12_1200_32_5_1_400_200_512_1_1.0_1.0_head_ic.pkl
+2020-12-23 14:02:50 Test 1200 .......
+2020-12-23 14:03:00 Epoch: 1200 Train 0.3116/0.6218 0.0000
+2020-12-23 14:03:00 Epoch: 1200 Val   0.3210/0.6864 0.0000
+2020-12-23 14:03:00 Epoch: 1200 Test  0.3722/0.7054 0.0000
+2020-12-23 14:03:39 Train 1200 Accuracy: 0.548888888888889
+2020-12-23 14:04:17 Val   1200 Accuracy: 0.49411111111111117
+2020-12-23 14:20:57 episode=1200, Mean Test accuracy=0.5002577777777778
 """
 
 

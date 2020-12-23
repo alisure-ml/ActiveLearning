@@ -21,7 +21,7 @@ from torch.utils.data import Dataset, DataLoader
 class MyTransforms(object):
 
     @staticmethod
-    def get_transform_miniimagenet(normalize, has_ic=True, is_fsl_simple=True):
+    def get_transform_miniimagenet(normalize, has_ic=True, is_fsl_simple=True, is_css=False):
         transform_train_ic = transforms.Compose([
             transforms.RandomCrop(84, padding=8),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
@@ -34,7 +34,13 @@ class MyTransforms(object):
             transforms.RandomCrop(84, padding=8),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        transform_train_fsl_css = transforms.Compose([
+            transforms.RandomRotation(20),
+            transforms.RandomResizedCrop(84),
+            transforms.ColorJitter(0.8, 0.8, 0.8, 0.2), transforms.RandomGrayscale(p=0.2),
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         transform_train_fsl = transform_train_fsl_simple if is_fsl_simple else transform_train_fsl_hard
+        transform_train_fsl = transform_train_fsl_css if is_css else transform_train_fsl
 
         transform_test = transforms.Compose([transforms.ToTensor(), normalize])
 
@@ -45,13 +51,14 @@ class MyTransforms(object):
         pass
 
     @classmethod
-    def get_transform(cls, dataset_name="miniimagenet", has_ic=True, is_fsl_simple=True):
+    def get_transform(cls, dataset_name="miniimagenet", has_ic=True, is_fsl_simple=True, is_css=False):
         normalize_1 = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
                                              std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
         normalize_2 = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
                                               np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
         if dataset_name == "miniimagenet":
-            return cls.get_transform_miniimagenet(normalize_1, has_ic=has_ic, is_fsl_simple=is_fsl_simple)
+            return cls.get_transform_miniimagenet(normalize_1, has_ic=has_ic,
+                                                  is_fsl_simple=is_fsl_simple, is_css=is_css)
         else:
             raise Exception("......")
         pass

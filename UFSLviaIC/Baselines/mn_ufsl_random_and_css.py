@@ -255,10 +255,10 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    num_workers = 8
+    num_workers = 16
 
     num_way = 5
     num_shot = 1
@@ -273,17 +273,26 @@ class Config(object):
     first_epoch, t_epoch = 500, 200
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
+    is_png = True
+
     baseline_type_list = ["random", "css", "cluster"]
 
     ###############################################################################################
-    baseline_type = "cluster"
+    # baseline_type = "css"
+    baseline_type = "random"
+    # baseline_type = "cluster"
 
     dataset_name = "miniimagenet"
 
-    is_png = True
+    train_epoch = 300
+    first_epoch, t_epoch = 100, 100
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     net, net_name = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4"
     # net, net_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12"
+
+    transform_train, transform_test = MyTransforms.get_transform(
+        dataset_name=dataset_name, has_ic=False, is_fsl_simple=False, is_css=baseline_type=="css")
     ###############################################################################################
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
@@ -292,8 +301,6 @@ class Config(object):
     net_dir = Tools.new_dir("../models_baseline/{}/{}.pkl".format(baseline_type, model_name))
 
     data_root = MyDataset.get_data_root(dataset_name=dataset_name, is_png=is_png)
-    transform_train, transform_test = MyTransforms.get_transform(dataset_name=dataset_name,
-                                                                 has_ic=False, is_fsl_simple=False)
     if baseline_type == "cluster":
         cluster_path = os.path.join("{}_feature".format(data_root), "train_cluster.pkl")
 
