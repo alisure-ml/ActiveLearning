@@ -281,7 +281,12 @@ class Config(object):
 
 
 """
-
+class_split = "256_png"
+2020-12-23 23:29:54 Test 300 300_64_5_1_conv4 .......
+2020-12-23 23:32:37 load proto net success from ../cars/models_mn/fsl_modify/300_64_5_1_conv4.pkl
+2020-12-23 23:33:31 Train 300 Accuracy: 0.7214444444444444
+2020-12-23 23:34:25 Val   300 Accuracy: 0.5366666666666666
+2020-12-23 23:56:50 episode=300, Mean Test accuracy=0.4736711111111111
 """
 
 
