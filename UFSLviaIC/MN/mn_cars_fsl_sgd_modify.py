@@ -11,7 +11,6 @@ import torch.nn.functional as F
 from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
-from torch.optim.lr_scheduler import StepLR, MultiStepLR
 from mn_tool_fsl_test import FSLTestTool
 from mn_tool_net import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
@@ -104,6 +103,7 @@ class Runner(object):
 
     def __init__(self):
         self.best_accuracy = 0.0
+        self.adjust_learning_rate = Config.adjust_learning_rate
 
         # all data
         self.data_train = CarsDataset.get_data_all(Config.data_root)
@@ -119,11 +119,11 @@ class Runner(object):
         self.loss = RunnerTool.to_cuda(nn.MSELoss())
 
         # optim
-        self.matching_net_optim = torch.optim.Adam(self.matching_net.parameters(), lr=Config.learning_rate)
-        self.matching_net_scheduler = MultiStepLR(self.matching_net_optim, Config.train_epoch_lr, gamma=0.5)
+        self.matching_net_optim = torch.optim.SGD(
+            self.matching_net.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
         self.test_tool = FSLTestTool(self.matching_test, data_root=Config.data_root,
-                                     num_way=Config.num_way, num_shot=Config.num_shot,
+                                     num_way=Config.num_way_test, num_shot=Config.num_shot,
                                      episode_size=Config.episode_size, test_episode=Config.test_episode,
                                      transform=self.task_train.transform_test)
         pass
@@ -159,18 +159,18 @@ class Runner(object):
 
         sample_z = self.matching_net(samples)  # 5x64*5*5
         batch_z = self.matching_net(batches)  # 75x64*5*5
-        z_support = sample_z.view(Config.num_way * Config.num_shot, -1)
+        z_support = sample_z.view(Config.num_way_test * Config.num_shot, -1)
         z_query = batch_z.view(batch_num, -1)
         _, z_dim = z_query.shape
 
-        z_support_expand = z_support.unsqueeze(0).expand(batch_num, Config.num_way * Config.num_shot, z_dim)
-        z_query_expand = z_query.unsqueeze(1).expand(batch_num, Config.num_way * Config.num_shot, z_dim)
+        z_support_expand = z_support.unsqueeze(0).expand(batch_num, Config.num_way_test * Config.num_shot, z_dim)
+        z_query_expand = z_query.unsqueeze(1).expand(batch_num, Config.num_way_test * Config.num_shot, z_dim)
 
         # 相似性
         z_support_expand = self.norm(z_support_expand)
         similarities = torch.sum(z_support_expand * z_query_expand, -1)
         similarities = torch.softmax(similarities, dim=1)
-        similarities = similarities.view(batch_num, Config.num_way, Config.num_shot)
+        similarities = similarities.view(batch_num, Config.num_way_test, Config.num_shot)
         predicts = torch.mean(similarities, dim=-1)
         return predicts
 
@@ -182,6 +182,10 @@ class Runner(object):
             self.matching_net.train()
 
             Tools.print()
+            mn_lr= self.adjust_learning_rate(self.matching_net_optim, epoch,
+                                             Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            Tools.print('Epoch: [{}] mn_lr={}'.format(epoch, mn_lr))
+
             all_loss = 0.0
             for task_data, task_labels, task_index in tqdm(self.task_train_loader):
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
@@ -202,10 +206,7 @@ class Runner(object):
 
             ###########################################################################
             # print
-            Tools.print("{:6} loss:{:.3f} lr:{}".format(
-                epoch, all_loss / len(self.task_train_loader), self.matching_net_scheduler.get_last_lr()))
-
-            self.matching_net_scheduler.step()
+            Tools.print("{:6} loss:{:.3f}".format(epoch, all_loss / len(self.task_train_loader)))
             ###########################################################################
 
             ###########################################################################
@@ -231,14 +232,11 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 3
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    # train_epoch = 180
-    learning_rate = 0.001
+    learning_rate = 0.01
     num_workers = 16
-    train_epoch = 300
-    train_epoch_lr = [200, 250]
 
     num_way = 5
     num_shot = 1
@@ -249,12 +247,22 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    model_name = "{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
+    train_epoch = 500
+    first_epoch, t_epoch = 300, 100
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
+
+    ###############################################################################################
+    # num_way = 10
+    num_way_test = 5
+    ###############################################################################################
+
+    model_name = "{}_{}_{}_{}_{}_{}_{}".format(
+        gpu_id, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch)
 
     matching_net, model_name = MatchingNet(hid_dim=64, z_dim=64), "{}_{}".format(model_name, "conv4")
     # matching_net, model_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "{}_{}".format(model_name, "res12")
 
-    mn_dir = Tools.new_dir("../cars/models_mn/fsl_modify/{}.pkl".format(model_name))
+    mn_dir = Tools.new_dir("../cars/models_mn/fsl_sgd_modify/{}.pkl".format(model_name))
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/UFSL/Cars'
         if not os.path.isdir(data_root):

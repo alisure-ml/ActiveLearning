@@ -7,7 +7,8 @@ import scipy.io as scio
 from alisuretool.Tools import Tools
 
 
-data_dir = "/mnt/4T/Data/data/UFSL/Cars"
+# data_dir = "/mnt/4T/Data/data/UFSL/Cars"
+data_dir = '/media/ubuntu/4T/ALISURE/Data/UFSL/Cars'
 car_anno_path = os.path.join(data_dir, "cars_annos.mat")
 
 
@@ -27,8 +28,7 @@ for anno in annos["annotations"][0][0].base:
     pass
 
 
-# result_size = 256
-result_size = 92
+result_size = 256
 is_png = True
 
 # result_size = None
