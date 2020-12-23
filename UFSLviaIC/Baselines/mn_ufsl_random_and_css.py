@@ -278,8 +278,8 @@ class Config(object):
     baseline_type_list = ["random", "css", "cluster"]
 
     ###############################################################################################
-    # baseline_type = "css"
-    baseline_type = "random"
+    baseline_type = "css"
+    # baseline_type = "random"
     # baseline_type = "cluster"
 
     dataset_name = "miniimagenet"
@@ -288,8 +288,8 @@ class Config(object):
     first_epoch, t_epoch = 100, 100
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
-    net, net_name = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4"
-    # net, net_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12"
+    # net, net_name, batch_size = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4", 64
+    net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 32
 
     transform_train, transform_test = MyTransforms.get_transform(
         dataset_name=dataset_name, has_ic=False, is_fsl_simple=False, is_css=baseline_type=="css")
@@ -308,6 +308,21 @@ class Config(object):
     Tools.print(net_dir)
     Tools.print(data_root)
     pass
+
+
+"""
+2020-12-23 17:09:50 load net success from ../models_baseline/css/2_css_conv4_300_64_5_1_100_100_png.pkl
+2020-12-23 17:10:14 Train 300 Accuracy: 0.4298888888888889
+2020-12-23 17:10:39 Val   300 Accuracy: 0.41122222222222227
+2020-12-23 17:11:02 Test1 300 Accuracy: 0.40611111111111114
+2020-12-23 17:12:16 Test2 300 Accuracy: 0.40897777777777783
+2020-12-23 17:17:51 episode=300, Test accuracy=0.4
+2020-12-23 17:17:51 episode=300, Test accuracy=0.41375555555555554
+2020-12-23 17:17:51 episode=300, Test accuracy=0.40957777777777776
+2020-12-23 17:17:51 episode=300, Test accuracy=0.40577777777777785
+2020-12-23 17:17:51 episode=300, Test accuracy=0.4082222222222222
+2020-12-23 17:17:51 episode=300, Mean Test accuracy=0.40746666666666664
+"""
 
 
 ##############################################################################################################

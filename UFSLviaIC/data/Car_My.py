@@ -1,6 +1,7 @@
 import os
 import sys
 import shutil
+from PIL import Image
 from tqdm import tqdm
 import scipy.io as scio
 from alisuretool.Tools import Tools
@@ -26,6 +27,13 @@ for anno in annos["annotations"][0][0].base:
     pass
 
 
+# result_size = 256
+result_size = 92
+is_png = True
+
+# result_size = None
+# is_png = False
+
 for index, class_id in tqdm(enumerate(list(anno_dict.keys()))):
     split = 0
     if index < 100:
@@ -35,11 +43,19 @@ for index, class_id in tqdm(enumerate(list(anno_dict.keys()))):
     else:
         split = 2
         pass
+
     for anno in anno_dict[class_id]:
         filename = anno[-1]
         src_filename = os.path.join(data_dir, filename)
-        dst_filename = Tools.new_dir(os.path.join(data_dir, dataset_list[split],
-                                                  str(class_id), os.path.basename(filename)))
-        shutil.copy(src_filename, dst_filename)
+        basename = os.path.basename(filename)
+        if result_size is None:
+            result_filename = "{}.png".format(basename[:-4]) if is_png else basename
+            dst_filename = Tools.new_dir(os.path.join(data_dir, dataset_list[split], str(class_id), result_filename))
+            shutil.copy(src_filename, dst_filename)
+        else:
+            dst_filename = Tools.new_dir(os.path.join(data_dir, "{}_png".format(result_size),
+                                                      dataset_list[split], str(class_id), basename))
+            Image.open(src_filename).resize((256, 256)).save(dst_filename)
+        pass
     pass
 

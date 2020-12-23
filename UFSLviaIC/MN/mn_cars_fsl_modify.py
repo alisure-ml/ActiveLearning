@@ -33,9 +33,10 @@ class CarsDataset(object):
 
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406] , std=[0.229, 0.224, 0.225])
         self.transform = transforms.Compose([
-            transforms.RandomResizedCrop(84), transforms.ColorJitter(0.4, 0.4, 0.4),
+            transforms.Resize([int(84 * 1.1), int(84 * 1.1)]), transforms.RandomCrop(84),
+            transforms.ColorJitter(0.4, 0.4, 0.4), transforms.RandomGrayscale(0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.Resize([int(84 * 1.15), int(84 * 1.15)]),
+        self.transform_test = transforms.Compose([transforms.Resize([int(84 * 1.1), int(84 * 1.1)]),
                                                   transforms.CenterCrop(84), transforms.ToTensor(), normalize])
         pass
 
@@ -259,6 +260,7 @@ class Config(object):
             data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/Cars'
     else:
         data_root = "F:\\data\\Cars"
+    data_root = os.path.join(data_root, "92_png")
 
     Tools.print(model_name)
     Tools.print(data_root)
