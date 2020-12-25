@@ -27,12 +27,19 @@ class DatasetIC(Dataset):
 
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406] , std=[0.229, 0.224, 0.225])
 
+        # self.transform = transforms.Compose([
+        #     transforms.Resize([int(image_size * 1.25), int(image_size * 1.25)]),
+        #     transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
+        #     transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(0.2),
+        #     transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        # self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.1), int(image_size * 1.1)]),
+        #                                           transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
         self.transform = transforms.Compose([
-            transforms.Resize([int(image_size * 1.25), int(image_size * 1.25)]),
+            transforms.Resize([int(image_size * 1.5), int(image_size * 1.5)]),
             transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.1), int(image_size * 1.1)]),
+        self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.5), int(image_size * 1.5)]),
                                                   transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
         pass
 
@@ -391,7 +398,12 @@ class Runner(object):
 
 
 """
+2020-12-24 01:09:25 load ic model success from ../cars/models/ic_res_xx/2_resnet_18_64_512_1_1700_300_200_False_ic.pkl
 
+2020-12-24 01:09:25 Test 1700 .......
+2020-12-24 01:09:36 Epoch: 1700 Train 0.1559/0.3656 0.0000
+2020-12-24 01:09:36 Epoch: 1700 Val   0.2543/0.5729 0.0000
+2020-12-24 01:09:36 Epoch: 1700 Test  0.1899/0.4250 0.0000
 """
 
 
@@ -426,6 +438,8 @@ class Config(object):
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
         gpu_id, net_name, batch_size, ic_out_dim, ic_ratio, train_epoch, first_epoch, t_epoch, modify_head)
+
+    model_name = "{}_{}".format(model_name, "transform2")
 
     ic_dir = Tools.new_dir("../cars/models/ic_res_xx/{}_ic.pkl".format(model_name))
     if "Linux" in platform.platform():

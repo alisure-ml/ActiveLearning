@@ -428,6 +428,24 @@ adjust_learning_rate = Runner.adjust_learning_rate2
 2020-12-23 07:21:11 Epoch: 800 Train 0.1795/0.4115 0.0000
 2020-12-23 07:21:11 Epoch: 800 Val   0.2659/0.5850 0.0000
 2020-12-23 07:21:11 Epoch: 800 Test  0.2227/0.5055 0.0000
+
+
+ic_out_dim = 2048
+ic_ratio = 1
+resnet, vggnet, net_name = resnet18, None, "resnet_18"
+modify_head = False
+learning_rate = 0.01
+train_epoch = 1900
+first_epoch, t_epoch = 300, 200
+adjust_learning_rate = Runner.adjust_learning_rate1
+2020-12-19 18:44:09 3_resnet_18_64_2048_1_1900_300_200_False
+2020-12-19 18:44:09 /media/ubuntu/4T/ALISURE/Data/UFSL/tiered-imagenet
+2020-12-19 18:44:09 ../tiered_imagenet/models/ic_res_xx/3_resnet_18_64_2048_1_1900_300_200_False_ic.pkl
+2020-12-24 09:07:27 Test 1280 .......
+2020-12-24 09:13:28 Epoch: 1280 Train 0.2698/0.5441 0.0000
+2020-12-24 09:13:28 Epoch: 1280 Val   0.3487/0.6842 0.0000
+2020-12-24 09:13:28 Epoch: 1280 Test  0.2954/0.6069 0.0000
+2020-12-24 09:13:28 Save networks for epoch: 1280
 """
 
 
