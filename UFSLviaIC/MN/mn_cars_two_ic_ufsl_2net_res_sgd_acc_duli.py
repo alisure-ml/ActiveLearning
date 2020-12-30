@@ -37,17 +37,42 @@ class CarsDataset(object):
             pass
 
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        # self.transform_train_ic = transforms.Compose([
+        #     transforms.Resize([int(image_size * 1.25), int(image_size * 1.25)]),
+        #     transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
+        #     transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(0.2),
+        #     transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        # self.transform_train_fsl = transforms.Compose([
+        #     transforms.Resize([int(image_size * 1.25), int(image_size * 1.25)]),
+        #     transforms.RandomCrop(image_size),
+        #     transforms.ColorJitter(0.4, 0.4, 0.4), transforms.RandomGrayscale(0.2),
+        #     transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        # self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.25), int(image_size * 1.25)]),
+        #                                           transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
+        # self.transform_train_ic = transforms.Compose([
+        #     transforms.Resize([int(image_size * 1.50), int(image_size * 1.50)]),
+        #     transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
+        #     transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(0.2),
+        #     transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        # self.transform_train_fsl = transforms.Compose([
+        #     transforms.Resize([int(image_size * 1.50), int(image_size * 1.50)]),
+        #     transforms.RandomCrop(image_size),
+        #     transforms.ColorJitter(0.4, 0.4, 0.4), transforms.RandomGrayscale(0.2),
+        #     transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        # self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.50), int(image_size * 1.50)]),
+        #                                           transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
         self.transform_train_ic = transforms.Compose([
-            transforms.Resize([int(image_size * 1.25), int(image_size * 1.25)]),
+            transforms.Resize([int(image_size * 1.50), int(image_size * 1.50)]),
             transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform_train_fsl = transforms.Compose([
-            transforms.Resize([int(image_size * 1.25), int(image_size * 1.25)]),
+            transforms.RandomRotation(20),
+            transforms.Resize([int(image_size * 1.50), int(image_size * 1.50)]),
             transforms.RandomCrop(image_size),
-            transforms.ColorJitter(0.4, 0.4, 0.4), transforms.RandomGrayscale(0.2),
+            transforms.ColorJitter(0.8, 0.8, 0.8, 0.2), transforms.RandomGrayscale(0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.1), int(image_size * 1.1)]),
+        self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.50), int(image_size * 1.50)]),
                                                   transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
         pass
 
@@ -447,7 +472,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
@@ -456,7 +481,8 @@ class Config(object):
     num_shot = 1
     # batch_size = 64
 
-    val_freq = 20
+    # val_freq = 20
+    val_freq = 10
     episode_size = 15
     test_episode = 600
 
@@ -468,18 +494,20 @@ class Config(object):
     loss_ic_ratio = 1.0
 
     ###############################################################################################
-    resnet = resnet18
-    # resnet = resnet34
+    # resnet = resnet18
+    resnet = resnet34
 
-    modify_head = False
-    # modify_head = True
+    # modify_head = False
+    modify_head = True
 
-    matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
-    # matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
+    # matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+    matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
 
-    ic_times = 2
+    # ic_times = 2
+    # ic_out_dim = 512
 
-    ic_out_dim = 512
+    ic_out_dim = 2048
+    ic_times = 5
 
     train_epoch = 1200
     first_epoch, t_epoch = 400, 200
@@ -489,7 +517,7 @@ class Config(object):
     class_split = "256_png_7"
     ###############################################################################################
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}{}_rot".format(
         gpu_id, class_split, net_name, train_epoch, batch_size, num_way, num_shot, first_epoch, t_epoch,
         ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio, ic_times, "_head" if modify_head else "")
 
@@ -511,7 +539,95 @@ class Config(object):
 
 
 """
+2020-12-26 08:31:00 load matching net success from ../cars/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/2_256_png_7_conv4_1200_64_5_1_400_200_512_1_1.0_1.0_2_mn.pkl
+2020-12-26 08:31:00 load ic model success from ../cars/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/2_256_png_7_conv4_1200_64_5_1_400_200_512_1_1.0_1.0_2_ic.pkl
+2020-12-26 08:31:00 Test 1200 .......
+2020-12-26 08:31:06 Epoch: 1200 Train 0.1701/0.3742 0.0000
+2020-12-26 08:31:06 Epoch: 1200 Val   0.2972/0.6593 0.0000
+2020-12-26 08:31:06 Epoch: 1200 Test  0.2154/0.5232 0.0000
+2020-12-26 08:31:30 Train 1200 Accuracy: 0.3298888888888889
+2020-12-26 08:31:54 Val   1200 Accuracy: 0.29388888888888887
+2020-12-26 08:32:20 Test1 1200 Accuracy: 0.3442222222222222
+2020-12-26 08:34:05 Test2 1200 Accuracy: 0.3370444444444445
+2020-12-26 08:42:24 episode=1200, Test accuracy=0.33308888888888893
+2020-12-26 08:42:24 episode=1200, Test accuracy=0.3329555555555555
+2020-12-26 08:42:24 episode=1200, Test accuracy=0.3326
+2020-12-26 08:42:24 episode=1200, Test accuracy=0.3360222222222222
+2020-12-26 08:42:24 episode=1200, Test accuracy=0.33686666666666665
+2020-12-26 08:42:24 episode=1200, Mean Test accuracy=0.33430666666666664
 
+
+2020-12-27 13:17:45 load matching net success from ../cars/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/1_256_png_7_conv4_1200_64_5_1_400_200_512_1_1.0_1.0_2_head_mn.pkl
+2020-12-27 13:17:46 load ic model success from ../cars/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/1_256_png_7_conv4_1200_64_5_1_400_200_512_1_1.0_1.0_2_head_ic.pkl
+2020-12-27 13:17:46 Test 1200 .......
+2020-12-27 13:17:58 Epoch: 1200 Train 0.1962/0.4348 0.0000
+2020-12-27 13:17:58 Epoch: 1200 Val   0.3407/0.6923 0.0000
+2020-12-27 13:17:58 Epoch: 1200 Test  0.2469/0.5771 0.0000
+2020-12-27 13:18:31 Train 1200 Accuracy: 0.343
+2020-12-27 13:19:06 Val   1200 Accuracy: 0.31266666666666665
+2020-12-27 13:19:38 Test1 1200 Accuracy: 0.36088888888888887
+2020-12-27 13:22:00 Test2 1200 Accuracy: 0.3556
+2020-12-27 13:33:04 episode=1200, Test accuracy=0.3560888888888889
+2020-12-27 13:33:04 episode=1200, Test accuracy=0.35142222222222225
+2020-12-27 13:33:04 episode=1200, Test accuracy=0.35404444444444444
+2020-12-27 13:33:04 episode=1200, Test accuracy=0.35531111111111113
+2020-12-27 13:33:04 episode=1200, Test accuracy=0.35860000000000003
+2020-12-27 13:33:04 episode=1200, Mean Test accuracy=0.35509333333333337
+
+
+2020-12-28 20:40:42 load matching net success from ../cars/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_256_png_7_resnet12_1200_32_5_1_400_200_512_1_1.0_1.0_2_head_mn.pkl
+2020-12-28 20:40:42 load ic model success from ../cars/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_256_png_7_resnet12_1200_32_5_1_400_200_512_1_1.0_1.0_2_head_ic.pkl
+2020-12-28 20:40:42 Test 1200 .......
+2020-12-28 20:41:01 Epoch: 1200 Train 0.2031/0.4345 0.0000
+2020-12-28 20:41:01 Epoch: 1200 Val   0.3391/0.6877 0.0000
+2020-12-28 20:41:01 Epoch: 1200 Test  0.2445/0.5706 0.0000
+2020-12-28 20:41:51 Train 1200 Accuracy: 0.35533333333333333
+2020-12-28 20:42:44 Val   1200 Accuracy: 0.3177777777777778
+2020-12-28 20:43:28 Test1 1200 Accuracy: 0.36866666666666664
+2020-12-28 20:46:51 Test2 1200 Accuracy: 0.3676666666666667
+2020-12-28 21:01:58 episode=1200, Test accuracy=0.36546666666666666
+2020-12-28 21:01:58 episode=1200, Test accuracy=0.3601111111111111
+2020-12-28 21:01:58 episode=1200, Test accuracy=0.3602444444444445
+2020-12-28 21:01:58 episode=1200, Test accuracy=0.36568888888888895
+2020-12-28 21:01:58 episode=1200, Test accuracy=0.36695555555555553
+2020-12-28 21:01:58 episode=1200, Mean Test accuracy=0.3636933333333333
+
+
+2020-12-29 14:03:04 load matching net success from ../cars/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_256_png_7_resnet12_1200_32_5_1_400_200_512_1_1.0_1.0_2_head_mn.pkl
+2020-12-29 14:03:04 load ic model success from ../cars/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_256_png_7_resnet12_1200_32_5_1_400_200_512_1_1.0_1.0_2_head_ic.pkl
+2020-12-29 14:03:04 Test 1200 .......
+2020-12-29 14:03:22 Epoch: 1200 Train 0.2065/0.4458 0.0000
+2020-12-29 14:03:22 Epoch: 1200 Val   0.3353/0.6978 0.0000
+2020-12-29 14:03:22 Epoch: 1200 Test  0.2584/0.5834 0.0000
+2020-12-29 14:04:11 Train 1200 Accuracy: 0.36844444444444446
+2020-12-29 14:05:09 Val   1200 Accuracy: 0.3268888888888889
+2020-12-29 14:06:08 Test1 1200 Accuracy: 0.37577777777777777
+2020-12-29 14:09:32 Test2 1200 Accuracy: 0.3732666666666667
+2020-12-29 14:27:01 episode=1200, Test accuracy=0.3685555555555555
+2020-12-29 14:27:01 episode=1200, Test accuracy=0.36062222222222223
+2020-12-29 14:27:01 episode=1200, Test accuracy=0.3661111111111111
+2020-12-29 14:27:01 episode=1200, Test accuracy=0.36920000000000003
+2020-12-29 14:27:01 episode=1200, Test accuracy=0.3665777777777778
+2020-12-29 14:27:01 episode=1200, Mean Test accuracy=0.36621333333333334
+
+
+
+2020-12-30 01:40:26 load matching net success from ../cars/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/2_256_png_7_conv4_1200_64_5_1_400_200_2048_1_1.0_1.0_5_head_mn.pkl
+2020-12-30 01:40:26 load ic model success from ../cars/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli/2_256_png_7_conv4_1200_64_5_1_400_200_2048_1_1.0_1.0_5_head_ic.pkl
+2020-12-30 01:40:26 Test 1200 .......
+2020-12-30 01:40:38 Epoch: 1200 Train 0.2602/0.5364 0.0000
+2020-12-30 01:40:38 Epoch: 1200 Val   0.3993/0.7413 0.0000
+2020-12-30 01:40:38 Epoch: 1200 Test  0.3068/0.6428 0.0000
+2020-12-30 01:41:12 Train 1200 Accuracy: 0.35422222222222227
+2020-12-30 01:41:45 Val   1200 Accuracy: 0.3115555555555556
+2020-12-30 01:42:18 Test1 1200 Accuracy: 0.3596666666666667
+2020-12-30 01:44:27 Test2 1200 Accuracy: 0.3572666666666667
+2020-12-30 01:55:43 episode=1200, Test accuracy=0.3600444444444444
+2020-12-30 01:55:43 episode=1200, Test accuracy=0.35531111111111113
+2020-12-30 01:55:43 episode=1200, Test accuracy=0.35928888888888894
+2020-12-30 01:55:43 episode=1200, Test accuracy=0.36004444444444444
+2020-12-30 01:55:43 episode=1200, Test accuracy=0.36062222222222223
+2020-12-30 01:55:43 episode=1200, Mean Test accuracy=0.3590622222222222
 """
 
 

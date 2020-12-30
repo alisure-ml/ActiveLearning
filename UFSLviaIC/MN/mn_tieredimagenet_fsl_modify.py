@@ -7,8 +7,10 @@ import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
 from PIL import Image
+from PIL import ImageEnhance
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
+import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from torch.optim.lr_scheduler import StepLR, MultiStepLR
@@ -17,6 +19,24 @@ from mn_tool_net import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
 
 ##############################################################################################################
+
+
+class ImageJitter(object):
+
+    def __init__(self):
+        self.transforms = [(ImageEnhance.Brightness, 0.4),
+                           (ImageEnhance.Contrast, 0.4), (ImageEnhance.Brightness, 0.4)]
+        pass
+
+    def __call__(self, img):
+        out = img
+        rand_tensor = torch.rand(len(self.transforms))
+        for i, (transformer, alpha) in enumerate(self.transforms):
+            r = alpha*(rand_tensor[i]*2.0 -1.0) + 1
+            out = transformer(out).enhance(r).convert('RGB')
+        return out
+
+    pass
 
 
 class TieredImageNetDataset(object):
@@ -110,6 +130,8 @@ class Runner(object):
 
         # model
         self.matching_net = RunnerTool.to_cuda(Config.matching_net)
+        # self.matching_net = RunnerTool.to_cuda(nn.DataParallel(self.matching_net))
+        # cudnn.benchmark = True
         RunnerTool.to_cuda(self.matching_net.apply(RunnerTool.weights_init))
         self.norm = Normalize(2)
 
@@ -229,31 +251,31 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 3
+    # gpu_id = "2,3"
+    gpu_id = "0"
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    train_epoch = 180
+    train_epoch = 100
+    train_epoch_lr = [50, 80]
     learning_rate = 0.001
     num_workers = 16
-    train_epoch_lr = [100, 150]
+    # train_epoch = 300
+    # train_epoch_lr = [200, 250]
 
     num_way = 5
     num_shot = 1
-    # batch_size = 64
-    batch_size = 32
+    # batch_size = 256
+    batch_size = 64
+    # batch_size = 32
 
-    val_freq = 5
+    val_freq = 10
     episode_size = 15
     test_episode = 600
 
-    train_epoch = 30
-    train_epoch_lr = [1, 4]
-    val_freq = 1
+    model_name = "{}_{}_{}_{}_{}".format(gpu_id.replace(",", ""), train_epoch, batch_size, num_way, num_shot)
 
-    model_name = "{}_{}_{}_{}".format(train_epoch, batch_size, num_way, num_shot)
-
-    # matching_net, model_name = MatchingNet(hid_dim=64, z_dim=64), "{}_{}".format(model_name, "conv4")
-    matching_net, model_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "{}_{}".format(model_name, "res12")
+    matching_net, model_name = MatchingNet(hid_dim=64, z_dim=64), "{}_{}".format(model_name, "conv4")
+    # matching_net, model_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "{}_{}".format(model_name, "res12")
 
     mn_dir = Tools.new_dir("../tiered_imagenet/models_mn/fsl_modify/{}.pkl".format(model_name))
     if "Linux" in platform.platform():
@@ -273,19 +295,26 @@ class Config(object):
 
 
 """
-2020-12-18 05:29:09 load proto net success from ../tiered_imagenet/models_mn/fsl_modify/180_64_5_1_conv4.pkl
-2020-12-18 05:29:36 Train 180 Accuracy: 0.6886666666666666
-2020-12-18 05:30:04 Val   180 Accuracy: 0.5344444444444444
-2020-12-18 05:37:20 episode=180, Mean Test accuracy=0.5606311111111111
+2020-12-20 09:37:27 load proto net success from ../tiered_imagenet/models_mn/fsl_modify/0_100_64_5_1_conv4.pkl
+2020-12-20 09:37:55 Train 100 Accuracy: 0.6654444444444444
+2020-12-20 09:38:22 Val   100 Accuracy: 0.5221111111111111
+2020-12-20 09:38:51 Test1 100 Accuracy: 0.5603333333333333
+2020-12-20 09:39:56 Test2 100 Accuracy: 0.5510444444444444
+2020-12-20 09:45:18 episode=100, Test accuracy=0.5572
+2020-12-20 09:45:18 episode=100, Test accuracy=0.5606444444444444
+2020-12-20 09:45:18 episode=100, Test accuracy=0.5591111111111111
+2020-12-20 09:45:18 episode=100, Test accuracy=0.5607333333333333
+2020-12-20 09:45:18 episode=100, Test accuracy=0.5621111111111112
+2020-12-20 09:45:18 episode=100, Mean Test accuracy=0.55996
 """
 
 
 if __name__ == '__main__':
     runner = Runner()
-    runner.load_model()
+    # runner.load_model()
 
-    runner.matching_net.eval()
-    runner.test_tool.val(episode=0, is_print=True)
+    # runner.matching_net.eval()
+    # runner.test_tool.val(episode=0, is_print=True)
 
     runner.train()
 

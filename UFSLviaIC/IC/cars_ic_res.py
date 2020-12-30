@@ -32,14 +32,14 @@ class DatasetIC(Dataset):
         #     transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
         #     transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(0.2),
         #     transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        # self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.1), int(image_size * 1.1)]),
+        # self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.25), int(image_size * 1.25)]),
         #                                           transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
         self.transform = transforms.Compose([
-            transforms.Resize([int(image_size * 1.5), int(image_size * 1.5)]),
+            transforms.Resize([int(image_size * 1.50), int(image_size * 1.50)]),
             transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.5), int(image_size * 1.5)]),
+        self.transform_test = transforms.Compose([transforms.Resize([int(image_size * 1.50), int(image_size * 1.50)]),
                                                   transforms.CenterCrop(image_size), transforms.ToTensor(), normalize])
         pass
 
@@ -399,11 +399,52 @@ class Runner(object):
 
 """
 2020-12-24 01:09:25 load ic model success from ../cars/models/ic_res_xx/2_resnet_18_64_512_1_1700_300_200_False_ic.pkl
-
 2020-12-24 01:09:25 Test 1700 .......
 2020-12-24 01:09:36 Epoch: 1700 Train 0.1559/0.3656 0.0000
 2020-12-24 01:09:36 Epoch: 1700 Val   0.2543/0.5729 0.0000
 2020-12-24 01:09:36 Epoch: 1700 Test  0.1899/0.4250 0.0000
+
+
+2020-12-25 04:36:54 load ic model success from ../cars/models/ic_res_xx/2_256_png_7_resnet_18_64_512_1_1700_300_200_False_transform2_ic.pkl
+2020-12-25 04:36:54 Test 1700 .......
+2020-12-25 04:37:02 Epoch: 1700 Train 0.1843/0.4068 0.0000
+2020-12-25 04:37:02 Epoch: 1700 Val   0.3357/0.6706 0.0000
+2020-12-25 04:37:02 Epoch: 1700 Test  0.2199/0.5438 0.0000
+
+
+2020-12-25 08:14:47 load ic model success from ../cars/models/ic_res_xx/3_256_png_7_resnet_34_64_512_1_1700_300_200_True_transform2_ic.pkl
+2020-12-25 08:14:47 Test 1700 .......
+2020-12-25 08:14:56 Epoch: 1700 Train 0.1920/0.4251 0.0000
+2020-12-25 08:14:56 Epoch: 1700 Val   0.3445/0.6810 0.0000
+2020-12-25 08:14:56 Epoch: 1700 Test  0.2406/0.5645 0.0000
+
+
+2020-12-25 16:42:52 load ic model success from ../cars/models/ic_res_xx/2_256_png_7_resnet_18_64_512_1_1700_300_200_False_ic.pkl
+2020-12-25 16:42:52 Test 1700 .......
+2020-12-25 16:43:01 Epoch: 1700 Train 0.1638/0.3723 0.0000
+2020-12-25 16:43:01 Epoch: 1700 Val   0.3152/0.6513 0.0000
+2020-12-25 16:43:01 Epoch: 1700 Test  0.2199/0.5072 0.0000
+
+
+2020-12-25 20:37:25 load ic model success from ../cars/models/ic_res_xx/3_256_png_7_resnet_34_64_512_1_1700_300_200_True_ic.pkl
+2020-12-25 20:37:25 Test 1700 .......
+2020-12-25 20:37:34 Epoch: 1700 Train 0.1745/0.3927 0.0000
+2020-12-25 20:37:34 Epoch: 1700 Val   0.3298/0.6823 0.0000
+2020-12-25 20:37:34 Epoch: 1700 Test  0.2368/0.5609 0.0000
+
+
+2020-12-26 22:19:01 load ic model success from ../cars/models/ic_res_xx/2_256_png_7_resnet_34_64_512_1_1700_300_200_True_ic.pkl
+2020-12-26 22:19:01 Test 1700 .......
+2020-12-26 22:19:12 Epoch: 1700 Train 0.2073/0.4512 0.0000
+2020-12-26 22:19:12 Epoch: 1700 Val   0.3579/0.6940 0.0000
+2020-12-26 22:19:12 Epoch: 1700 Test  0.2616/0.5723 0.0000
+
+
+2020-12-27 06:18:22 load ic model success from ../cars/models/ic_res_xx/2_256_png_7_resnet_34_64_512_1_1700_300_200_True_1_ic.pkl
+2020-12-27 06:18:22 Test 1700 .......
+2020-12-27 06:18:34 Epoch: 1700 Train 0.1884/0.4233 0.0000
+2020-12-27 06:18:34 Epoch: 1700 Val   0.3562/0.6982 0.0000
+2020-12-27 06:18:34 Epoch: 1700 Test  0.2398/0.5697 0.0000
 """
 
 
@@ -425,21 +466,22 @@ class Config(object):
     ic_ratio = 1
     ic_times = 1
 
-    resnet, vggnet, net_name = resnet18, None, "resnet_18"
-    # resnet, vggnet, net_name = resnet34, None, "resnet_34"
+    # resnet, vggnet, net_name = resnet18, None, "resnet_18"
+    resnet, vggnet, net_name = resnet34, None, "resnet_34"
 
-    modify_head = False
-    # modify_head = True
+    # modify_head = False
+    modify_head = True
+
+    # class_split = "256_png"
+    class_split = "256_png_7"
 
     learning_rate = 0.01
     train_epoch = 1700
     first_epoch, t_epoch = 300, 200
     adjust_learning_rate = Runner.adjust_learning_rate1
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        gpu_id, net_name, batch_size, ic_out_dim, ic_ratio, train_epoch, first_epoch, t_epoch, modify_head)
-
-    model_name = "{}_{}".format(model_name, "transform2")
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
+        gpu_id, class_split, net_name, batch_size, ic_out_dim, ic_ratio, train_epoch, first_epoch, t_epoch, modify_head, ic_times)
 
     ic_dir = Tools.new_dir("../cars/models/ic_res_xx/{}_ic.pkl".format(model_name))
     if "Linux" in platform.platform():
@@ -448,7 +490,7 @@ class Config(object):
             data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/Cars'
     else:
         data_root = "F:\\data\\Cars"
-    data_root = os.path.join(data_root, "256_png")
+    data_root = os.path.join(data_root, class_split)
 
     Tools.print(model_name)
     Tools.print(data_root)
