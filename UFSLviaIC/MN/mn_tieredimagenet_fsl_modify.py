@@ -7,7 +7,6 @@ import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
 from PIL import Image
-from PIL import ImageEnhance
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
 import torch.backends.cudnn as cudnn
@@ -21,28 +20,17 @@ from mn_tool_net import MatchingNet, Normalize, RunnerTool, ResNet12Small
 ##############################################################################################################
 
 
-class ImageJitter(object):
-
-    def __init__(self):
-        self.transforms = [(ImageEnhance.Brightness, 0.4),
-                           (ImageEnhance.Contrast, 0.4), (ImageEnhance.Brightness, 0.4)]
-        pass
-
-    def __call__(self, img):
-        out = img
-        rand_tensor = torch.rand(len(self.transforms))
-        for i, (transformer, alpha) in enumerate(self.transforms):
-            r = alpha*(rand_tensor[i]*2.0 -1.0) + 1
-            out = transformer(out).enhance(r).convert('RGB')
-        return out
-
-    pass
-
-
 class TieredImageNetDataset(object):
 
-    def __init__(self, data_list, num_way, num_shot):
+    def __init__(self, data_list, num_way, num_shot, load_data=False):
         self.data_list, self.num_way, self.num_shot = data_list, num_way, num_shot
+        self.load_data = load_data
+        if self.load_data:
+            # self.data_image = self.load_image_data()
+            Tools.print("Load image to memory....")
+            self.data_image_path = os.path.join(Config.data_root, "train_images_png.npz")
+            self.data_image = np.load(self.data_image_path)["images"]
+            pass
 
         self.data_dict = {}
         for index, label, image_filename in self.data_list:
@@ -58,6 +46,16 @@ class TieredImageNetDataset(object):
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
         pass
+
+    def load_image_data(self):
+        result = []
+        for image_index, image_tuple in tqdm(enumerate(self.data_list), total=len(self.data_list)):
+            index, class_id, image_path = image_tuple
+            assert image_index == index
+            image_data = np.asarray(Image.open(image_path))
+            result.append(image_data)
+            pass
+        return result
 
     def __len__(self):
         return len(self.data_list)
@@ -100,14 +98,19 @@ class TieredImageNetDataset(object):
         random.shuffle(c_way_k_shot_tuple_list)
 
         task_list = c_way_k_shot_tuple_list + [now_label_image_tuple]
-        task_data = torch.cat([torch.unsqueeze(self.read_image(one[2], self.transform), dim=0) for one in task_list])
+        task_data = torch.cat([torch.unsqueeze(self.read_image(one, self.transform), dim=0) for one in task_list])
         task_label = torch.Tensor([int(one_tuple[1] == now_label) for one_tuple in c_way_k_shot_tuple_list])
         task_index = torch.Tensor([one[0] for one in task_list]).long()
         return task_data, task_label, task_index
 
-    @staticmethod
-    def read_image(image_path, transform=None):
-        image = Image.open(image_path).convert('RGB')
+    def read_image(self, one, transform=None):
+        if self.load_data:
+            image_id = int(os.path.basename(one[-1]).split(".png")[0])
+            now_data = self.data_image[image_id]
+            image = Image.fromarray(now_data)
+        else:
+            image = Image.open(one[2]).convert('RGB')
+
         if transform is not None:
             image = transform(image)
         return image
@@ -125,13 +128,14 @@ class Runner(object):
 
         # all data
         self.data_train = TieredImageNetDataset.get_data_all(Config.data_root)
-        self.task_train = TieredImageNetDataset(self.data_train, Config.num_way, Config.num_shot)
+        self.task_train = TieredImageNetDataset(self.data_train, Config.num_way,
+                                                Config.num_shot, load_data=Config.load_data)
         self.task_train_loader = DataLoader(self.task_train, Config.batch_size, True, num_workers=Config.num_workers)
 
         # model
         self.matching_net = RunnerTool.to_cuda(Config.matching_net)
-        # self.matching_net = RunnerTool.to_cuda(nn.DataParallel(self.matching_net))
-        # cudnn.benchmark = True
+        self.matching_net = RunnerTool.to_cuda(nn.DataParallel(self.matching_net))
+        cudnn.benchmark = True
         RunnerTool.to_cuda(self.matching_net.apply(RunnerTool.weights_init))
         self.norm = Normalize(2)
 
@@ -251,8 +255,8 @@ class Runner(object):
 
 
 class Config(object):
-    # gpu_id = "2,3"
-    gpu_id = "0"
+    gpu_id = "0,1,2,3"
+    # gpu_id = "1"
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     train_epoch = 100
@@ -264,13 +268,16 @@ class Config(object):
 
     num_way = 5
     num_shot = 1
-    # batch_size = 256
-    batch_size = 64
+    batch_size = 256
+    # batch_size = 128
+    # batch_size = 64
     # batch_size = 32
 
-    val_freq = 10
+    val_freq = 5
     episode_size = 15
     test_episode = 600
+
+    load_data = True
 
     model_name = "{}_{}_{}_{}_{}".format(gpu_id.replace(",", ""), train_epoch, batch_size, num_way, num_shot)
 
