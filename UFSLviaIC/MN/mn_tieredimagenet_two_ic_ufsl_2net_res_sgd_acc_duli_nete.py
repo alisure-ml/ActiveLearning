@@ -145,6 +145,7 @@ class TieredImageNetFSLDataset(object):
 
     def __init__(self, data_list, classes, num_way, num_shot, image_size=84):
         self.num_way, self.num_shot = num_way, num_shot
+        self.true_label = [one[1] for one in data_list]
         self.data_list = [(one[0], class_one, one[2]) for one, class_one in zip(data_list, classes)]
 
         self.data_dict = {}
@@ -171,6 +172,7 @@ class TieredImageNetFSLDataset(object):
         now_label_image_tuple = self.data_list[item]
         now_index, now_label, now_image_filename = now_label_image_tuple
         now_label_k_shot_image_tuple = random.sample(self.data_dict[now_label], self.num_shot)
+        is_ok_list = [self.true_label[one[0]] == self.true_label[item] for one in now_label_k_shot_image_tuple]
 
         # 其他样本
         other_label = list(self.data_dict.keys())
@@ -191,7 +193,7 @@ class TieredImageNetFSLDataset(object):
                                                dim=0) for one in task_list])
         task_label = torch.Tensor([int(one_tuple[1] == now_label) for one_tuple in c_way_k_shot_tuple_list])
         task_index = torch.Tensor([one[0] for one in task_list]).long()
-        return task_data, task_label, task_index
+        return task_data, task_label, task_index, is_ok_list
 
     @staticmethod
     def read_image(one, transform=None):
