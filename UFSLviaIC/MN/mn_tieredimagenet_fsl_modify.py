@@ -269,8 +269,8 @@ class Config(object):
     num_way = 5
     num_shot = 1
     # batch_size = 256
-    batch_size = 128
-    # batch_size = 64
+    # batch_size = 128
+    batch_size = 64
     # batch_size = 32
 
     val_freq = 5
@@ -329,6 +329,21 @@ class Config(object):
 2020-12-31 17:14:53 episode=100, Test accuracy=0.5578
 2020-12-31 17:14:53 episode=100, Test accuracy=0.5526888888888889
 2020-12-31 17:14:53 episode=100, Mean Test accuracy=0.5558444444444445
+
+
+2021-01-01 23:00:23 ../tiered_imagenet/models_mn/fsl_modify/0123_100_64_5_1_res12.pkl
+2021-01-01 23:00:28 load proto net success from ../tiered_imagenet/models_mn/fsl_modify/0123_100_64_5_1_res12.pkl
+2021-01-01 23:01:37 Train 100 Accuracy: 0.95
+2021-01-01 23:02:37 Val   100 Accuracy: 0.6306666666666666
+2021-01-01 23:03:36 Test1 100 Accuracy: 0.6471111111111111
+2021-01-01 23:07:14 Test2 100 Accuracy: 0.6316666666666667
+2021-01-01 23:25:08 episode=100, Test accuracy=0.6417555555555555
+2021-01-01 23:25:08 episode=100, Test accuracy=0.6391555555555556
+2021-01-01 23:25:08 episode=100, Test accuracy=0.6492666666666667
+2021-01-01 23:25:08 episode=100, Test accuracy=0.6506666666666666
+2021-01-01 23:25:08 episode=100, Test accuracy=0.6409555555555556
+2021-01-01 23:25:08 episode=100, Mean Test accuracy=0.64436
+
 """
 
 
@@ -339,7 +354,7 @@ if __name__ == '__main__':
     # runner.matching_net.eval()
     # runner.test_tool.val(episode=0, is_print=True)
 
-    runner.train()
+    # runner.train()
 
     runner.load_model()
     runner.matching_net.eval()

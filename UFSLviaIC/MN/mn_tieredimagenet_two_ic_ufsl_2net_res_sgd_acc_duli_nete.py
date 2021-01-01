@@ -11,11 +11,12 @@ from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
 import torch.backends.cudnn as cudnn
+from mn_tool_ic_test import ICTestTool
 from mn_tool_fsl_test import FSLTestTool
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from torchvision.models import resnet18, resnet34
-from mn_tool_ic_test_tieredimagenet import ICTestTool
+from torch.optim.lr_scheduler import StepLR, MultiStepLR
 from mn_tool_net import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
 
@@ -43,7 +44,7 @@ class TieredImageNetICDataset(object):
     def __getitem__(self, idx):
         idx, label, image_filename = self.data_list[idx]
         image = Image.open(image_filename).convert('RGB')
-        image = self.transform(image)
+        image = self.transform_train_ic(image)
         return image, label, idx
 
     @staticmethod
@@ -66,13 +67,12 @@ class TieredImageNetICDataset(object):
     pass
 
 
-class TieredImageNetFSLDataset(object):
+class TieredImageNetFSLDatasetOld(object):
 
-    def __init__(self, data_list, num_way, num_shot, image_size=84):
+    def __init__(self, data_list, classes, num_way, num_shot, image_size=84):
         self.data_list, self.num_way, self.num_shot = data_list, num_way, num_shot
         self.data_id = np.asarray(range(len(self.data_list)))
-
-        self.classes = None
+        self.classes = classes
 
         self.data_dict = {}
         for index, label, image_filename in self.data_list:
@@ -91,10 +91,6 @@ class TieredImageNetFSLDataset(object):
 
     def __len__(self):
         return len(self.data_list)
-
-    def set_samples_class(self, classes):
-        self.classes = classes
-        pass
 
     def __getitem__(self, item):
         # 当前样本
@@ -120,8 +116,7 @@ class TieredImageNetFSLDataset(object):
 
         task_data = []
         for one in task_list:
-            transform = self.transform_train_ic if one[2] == now_image_filename else self.transform_train_fsl
-            task_data.append(torch.unsqueeze(self.read_image(one, transform), dim=0))
+            task_data.append(torch.unsqueeze(self.read_image(one, self.transform_train_fsl), dim=0))
             pass
         task_data = torch.cat(task_data)
 
@@ -135,6 +130,68 @@ class TieredImageNetFSLDataset(object):
         else:
             return random.sample(list(np.squeeze(np.argwhere(self.classes != label))), num)
         pass
+
+    @staticmethod
+    def read_image(one, transform=None):
+        image = Image.open(one[2]).convert('RGB')
+        if transform is not None:
+            image = transform(image)
+        return image
+
+    pass
+
+
+class TieredImageNetFSLDataset(object):
+
+    def __init__(self, data_list, classes, num_way, num_shot, image_size=84):
+        self.num_way, self.num_shot = num_way, num_shot
+        self.data_list = [(one[0], class_one, one[2]) for one, class_one in zip(data_list, classes)]
+
+        self.data_dict = {}
+        for index, label, image_filename in self.data_list:
+            if label not in self.data_dict:
+                self.data_dict[label] = []
+            self.data_dict[label].append((index, label, image_filename))
+            pass
+        Tools.print("class number = {}".format(len(self.data_dict.keys())))
+
+        normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
+                                         std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
+        self.transform_train_fsl = transforms.Compose([
+            transforms.RandomCrop(image_size, padding=8),
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
+        pass
+
+    def __len__(self):
+        return len(self.data_list)
+
+    def __getitem__(self, item):
+        # 当前样本
+        now_label_image_tuple = self.data_list[item]
+        now_index, now_label, now_image_filename = now_label_image_tuple
+        now_label_k_shot_image_tuple = random.sample(self.data_dict[now_label], self.num_shot)
+
+        # 其他样本
+        other_label = list(self.data_dict.keys())
+        other_label.remove(now_label)
+        other_label = random.sample(other_label, self.num_way - 1)
+        other_label_k_shot_image_tuple_list = []
+        for _label in other_label:
+            other_label_k_shot_image_tuple = random.sample(self.data_dict[_label], self.num_shot)
+            other_label_k_shot_image_tuple_list.extend(other_label_k_shot_image_tuple)
+            pass
+
+        # c_way_k_shot
+        c_way_k_shot_tuple_list = now_label_k_shot_image_tuple + other_label_k_shot_image_tuple_list
+        random.shuffle(c_way_k_shot_tuple_list)
+
+        task_list = c_way_k_shot_tuple_list + [now_label_image_tuple]
+        task_data = torch.cat([torch.unsqueeze(self.read_image(one, self.transform_train_fsl),
+                                               dim=0) for one in task_list])
+        task_label = torch.Tensor([int(one_tuple[1] == now_label) for one_tuple in c_way_k_shot_tuple_list])
+        task_index = torch.Tensor([one[0] for one in task_list]).long()
+        return task_data, task_label, task_index
 
     @staticmethod
     def read_image(one, transform=None):
@@ -182,7 +239,6 @@ class ProduceClass(object):
         self.count_2 = 0
         self.class_num = np.zeros(shape=(self.out_dim,), dtype=np.int)
         self.classes = np.zeros(shape=(self.n_sample,), dtype=np.int)
-        self.features = np.random.random(size=(self.n_sample, self.out_dim))
         pass
 
     def init(self):
@@ -204,8 +260,6 @@ class ProduceClass(object):
         out_data = out.data.cpu()
         top_k = out_data.topk(self.out_dim, dim=1)[1].cpu()
         indexes_cpu = indexes.cpu()
-
-        self.features[indexes_cpu] = out_data
 
         batch_size = top_k.size(0)
         class_labels = np.zeros(shape=(batch_size,), dtype=np.int)
@@ -236,7 +290,7 @@ class ProduceClass(object):
 class RunnerIC(object):
 
     def __init__(self):
-        self.adjust_learning_rate = Config.adjust_learning_rate
+        self.adjust_learning_rate = Config.ic_adjust_learning_rate
 
         # data
         self.data_train = TieredImageNetICDataset.get_data_all(Config.data_root)
@@ -268,10 +322,14 @@ class RunnerIC(object):
                                        transform=self.ic_train_loader.dataset.transform_test, k=Config.ic_knn)
         pass
 
-    def load_model(self):
-        if os.path.exists(Config.ic_dir):
-            self.ic_model.load_state_dict(torch.load(Config.ic_dir))
-            Tools.print("load ic model success from {}".format(Config.ic_dir))
+    def load_model(self, ic_dir_checkpoint=None):
+        ic_dir = ic_dir_checkpoint if ic_dir_checkpoint else Config.ic_dir
+        if os.path.exists(ic_dir):
+            checkpoint = torch.load(ic_dir)
+            if ic_dir_checkpoint:
+                checkpoint = {"module.{}".format(key): checkpoint[key] for key in checkpoint}
+            self.ic_model.load_state_dict(checkpoint)
+            Tools.print("load ic model success from {}".format(ic_dir))
         pass
 
     def train(self):
@@ -356,7 +414,7 @@ class RunnerIC(object):
             ic_classes = np.zeros(shape=(len(self.tiered_imagenet_dataset),), dtype=np.int)
             for image, label, idx in tqdm(self.ic_train_loader_eval):
                 ic_out_logits, ic_out_l2norm = self.ic_model(RunnerTool.to_cuda(image))
-                ic_classes[idx] = np.argmax(ic_out_l2norm.cpu().numpy(), -1)
+                ic_classes[idx] = np.argmax(ic_out_l2norm.cpu().numpy(), axis=-1)
                 pass
         return self.data_train, ic_classes
 
@@ -368,9 +426,8 @@ class RunnerFSL(object):
     def __init__(self, data_train, classes):
         # all data
         self.data_train = data_train
-        self.task_train = TieredImageNetFSLDataset(self.data_train, Config.fsl_num_way, Config.fsl_num_shot)
+        self.task_train = TieredImageNetFSLDataset(self.data_train, classes, Config.fsl_num_way, Config.fsl_num_shot)
         self.task_train_loader = DataLoader(self.task_train, Config.fsl_batch_size, True, num_workers=Config.num_workers)
-        self.task_train.set_samples_class(classes)
 
         # model
         self.matching_net = RunnerTool.to_cuda(Config.fsl_matching_net)
@@ -381,7 +438,7 @@ class RunnerFSL(object):
 
         # optim
         self.matching_net_optim = torch.optim.Adam(self.matching_net.parameters(), lr=Config.fsl_learning_rate)
-        self.matching_net_scheduler = MultiStepLR(self.matching_net_optim, Config.fsl_lr_schedule, gamma=0.5)
+        self.matching_net_scheduler = MultiStepLR(self.matching_net_optim, Config.fsl_lr_schedule, gamma=1/3)
 
         # loss
         self.fsl_loss = RunnerTool.to_cuda(nn.MSELoss())
@@ -481,7 +538,7 @@ class RunnerFSL(object):
 
             ###########################################################################
             # Val
-            if epoch % Config.val_freq == 0:
+            if epoch % Config.fsl_val_freq == 0:
                 self.matching_net.eval()
 
                 val_accuracy = self.test_tool_fsl.val(episode=epoch, is_print=True, has_test=False)
@@ -505,12 +562,12 @@ class RunnerFSL(object):
 
 class Config(object):
     gpu_id = "0,1,2,3"
+    gpu_num = len(gpu_id.split(","))
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    num_workers = 16
+    num_workers = 32
 
     #######################################################################################
-    ic_batch_size = 64
     ic_ratio = 1
     ic_knn = 100
     ic_out_dim = 2048
@@ -522,6 +579,8 @@ class Config(object):
     ic_learning_rate = 0.01
     ic_train_epoch = 1200
     ic_first_epoch, ic_t_epoch = 400, 200
+    ic_batch_size = 64 * 4 * gpu_num
+
     ic_adjust_learning_rate = RunnerTool.adjust_learning_rate1
     #######################################################################################
 
@@ -533,12 +592,13 @@ class Config(object):
     fsl_episode_size = 15
     fsl_test_episode = 600
 
-    fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+    fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 96
     # fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
 
     fsl_learning_rate = 0.01
     fsl_train_epoch = 200
     fsl_lr_schedule = [100, 150]
+    fsl_batch_size = fsl_batch_size * gpu_num
     ###############################################################################################
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
@@ -552,9 +612,23 @@ class Config(object):
     else:
         data_root = "F:\\data\\tiered-imagenet"
 
+    ###############################################################################################
+    # ic_batch_size = 16
+    # fsl_batch_size = 16
+    # ic_train_epoch = 2
+    # ic_first_epoch, ic_t_epoch = 1, 1
+    # ic_val_freq = 1
+    # fsl_train_epoch = 8
+    # fsl_lr_schedule = [4, 6]
+    # fsl_test_episode = 20
+    # fsl_val_freq = 2
+    # data_root = os.path.join(data_root, "small")
+    ###############################################################################################
+
     _root_path = "../tiered_imagenet/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete"
     mn_dir = Tools.new_dir("{}/{}_mn.pkl".format(_root_path, model_name))
     ic_dir = Tools.new_dir("{}/{}_ic.pkl".format(_root_path, model_name))
+    ic_dir_checkpoint = "../tiered_imagenet/models/ic_res_xx/3_resnet_18_64_2048_1_1900_300_200_False_ic.pkl"
 
     Tools.print(model_name)
     Tools.print(data_root)
@@ -568,12 +642,11 @@ class Config(object):
 
 if __name__ == '__main__':
     runner_ic = RunnerIC()
-    runner_ic.load_model()
-    runner_ic.train()
+    # runner_ic.train()
+    runner_ic.load_model(ic_dir_checkpoint=Config.ic_dir_checkpoint)
     data_train, classes = runner_ic.eval()
 
     runner_fsl = RunnerFSL(data_train=data_train, classes=classes)
-    runner_fsl.load_model()
     runner_fsl.train()
 
     runner_ic.load_model()
