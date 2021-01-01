@@ -268,8 +268,8 @@ class Config(object):
 
     num_way = 5
     num_shot = 1
-    batch_size = 256
-    # batch_size = 128
+    # batch_size = 256
+    batch_size = 128
     # batch_size = 64
     # batch_size = 32
 
@@ -277,12 +277,12 @@ class Config(object):
     episode_size = 15
     test_episode = 600
 
-    load_data = True
+    load_data = False
 
     model_name = "{}_{}_{}_{}_{}".format(gpu_id.replace(",", ""), train_epoch, batch_size, num_way, num_shot)
 
-    matching_net, model_name = MatchingNet(hid_dim=64, z_dim=64), "{}_{}".format(model_name, "conv4")
-    # matching_net, model_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "{}_{}".format(model_name, "res12")
+    # matching_net, model_name = MatchingNet(hid_dim=64, z_dim=64), "{}_{}".format(model_name, "conv4")
+    matching_net, model_name = ResNet12Small(avg_pool=True, drop_rate=0.1), "{}_{}".format(model_name, "res12")
 
     mn_dir = Tools.new_dir("../tiered_imagenet/models_mn/fsl_modify/{}.pkl".format(model_name))
     if "Linux" in platform.platform():
@@ -313,6 +313,22 @@ class Config(object):
 2020-12-20 09:45:18 episode=100, Test accuracy=0.5607333333333333
 2020-12-20 09:45:18 episode=100, Test accuracy=0.5621111111111112
 2020-12-20 09:45:18 episode=100, Mean Test accuracy=0.55996
+
+2020-12-31 16:59:14 Test 100 0123_100_256_5_1_conv4 .......
+2020-12-31 16:59:47 Train 100 Accuracy: 0.6671111111111111
+2020-12-31 17:00:21 Val   100 Accuracy: 0.525
+2020-12-31 17:00:55 Test1 100 Accuracy: 0.5589999999999999
+2020-12-31 17:00:55 load proto net success from ../tiered_imagenet/models_mn/fsl_modify/0123_100_256_5_1_conv4.pkl
+2020-12-31 17:01:27 Train 100 Accuracy: 0.6713333333333332
+2020-12-31 17:02:00 Val   100 Accuracy: 0.5263333333333333
+2020-12-31 17:02:34 Test1 100 Accuracy: 0.5511111111111111
+2020-12-31 17:04:37 Test2 100 Accuracy: 0.5597333333333334
+2020-12-31 17:14:53 episode=100, Test accuracy=0.5559111111111111
+2020-12-31 17:14:53 episode=100, Test accuracy=0.5517555555555556
+2020-12-31 17:14:53 episode=100, Test accuracy=0.5610666666666666
+2020-12-31 17:14:53 episode=100, Test accuracy=0.5578
+2020-12-31 17:14:53 episode=100, Test accuracy=0.5526888888888889
+2020-12-31 17:14:53 episode=100, Mean Test accuracy=0.5558444444444445
 """
 
 

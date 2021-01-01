@@ -514,8 +514,8 @@ if __name__ == '__main__':
     net_name_list = [Config.net_name_conv4, Config.net_name_vgg16_bn,
                      Config.net_name_res18, Config.net_name_res34, Config.net_name_res50]
 
-    _gpu_id = 3
-    now_net_name = net_name_list[3]
+    _gpu_id = 0
+    now_net_name = net_name_list[4]
     modify_head = True
     for _ic_out_dim in ic_out_dim_list:
         _config = Config(gpu_id=_gpu_id, ic_out_dim=_ic_out_dim, modify_head=modify_head, net_name=now_net_name)

@@ -122,7 +122,9 @@ class ProduceClass(object):
 class RunnerTool(object):
 
     @staticmethod
-    def to_cuda(x):
+    def to_cuda(x, device=None):
+        if device:
+            return x.to(device) if torch.cuda.is_available() else x
         return x.cuda() if torch.cuda.is_available() else x
 
     @staticmethod
