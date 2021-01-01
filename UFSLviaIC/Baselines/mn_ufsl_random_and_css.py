@@ -278,9 +278,9 @@ class Config(object):
     baseline_type_list = ["random", "css", "cluster"]
 
     ###############################################################################################
-    baseline_type = "css"
+    # baseline_type = "css"
     # baseline_type = "random"
-    # baseline_type = "cluster"
+    baseline_type = "cluster"
 
     dataset_name = "miniimagenet"
 
