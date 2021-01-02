@@ -1,0 +1,10 @@
+*.pyc
+*.npy
+*.tar
+run.sh
+bashrc
+miniimagenet
+logs
+data
+pretrain_model
+pretrain_model_1
