@@ -255,45 +255,65 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
 
     num_way = 5
     num_shot = 1
-    batch_size = 64
+    learning_rate = 0.01
 
     val_freq = 10
     episode_size = 15
     test_episode = 600
 
-    learning_rate = 0.01
-    train_epoch = 1700
-    first_epoch, t_epoch = 500, 200
-    adjust_learning_rate = RunnerTool.adjust_learning_rate1
+    # batch_size = 64
+    # train_epoch = 1700
+    # first_epoch, t_epoch = 500, 200
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
     is_png = True
 
+    ###############################################################################################
     baseline_type_list = ["random", "css", "cluster"]
+    baseline_type = "css"
+    # baseline_type = "random"
+    # baseline_type = "cluster"
+    ###############################################################################################
 
     ###############################################################################################
-    # baseline_type = "css"
-    # baseline_type = "random"
-    baseline_type = "cluster"
-
-    dataset_name = "miniimagenet"
-
-    train_epoch = 300
-    first_epoch, t_epoch = 100, 100
-    adjust_learning_rate = RunnerTool.adjust_learning_rate2
-
+    # dataset_name = "miniimagenet"
+    # train_epoch = 300
+    # first_epoch, t_epoch = 100, 100
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
     # net, net_name, batch_size = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4", 64
-    net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 32
+
+    # dataset_name = "miniimagenet"
+    # train_epoch = 150
+    # first_epoch, t_epoch = 80, 120
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
+    # net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 32
+    ###############################################################################################
+
+    ###############################################################################################
+    dataset_name = "tieredimagenet"
+    train_epoch = 150
+    first_epoch, t_epoch = 80, 120
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
+    net, net_name, batch_size = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4", 64
+    ###############################################################################################
+
+    ###############################################################################################
+    # dataset_name = "tieredimagenet"
+    # train_epoch = 150
+    # first_epoch, t_epoch = 80, 120
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
+    # net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 32
+    ###############################################################################################
 
     transform_train, transform_test = MyTransforms.get_transform(
         dataset_name=dataset_name, has_ic=False, is_fsl_simple=False, is_css=baseline_type=="css")
-    ###############################################################################################
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
         gpu_id, baseline_type, net_name, train_epoch, batch_size,
@@ -310,6 +330,7 @@ class Config(object):
     pass
 
 
+# miniimagenet
 """
 random
 2020-12-23 19:47:58 load net success from ../models_baseline/random/2_random_conv4_300_64_5_1_100_100_png.pkl
@@ -372,8 +393,32 @@ css
 2020-12-25 00:27:26 episode=300, Test accuracy=0.4468222222222223
 2020-12-25 00:27:26 episode=300, Test accuracy=0.4527777777777777
 2020-12-25 00:27:26 episode=300, Mean Test accuracy=0.4481333333333334
+
+
+res12
+random
+2021-01-02 17:00:53 ../models_baseline/random/1_random_res12_300_32_5_1_100_100_png.pkl
+2021-01-02 17:00:53 /mnt/4T/Data/data/miniImagenet/miniImageNet_png
+2021-01-02 17:00:56 load net success from ../models_baseline/random/1_random_res12_300_32_5_1_100_100_png.pkl
+2021-01-02 17:01:23 Train 300 Accuracy: 0.30333333333333334
+2021-01-02 17:01:50 Val   300 Accuracy: 0.28477777777777774
+2021-01-02 17:02:17 Test1 300 Accuracy: 0.303
+2021-01-02 17:03:49 Test2 300 Accuracy: 0.3009555555555556
+2021-01-02 17:11:28 episode=300, Test accuracy=0.29944444444444446
+2021-01-02 17:11:28 episode=300, Test accuracy=0.29713333333333336
+2021-01-02 17:11:28 episode=300, Test accuracy=0.29606666666666664
+2021-01-02 17:11:28 episode=300, Test accuracy=0.3001111111111111
+2021-01-02 17:11:28 episode=300, Test accuracy=0.2969555555555556
+2021-01-02 17:11:28 episode=300, Mean Test accuracy=0.2979422222222223
+
+
 """
 
+
+# tieredimagenet
+"""
+
+"""
 
 ##############################################################################################################
 

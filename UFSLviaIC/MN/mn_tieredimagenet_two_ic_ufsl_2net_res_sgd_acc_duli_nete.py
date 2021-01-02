@@ -590,17 +590,22 @@ class Config(object):
     fsl_num_way = 5
     fsl_num_shot = 1
 
-    fsl_val_freq = 5
     fsl_episode_size = 15
     fsl_test_episode = 600
 
-    fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 96
-    # fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
+    # fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 96
+    fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
 
     fsl_learning_rate = 0.01
-    fsl_train_epoch = 200
-    fsl_lr_schedule = [100, 150]
+
+    # fsl_val_freq = 5
+    # fsl_train_epoch = 200
+    # fsl_lr_schedule = [100, 150]
     fsl_batch_size = fsl_batch_size * gpu_num
+
+    fsl_val_freq = 2
+    fsl_train_epoch = 100
+    fsl_lr_schedule = [50, 80]
     ###############################################################################################
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
@@ -638,7 +643,19 @@ class Config(object):
 
 
 """
-
+2021-01-02 16:22:56 load ic model success from ../tiered_imagenet/models/ic_res_xx/3_resnet_18_64_2048_1_1900_300_200_False_ic.pkl
+2021-01-02 16:24:21 class number = 2039
+2021-01-02 16:24:21 load matching net success from ../tiered_imagenet/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/0123_res18_1200_1024_2048_conv4_200_5_1_384_mn.pkl
+2021-01-02 16:24:56 Train 200 Accuracy: 0.48877777777777776
+2021-01-02 16:25:31 Val   200 Accuracy: 0.47944444444444445
+2021-01-02 16:26:06 Test1 200 Accuracy: 0.4798888888888888
+2021-01-02 16:28:05 Test2 200 Accuracy: 0.46691111111111117
+2021-01-02 16:38:08 episode=200, Test accuracy=0.4728444444444445
+2021-01-02 16:38:08 episode=200, Test accuracy=0.4697111111111112
+2021-01-02 16:38:08 episode=200, Test accuracy=0.47111111111111115
+2021-01-02 16:38:08 episode=200, Test accuracy=0.477
+2021-01-02 16:38:08 episode=200, Test accuracy=0.4700666666666668
+2021-01-02 16:38:08 episode=200, Mean Test accuracy=0.4721466666666667
 """
 
 
@@ -655,7 +672,7 @@ if __name__ == '__main__':
     runner_fsl.load_model()
     runner_ic.ic_model.eval()
     runner_fsl.matching_net.eval()
-    runner_ic.test_tool_ic.val(epoch=Config.ic_train_epoch, is_print=True)
+    # runner_ic.test_tool_ic.val(epoch=Config.ic_train_epoch, is_print=True)
     runner_fsl.test_tool_fsl.val(episode=Config.fsl_train_epoch, is_print=True)
     runner_fsl.test_tool_fsl.test(test_avg_num=5, episode=Config.fsl_train_epoch, is_print=True)
     pass

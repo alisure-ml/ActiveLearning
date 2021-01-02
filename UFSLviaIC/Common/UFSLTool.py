@@ -51,6 +51,10 @@ class MyTransforms(object):
         pass
 
     @classmethod
+    def get_transform_tieredimagenet(cls, normalize, has_ic=True, is_fsl_simple=True, is_css=False):
+        return cls.get_transform_miniimagenet(normalize, has_ic, is_fsl_simple, is_css)
+
+    @classmethod
     def get_transform(cls, dataset_name="miniimagenet", has_ic=True, is_fsl_simple=True, is_css=False):
         normalize_1 = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
                                              std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
@@ -59,6 +63,9 @@ class MyTransforms(object):
         if dataset_name == "miniimagenet":
             return cls.get_transform_miniimagenet(normalize_1, has_ic=has_ic,
                                                   is_fsl_simple=is_fsl_simple, is_css=is_css)
+        elif dataset_name == "tieredimagenet":
+            return cls.get_transform_tieredimagenet(normalize_1, has_ic=has_ic,
+                                                    is_fsl_simple=is_fsl_simple, is_css=is_css)
         else:
             raise Exception("......")
         pass
@@ -102,6 +109,13 @@ class MyDataset(object):
             else:
                 data_root = "F:\\data\\miniImagenet"
             data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
+        elif dataset_name == "tieredimagenet":
+            if "Linux" in platform.platform():
+                data_root = '/mnt/4T/Data/data/UFSL/tiered-imagenet'
+                if not os.path.isdir(data_root):
+                    data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/tiered-imagenet'
+            else:
+                data_root = "F:\\data\\UFSL\\tiered-imagenet"
         else:
             raise Exception("..........................")
         return data_root
