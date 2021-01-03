@@ -255,7 +255,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
@@ -277,8 +277,8 @@ class Config(object):
 
     ###############################################################################################
     baseline_type_list = ["random", "css", "cluster"]
-    baseline_type = "css"
-    # baseline_type = "random"
+    # baseline_type = "css"
+    baseline_type = "random"
     # baseline_type = "cluster"
     ###############################################################################################
 
@@ -318,7 +318,7 @@ class Config(object):
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
         gpu_id, baseline_type, net_name, train_epoch, batch_size,
         num_way, num_shot, first_epoch, t_epoch, "_png" if is_png else "")
-    net_dir = Tools.new_dir("../models_baseline/{}/{}.pkl".format(baseline_type, model_name))
+    net_dir = Tools.new_dir("../models_baseline/{}/{}/{}.pkl".format(baseline_type, dataset_name, model_name))
 
     data_root = MyDataset.get_data_root(dataset_name=dataset_name, is_png=is_png)
     if baseline_type == "cluster":
@@ -395,8 +395,7 @@ css
 2020-12-25 00:27:26 episode=300, Mean Test accuracy=0.4481333333333334
 
 
-res12
-random
+res12 random
 2021-01-02 17:00:53 ../models_baseline/random/1_random_res12_300_32_5_1_100_100_png.pkl
 2021-01-02 17:00:53 /mnt/4T/Data/data/miniImagenet/miniImageNet_png
 2021-01-02 17:00:56 load net success from ../models_baseline/random/1_random_res12_300_32_5_1_100_100_png.pkl
@@ -411,7 +410,18 @@ random
 2021-01-02 17:11:28 episode=300, Test accuracy=0.2969555555555556
 2021-01-02 17:11:28 episode=300, Mean Test accuracy=0.2979422222222223
 
-
+res12 cluster
+2021-01-03 13:43:05 load net success from ../models_baseline/cluster/2_cluster_res12_300_32_5_1_100_100_png.pkl
+2021-01-03 13:43:33 Train 300 Accuracy: 0.5569999999999999
+2021-01-03 13:44:01 Val   300 Accuracy: 0.46144444444444443
+2021-01-03 13:44:29 Test1 300 Accuracy: 0.4706666666666666
+2021-01-03 13:46:04 Test2 300 Accuracy: 0.47948888888888885
+2021-01-03 13:54:02 episode=300, Test accuracy=0.4766444444444445
+2021-01-03 13:54:02 episode=300, Test accuracy=0.4850444444444445
+2021-01-03 13:54:02 episode=300, Test accuracy=0.48766666666666664
+2021-01-03 13:54:02 episode=300, Test accuracy=0.48335555555555554
+2021-01-03 13:54:02 episode=300, Test accuracy=0.4793777777777778
+2021-01-03 13:54:02 episode=300, Mean Test accuracy=0.4824177777777778
 """
 
 
