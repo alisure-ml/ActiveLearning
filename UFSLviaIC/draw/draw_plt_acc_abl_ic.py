@@ -1,4 +1,5 @@
 import os
+import time
 from glob import glob
 import matplotlib.pyplot as plt  # matplotlib.colors.BASE_COLORS
 from alisuretool.Tools import Tools
@@ -28,6 +29,10 @@ for index, txt_content in enumerate(all_txt_content):
         acc_dict[split] = [top_1, top_5]
         pass
 
+    time_list = [time.strptime(txt.split(" E")[0], "%Y-%m-%d %H:%M:%S")
+                 for txt in txt_content if "Epoch" in txt and "ic_lr" in txt][100: 110]
+    now_time = (time.mktime(time_list[-1]) - time.mktime(time_list[0])) // (len(time_list) - 1)
+
     txt_name = all_txt_name[index]
 
     head = "*" if txt_name[-3] == "head" else ""
@@ -40,11 +45,11 @@ for index, txt_content in enumerate(all_txt_content):
     else:
         d = int(txt_name[2])
         if txt_name[0] == "res50":
-            name = "Resnet-50"
+            name = "ResNet-50"
         elif txt_name[0] == "res34":
-            name = "Resnet-34"
+            name = "ResNet-34"
         elif txt_name[0] == "res18":
-            name = "Resnet-18"
+            name = "ResNet-18"
         else:
             raise Exception("")
         name = name + head
@@ -52,7 +57,7 @@ for index, txt_content in enumerate(all_txt_content):
 
     if name not in acc_result_dict:
         acc_result_dict[name] = {}
-    acc_result_dict[name][d] = acc_dict
+    acc_result_dict[name][d] = {"acc": acc_dict, "time": now_time}
     pass
 
 
@@ -63,23 +68,24 @@ for split in ["Train", "Val", "Test"]:
     plt.figure(figsize=(8, 6))
 
     handles1, handles2, labels1, labels2 = [], [], [], []
-    for acc_index, acc_key in enumerate(acc_result_dict):
+    acc_result_key = sorted(list(acc_result_dict.keys()))
+    for acc_index, acc_key in enumerate(acc_result_key):
         now_acc = acc_result_dict[acc_key]
         if len(now_acc.keys()) < len(x_data) or "*" in acc_key:
             continue
-        top_1 = [now_acc[int(x)][split][0] for x in x_data]
-        top_5 = [now_acc[int(x)][split][1] for x in x_data]
+        top_1 = [now_acc[int(x)]["acc"][split][0] for x in x_data]
+        top_5 = [now_acc[int(x)]["acc"][split][1] for x in x_data]
         ln1, = plt.plot(x_data, top_1, color=color[acc_index], linewidth=2.0, linestyle='-')
         plt.scatter(x_data, top_1, s=20, color=color[acc_index])
         ln2, = plt.plot(x_data, top_5, color=color[acc_index], linewidth=2.0, linestyle=':')
         plt.scatter(x_data, top_5, s=20, color=color[acc_index])
         handles1.append(ln1)
         handles2.append(ln2)
-        labels1.append("{} {} Top 1".format(acc_key, split))
-        labels2.append("{} {} Top 5".format(acc_key, split))
+        labels1.append("{} Top-1".format(acc_key))
+        labels2.append("{} Top-5".format(acc_key))
         pass
 
-    plt.legend(handles=handles1 + handles2, labels=labels1 + labels2, loc='lower center', ncol=2, fontsize=12)
+    plt.legend(handles=handles1 + handles2, labels=labels1 + labels2, loc='lower center', ncol=2, fontsize=14)
     plt.grid(linestyle='--')
     plt.ylim(0.0, 1.0)
     plt.locator_params("y", nbins=10)
@@ -91,3 +97,35 @@ for split in ["Train", "Val", "Test"]:
     plt.savefig(Tools.new_dir(os.path.join("plot", "ic", "abl_acc_ic_{}.pdf".format(split))))
     plt.show()
     pass
+
+
+x_data = ["64", "128", '256', '512', '1024', '2048']
+color = ["r", "g", "b", "k", "y", "c", "g", "m"]
+plt.figure(figsize=(8, 6))
+
+handles1, labels1 = [], []
+acc_result_key = sorted(list(acc_result_dict.keys()))
+for acc_index, acc_key in enumerate(acc_result_key):
+    if "*" in acc_key:
+        continue
+    now_acc = acc_result_dict[acc_key]
+
+    time = [now_acc[int(x)]["time"] for x in x_data]
+    ln1, = plt.plot(x_data, time, color=color[acc_index], linewidth=2.0, linestyle='-')
+    plt.scatter(x_data, time, s=20, color=color[acc_index])
+    handles1.append(ln1)
+    labels1.append("{}".format(acc_key))
+    pass
+
+plt.legend(handles=handles1, labels=labels1, loc='lower center', ncol=3, fontsize=14)
+plt.grid(linestyle='--')
+plt.ylim(0, 80)
+plt.locator_params("y", nbins=10)
+plt.xlabel('Dimension', fontsize=18)
+plt.ylabel('Training Time per Epoch (s)', fontsize=18)
+plt.tick_params(labelsize=16)
+plt.subplots_adjust(top=0.96, bottom=0.10, left=0.12, right=0.98, hspace=0, wspace=0)
+
+plt.savefig(Tools.new_dir(os.path.join("plot", "ic", "abl_acc_ic_Train_time.pdf")))
+plt.show()
+
