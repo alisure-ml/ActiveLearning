@@ -563,7 +563,7 @@ class RunnerFSL(object):
 
 
 class Config(object):
-    gpu_id = "0,1,2,3"
+    gpu_id = "1,2,3"
     gpu_num = len(gpu_id.split(","))
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
@@ -575,13 +575,13 @@ class Config(object):
     ic_out_dim = 2048
     ic_val_freq = 10
 
-    ic_resnet, ic_modify_head, ic_net_name = resnet18, False, "res18"
-    # ic_resnet, ic_modify_head, ic_net_name = resnet34, True, "res34_head"
+    # ic_resnet, ic_modify_head, ic_net_name = resnet18, False, "res18"
+    ic_resnet, ic_modify_head, ic_net_name = resnet34, True, "res34_head"
 
     ic_learning_rate = 0.01
     ic_train_epoch = 1200
     ic_first_epoch, ic_t_epoch = 400, 200
-    ic_batch_size = 64 * 4 * gpu_num
+    ic_batch_size = 64 * 2 * gpu_num
 
     ic_adjust_learning_rate = RunnerTool.adjust_learning_rate1
     #######################################################################################
@@ -593,8 +593,8 @@ class Config(object):
     fsl_episode_size = 15
     fsl_test_episode = 600
 
-    # fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 96
-    fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
+    fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 96
+    # fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
 
     fsl_learning_rate = 0.01
 
@@ -635,7 +635,8 @@ class Config(object):
     _root_path = "../tiered_imagenet/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete"
     mn_dir = Tools.new_dir("{}/{}_mn.pkl".format(_root_path, model_name))
     ic_dir = Tools.new_dir("{}/{}_ic.pkl".format(_root_path, model_name))
-    ic_dir_checkpoint = "../tiered_imagenet/models/ic_res_xx/3_resnet_18_64_2048_1_1900_300_200_False_ic.pkl"
+    ic_dir_checkpoint = None
+    # ic_dir_checkpoint = "../tiered_imagenet/models/ic_res_xx/3_resnet_18_64_2048_1_1900_300_200_False_ic.pkl"
 
     Tools.print(model_name)
     Tools.print(data_root)
@@ -656,12 +657,24 @@ class Config(object):
 2021-01-02 16:38:08 episode=200, Test accuracy=0.477
 2021-01-02 16:38:08 episode=200, Test accuracy=0.4700666666666668
 2021-01-02 16:38:08 episode=200, Mean Test accuracy=0.4721466666666667
+
+2021-01-04 03:55:37 load matching net success from ../tiered_imagenet/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/0123_res18_1200_1024_2048_resnet12_100_5_1_128_mn.pkl
+2021-01-04 03:56:38 Train 100 Accuracy: 0.5441111111111112
+2021-01-04 03:57:38 Val   100 Accuracy: 0.5011111111111112
+2021-01-04 03:58:39 Test1 100 Accuracy: 0.5006666666666666
+2021-01-04 04:02:17 Test2 100 Accuracy: 0.4976000000000001
+2021-01-04 04:20:27 episode=100, Test accuracy=0.4953111111111112
+2021-01-04 04:20:27 episode=100, Test accuracy=0.4992888888888889
+2021-01-04 04:20:27 episode=100, Test accuracy=0.49140000000000006
+2021-01-04 04:20:27 episode=100, Test accuracy=0.4898
+2021-01-04 04:20:27 episode=100, Test accuracy=0.48611111111111105
+2021-01-04 04:20:27 episode=100, Mean Test accuracy=0.4923822222222222
 """
 
 
 if __name__ == '__main__':
     runner_ic = RunnerIC()
-    # runner_ic.train()
+    runner_ic.train()
     runner_ic.load_model(ic_dir_checkpoint=Config.ic_dir_checkpoint)
     data_train, classes = runner_ic.eval()
 
