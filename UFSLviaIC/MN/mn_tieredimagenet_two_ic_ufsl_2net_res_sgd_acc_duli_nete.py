@@ -581,7 +581,7 @@ class Config(object):
     ic_learning_rate = 0.01
     ic_train_epoch = 1200
     ic_first_epoch, ic_t_epoch = 400, 200
-    ic_batch_size = 64 * 2 * gpu_num
+    ic_batch_size = 64 * 4 * gpu_num
 
     ic_adjust_learning_rate = RunnerTool.adjust_learning_rate1
     #######################################################################################

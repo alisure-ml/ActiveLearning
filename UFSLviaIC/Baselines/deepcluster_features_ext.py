@@ -221,15 +221,25 @@ class Config(object):
     batch_size = 8
 
     is_png = True
-    # is_png = False
 
-    if "Linux" in platform.platform():
-        data_root = '/mnt/4T/Data/data/miniImagenet'
-        if not os.path.isdir(data_root):
-            data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
+    # dataset_name = "miniimagenet"
+    dataset_name = "tieredimagenet"
+
+    if dataset_name == "miniimagenet":
+        if "Linux" in platform.platform():
+            data_root = '/mnt/4T/Data/data/miniImagenet'
+            if not os.path.isdir(data_root):
+                data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
+        else:
+            data_root = "F:\\data\\miniImagenet"
+        data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
     else:
-        data_root = "F:\\data\\miniImagenet"
-    data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
+        if "Linux" in platform.platform():
+            data_root = '/mnt/4T/Data/data/UFSL/tiered-imagenet'
+            if not os.path.isdir(data_root):
+                data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/tiered-imagenet'
+        else:
+            data_root = "F:\\data\\UFSL\\tiered-imagenet"
     Tools.print(data_root)
 
     features_save_path = Tools.new_dir("{}_feature".format(data_root))
