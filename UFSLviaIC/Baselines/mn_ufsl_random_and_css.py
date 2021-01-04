@@ -302,9 +302,7 @@ class Config(object):
     first_epoch, t_epoch = 80, 120
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
     net, net_name, batch_size = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4", 64
-    ###############################################################################################
 
-    ###############################################################################################
     # dataset_name = "tieredimagenet"
     # train_epoch = 150
     # first_epoch, t_epoch = 80, 120
@@ -318,7 +316,7 @@ class Config(object):
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}{}".format(
         gpu_id, baseline_type, net_name, train_epoch, batch_size,
         num_way, num_shot, first_epoch, t_epoch, "_png" if is_png else "")
-    net_dir = Tools.new_dir("../models_baseline/{}/{}/{}.pkl".format(baseline_type, dataset_name, model_name))
+    net_dir = Tools.new_dir("../models_baseline/{}/{}/{}.pkl".format(dataset_name, baseline_type, model_name))
 
     data_root = MyDataset.get_data_root(dataset_name=dataset_name, is_png=is_png)
     if baseline_type == "cluster":

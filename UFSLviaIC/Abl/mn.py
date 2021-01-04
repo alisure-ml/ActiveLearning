@@ -68,8 +68,8 @@ class Runner(object):
         pass
 
     def load_model(self):
-        mn_dir = self.config.mn_checkpoint if self.config.is_eval else self.config.mn_dir
-        ic_dir = self.config.ic_checkpoint if self.config.is_eval else self.config.ic_dir
+        mn_dir = self.config.mn_dir
+        ic_dir = self.config.ic_dir
         if os.path.exists(mn_dir):
             self.matching_net.load_state_dict(torch.load(mn_dir))
             Tools.print("load matching net success from {}".format(mn_dir), txt_path=self.config.log_file)
@@ -229,8 +229,8 @@ class Runner(object):
 
 class Config(object):
 
-    def __init__(self, gpu_id=1, dataset_name=MyDataset.dataset_name_miniimagenet, is_conv_4=True, is_res34=True,
-                 is_modify_head=True, is_eval=False, mn_checkpoint=None, ic_checkpoint=None):
+    def __init__(self, gpu_id=1, dataset_name=MyDataset.dataset_name_miniimagenet,
+                 is_conv_4=True, is_res34=True, is_modify_head=True):
         self.gpu_id = gpu_id
         os.environ["CUDA_VISIBLE_DEVICES"] = str(self.gpu_id)
 
@@ -238,7 +238,6 @@ class Config(object):
         self.is_conv_4 = is_conv_4
         self.is_res34 = is_res34
         self.modify_head = is_modify_head
-        self.is_eval = is_eval
 
         self.num_workers = 8
         self.num_way = 5
@@ -289,13 +288,6 @@ class Config(object):
         self.ic_dir = "{}/{}_{}_ic.pkl".format(_root_path, self.time, self.model_name)
         self.log_file = self.ic_dir.replace(".pkl", ".txt")
 
-        if self.is_eval:
-            self.mn_checkpoint = mn_checkpoint
-            self.ic_checkpoint = ic_checkpoint
-            self.log_file = os.path.join(_root_path, "abl_{}_{}_{}.txt".format(
-                self.time, self.ic_net_name, self.e_net_name))
-            pass
-
         Tools.print(self.data_root, txt_path=self.log_file)
         Tools.print(self.model_name, txt_path=self.log_file)
         Tools.print(self.mn_dir, txt_path=self.log_file)
@@ -310,7 +302,7 @@ class Config(object):
 
 def train(gpu_id, dataset_name=MyDataset.dataset_name_miniimagenet, is_train=True, test_first=False):
     config = Config(gpu_id=gpu_id, dataset_name=dataset_name,
-                    is_conv_4=True, is_res34=True, is_modify_head=True, is_eval=False)
+                    is_conv_4=True, is_res34=True, is_modify_head=True)
     runner = Runner(config=config)
 
     if test_first:
@@ -332,41 +324,10 @@ def train(gpu_id, dataset_name=MyDataset.dataset_name_miniimagenet, is_train=Tru
     pass
 
 
-def final_eval(gpu_id, mn_checkpoint, ic_checkpoint, dataset_name, is_conv_4, is_res34, is_modify_head, test_episode=1000):
-    config = Config(gpu_id, dataset_name=dataset_name, is_conv_4=is_conv_4, is_res34=is_res34, is_modify_head=is_modify_head,
-                    is_eval=True, mn_checkpoint=mn_checkpoint, ic_checkpoint=ic_checkpoint)
-    runner = Runner(config=config)
-
-    runner.load_model()
-    runner.matching_net.eval()
-    runner.ic_model.eval()
-
-    ways, shots = MyDataset.get_ways_shots(dataset_name=dataset_name)
-    for index, way in enumerate(ways):
-        Tools.print("{}/{} way={}".format(index, len(ways), way))
-        m, pm = runner.test_tool_fsl.eval(num_way=way, num_shot=1, episode_size=15, test_episode=test_episode)
-        Tools.print("way={},shot=1,acc={},con={}".format(way, m, pm), txt_path=config.log_file)
-    for index, shot in enumerate(shots):
-        Tools.print("{}/{} shot={}".format(index, len(shots), shot))
-        m, pm = runner.test_tool_fsl.eval(num_way=5, num_shot=shot, episode_size=15, test_episode=test_episode)
-        Tools.print("way=5,shot={},acc={},con={}".format(shot, m, pm), txt_path=config.log_file)
-    pass
-
-
 ##############################################################################################################
 
 
 if __name__ == '__main__':
     # train(gpu_id=0, dataset_name=MyDataset.dataset_name_miniimagenet, is_train=True, test_first=False)
-    # train(gpu_id=0, dataset_name=MyDataset.dataset_name_miniimagenet, is_train=False, test_first=False)
-    gpu_id = 0
-    checkpoint_path = "../models_abl/miniimagenet/mn"
-    ic_checkpoint = os.path.join(checkpoint_path, "1_2100_64_5_1_500_200_512_1_1.0_1.0_ic.pkl")
-    mn_checkpoint = os.path.join(checkpoint_path, "1_2100_64_5_1_500_200_512_1_1.0_1.0_mn.pkl")
-    is_res34 = False
-    is_modify_head = False
-    is_conv_4 = True
-    final_eval(gpu_id=gpu_id, mn_checkpoint=mn_checkpoint, ic_checkpoint=ic_checkpoint,
-               dataset_name=MyDataset.dataset_name_miniimagenet,
-               is_conv_4=is_conv_4, is_res34=is_res34, is_modify_head=is_modify_head)
+    train(gpu_id=0, dataset_name=MyDataset.dataset_name_miniimagenet, is_train=False, test_first=False)
     pass

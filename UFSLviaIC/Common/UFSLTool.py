@@ -77,10 +77,10 @@ class MyDataset(object):
     def get_ways_shots(dataset_name):
         if dataset_name == MyDataset.dataset_name_miniimagenet:
             ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-            shots = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100]
+            shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
         elif dataset_name == MyDataset.dataset_name_tieredimagenet:
-            ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-            shots = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100]
+            ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 35, 30, 35, 40, 45, 50]
+            shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
         else:
             raise Exception(".")
         return ways, shots
@@ -840,22 +840,25 @@ class FSLTestTool(object):
             counter = 0
             # 随机选5类，每类中取出1个作为训练样本，每类取出15个作为测试样本
             task = Task(folders, num_way, num_shot, episode_size)
-            sample_data_loader = TestDataset.get_data_loader(task, 1, "train", sampler_test=sampler_test,
+            sample_data_loader = TestDataset.get_data_loader(task, num_shot, "train", sampler_test=sampler_test,
                                                            shuffle=False, transform=self.transform)
-            batch_data_loader = TestDataset.get_data_loader(task, 3, "val", sampler_test=sampler_test,
+            num_per_class = 5 if num_shot > 1 else 3
+            batch_data_loader = TestDataset.get_data_loader(task, num_per_class, "val", sampler_test=sampler_test,
                                                           shuffle=True, transform=self.transform)
             samples, labels = sample_data_loader.__iter__().next()
 
-            samples = RunnerTool.to_cuda(samples)
-            for batches, batch_labels in batch_data_loader:
-                results = self.model_fn(samples, RunnerTool.to_cuda(batches), num_way=num_way, num_shot=num_shot)
+            with torch.no_grad():
+                samples = RunnerTool.to_cuda(samples)
+                for batches, batch_labels in batch_data_loader:
+                    results = self.model_fn(samples, RunnerTool.to_cuda(batches), num_way=num_way, num_shot=num_shot)
 
-                _, predict_labels = torch.max(results.data, 1)
-                batch_size = batch_labels.shape[0]
-                rewards = [1 if predict_labels[j].cpu() == batch_labels[j] else 0 for j in range(batch_size)]
-                total_rewards += np.sum(rewards)
+                    _, predict_labels = torch.max(results.data, 1)
+                    batch_size = batch_labels.shape[0]
+                    rewards = [1 if predict_labels[j].cpu() == batch_labels[j] else 0 for j in range(batch_size)]
+                    total_rewards += np.sum(rewards)
 
-                counter += batch_size
+                    counter += batch_size
+                    pass
                 pass
 
             accuracies.append(total_rewards / 1.0 / counter)
