@@ -1102,8 +1102,15 @@ class FSLEvalTool(object):
         pm = 1.96 * (std / np.sqrt(len(a)))
         return m, pm
 
-    def eval(self, num_way=5, num_shot=1, episode_size=15, test_episode=1000):
-        acc_list = self._val_no_mean(self.folders_test, sampler_test=True, num_way=num_way,
+    def eval(self, num_way=5, num_shot=1, episode_size=15, test_episode=1000, split=MyDataset.dataset_split_test):
+        folders_test = self.folders_test
+        if split == MyDataset.dataset_split_train:
+            folders_test = self.folders_train
+        elif split == MyDataset.dataset_split_val:
+            folders_test = self.folders_val
+            pass
+
+        acc_list = self._val_no_mean(folders_test, sampler_test=True, num_way=num_way,
                                      num_shot=num_shot, episode_size=episode_size, test_episode=test_episode)
         m, pm = self._compute_confidence_interval(acc_list)
         return m, pm

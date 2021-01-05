@@ -7,10 +7,11 @@ from alisuretool.Tools import Tools
 
 
 dataset_name = "miniimagenet"
+result_dir = "result"
 
-txt_path = "/mnt/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/{}/mn/result".format(dataset_name)
+txt_path = "/mnt/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/{}/mn/{}".format(dataset_name, result_dir)
 if not os.path.exists(txt_path):
-    txt_path = "/media/ubuntu/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/{}/mn/result".format(dataset_name)
+    txt_path = "/media/ubuntu/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/{}/mn/{}".format(dataset_name, result_dir)
     pass
 
 all_txt = glob(os.path.join(txt_path, "*.txt"))
@@ -43,27 +44,40 @@ for index, txt_content in enumerate(all_txt_content):
         pass
 
     txt_name = all_txt_name[index]
-    if txt_name[0] == "ufsl":
-        name = "Our"
-    elif txt_name[0] == "cluster":
-        name = "Cluster"
-    elif txt_name[0] == "css":
-        name = "CSS"
-    elif txt_name[0] == "random":
-        name = "Random"
+    method, net = txt_name[0], txt_name[-1]
+    if txt_name[0] in ["train", "val", "test"]:
+        method, net = txt_name[1], txt_name[-1]
+
+    net_index = 1 if net == "conv4" else 2
+    net = "Conv4" if net == "conv4" else "ResNet12"
+    if method == "ufsl":
+        if "18" in net:
+            continue
+        name = "{}4-{}({})".format(net_index, "Our", net)
+    elif method == "cluster":
+        name = "{}3-{}({})".format(net_index, "Cluster", net)
+    elif method == "css":
+        name = "{}2-{}({})".format(net_index, "CSS", net)
+    elif method == "random":
+        name = "{}1-{}({})".format(net_index, "Random", net)
+    elif method == "label":
+        name = "{}5-{}({})".format(net_index, "Label", net)
+    else:
+        raise Exception(".........")
         pass
 
-    ways_shots_dict["-".join(txt_name)] = {"ways": ways_dict, "shots": shots_dict}
+    ways_shots_dict[name] = {"ways": ways_dict, "shots": shots_dict}
     pass
 
 
-color = ["r", "g", "b", "k", "y", "c", "m"]
-linestyle = ["-", ":"]
+color = ["g", "b", "m", "r", "y"]  # , "k", "c"
+linestyle = ["-.", "-"]
 for split in ["shots", "ways"]:
     plt.figure(figsize=(8, 6))
 
     handles1, labels1 = [], []
-    for acc_index, key in enumerate(ways_shots_dict):
+    ways_shots_dict_keys = sorted(list(ways_shots_dict.keys()))
+    for acc_index, key in enumerate(ways_shots_dict_keys):
         ways_and_shots = ways_shots_dict[key]
         nows = ways_and_shots[split]
         now_keys = sorted(list(nows.keys()))
@@ -74,7 +88,7 @@ for split in ["shots", "ways"]:
                         linewidth=2.0, linestyle=linestyle[acc_index // len(color)])
         plt.scatter(now_keys, now_values, s=20, color=color[acc_index % len(color)])
         handles1.append(ln1)
-        labels1.append(key)
+        labels1.append(key[3:])
         pass
 
     plt.legend(handles=handles1, labels=labels1, loc='best', ncol=2, fontsize=14)

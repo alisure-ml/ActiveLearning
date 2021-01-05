@@ -74,7 +74,7 @@ class Runner(object):
 
             _, _, transform_test = MyTransforms.get_transform(
                 dataset_name=self.config.dataset_name, has_ic=True, is_fsl_simple=True, is_css=False)
-            data_test = MyDataset.get_data_split(self.config.data_root, split=MyDataset.dataset_split_test)
+            data_test = MyDataset.get_data_split(self.config.data_root, split=self.config.split)
             loader = DataLoader(EvalFeatureDataset(data_test, transform_test),
                                 self.config.batch_size, False, num_workers=self.config.num_workers)
             for image, image_name in tqdm(loader):
@@ -94,11 +94,13 @@ class Runner(object):
 class Config(object):
 
     def __init__(self, gpu_id=1, name=None, is_conv_4=True, mn_checkpoint=None,
-                 dataset_name=MyDataset.dataset_name_miniimagenet, is_check=False):
+                 dataset_name=MyDataset.dataset_name_miniimagenet, result_dir="result",
+                 split=MyDataset.dataset_split_test, is_check=False):
         self.gpu_id = gpu_id
         os.environ["CUDA_VISIBLE_DEVICES"] = str(self.gpu_id)
 
         self.name = name
+        self.split = split
         self.is_conv_4 = is_conv_4
         self.dataset_name = dataset_name
         self.num_way = 5
@@ -120,8 +122,8 @@ class Config(object):
             self.log_file = None
             return
 
-        self.log_file = Tools.new_dir(os.path.join("../models_abl/{}/mn/result2".format(self.dataset_name),
-                                                   "{}_{}.txt".format(self.name, Tools.get_format_time())))
+        self.log_file = Tools.new_dir(os.path.join("../models_abl/{}/mn/{}".format(self.dataset_name, result_dir),
+                                                   "{}_{}_{}.txt".format(split, self.name, Tools.get_format_time())))
 
         ###############################################################################################
         self.is_png = True
@@ -137,8 +139,10 @@ class Config(object):
 ##############################################################################################################
 
 
-def final_eval(gpu_id, name, mn_checkpoint, dataset_name, is_conv_4, test_episode=1000):
-    config = Config(gpu_id, dataset_name=dataset_name, is_conv_4=is_conv_4, name=name, mn_checkpoint=mn_checkpoint)
+def final_eval(gpu_id, name, mn_checkpoint, dataset_name, is_conv_4,
+               test_episode=1000, result_dir="result", split=MyDataset.dataset_split_test):
+    config = Config(gpu_id, dataset_name=dataset_name, is_conv_4=is_conv_4,
+                    name=name, mn_checkpoint=mn_checkpoint, result_dir=result_dir, split=split)
     runner = Runner(config=config)
 
     runner.load_model()
@@ -149,16 +153,16 @@ def final_eval(gpu_id, name, mn_checkpoint, dataset_name, is_conv_4, test_episod
     ways, shots = MyDataset.get_ways_shots(dataset_name=dataset_name)
     for index, way in enumerate(ways):
         Tools.print("{}/{} way={}".format(index, len(ways), way))
-        m, pm = test_tool_fsl.eval(num_way=way, num_shot=1, episode_size=15, test_episode=test_episode)
+        m, pm = test_tool_fsl.eval(num_way=way, num_shot=1, episode_size=15, test_episode=test_episode, split=split)
         Tools.print("way={},shot=1,acc={},con={}".format(way, m, pm), txt_path=config.log_file)
     for index, shot in enumerate(shots):
         Tools.print("{}/{} shot={}".format(index, len(shots), shot))
-        m, pm = test_tool_fsl.eval(num_way=5, num_shot=shot, episode_size=15, test_episode=test_episode)
+        m, pm = test_tool_fsl.eval(num_way=5, num_shot=shot, episode_size=15, test_episode=test_episode, split=split)
         Tools.print("way=5,shot={},acc={},con={}".format(shot, m, pm), txt_path=config.log_file)
     pass
 
 
-def miniimagenet_final_eval(gpu_id=0):
+def miniimagenet_final_eval(gpu_id=0, result_dir="result"):
     dataset_name = MyDataset.dataset_name_miniimagenet
     checkpoint_path = "../models_abl/{}/mn".format(dataset_name)
 
@@ -199,7 +203,42 @@ def miniimagenet_final_eval(gpu_id=0):
     for index, param in enumerate(param_list):
         Tools.print("{} / {}".format(index, len(param_list)))
         final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"],
-                   dataset_name=dataset_name, is_conv_4=param["is_conv_4"])
+                   dataset_name=dataset_name, is_conv_4=param["is_conv_4"], result_dir=result_dir)
+        pass
+
+    pass
+
+
+def miniimagenet_our_eval(gpu_id=0, result_dir="result_our"):
+    dataset_name = MyDataset.dataset_name_miniimagenet
+    checkpoint_path = "../models_abl/{}/mn".format(dataset_name)
+
+    param_list = [
+        {"name": "ufsl_res18_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "ufsl", "1_2100_64_5_1_500_200_512_1_1.0_1.0_mn.pkl")},
+        {"name": "ufsl_res34head_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "ufsl", "3_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
+
+        {"name": "ufsl_res34head_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "ufsl", "1_R12S_1500_32_5_1_300_200_512_1_1.0_1.0_head_png_mn.pkl")},
+        {"name": "ufsl_res34head_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "ufsl", "2_R12S_1500_32_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
+    ]
+
+    for index, param in enumerate(param_list):
+        Tools.print("Check: {} / {}".format(index, len(param_list)))
+        Runner(config=Config(gpu_id, dataset_name=dataset_name, is_conv_4=param["is_conv_4"],
+                             name=param["name"], mn_checkpoint=param["mn"], is_check=True)).load_model()
+        pass
+
+    for index, param in enumerate(param_list):
+        Tools.print("{} / {}".format(index, len(param_list)))
+        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
+                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_train)
+        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
+                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_val)
+        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
+                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_test)
         pass
 
     pass
@@ -209,5 +248,5 @@ def miniimagenet_final_eval(gpu_id=0):
 
 
 if __name__ == '__main__':
-    miniimagenet_final_eval()
+    miniimagenet_our_eval()
     pass
