@@ -255,7 +255,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
@@ -264,7 +264,6 @@ class Config(object):
     num_shot = 1
     learning_rate = 0.01
 
-    val_freq = 10
     episode_size = 15
     test_episode = 600
 
@@ -277,18 +276,20 @@ class Config(object):
 
     ###############################################################################################
     baseline_type_list = ["random", "css", "cluster"]
-    # baseline_type = "css"
+    baseline_type = "css"
     # baseline_type = "random"
-    baseline_type = "cluster"
+    # baseline_type = "cluster"
     ###############################################################################################
 
     ###############################################################################################
+    # val_freq = 10
     # dataset_name = "miniimagenet"
     # train_epoch = 300
     # first_epoch, t_epoch = 100, 100
     # adjust_learning_rate = RunnerTool.adjust_learning_rate2
     # net, net_name, batch_size = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4", 64
 
+    # val_freq = 10
     # dataset_name = "miniimagenet"
     # train_epoch = 150
     # first_epoch, t_epoch = 80, 120
@@ -297,17 +298,19 @@ class Config(object):
     ###############################################################################################
 
     ###############################################################################################
-    dataset_name = "tieredimagenet"
-    train_epoch = 150
-    first_epoch, t_epoch = 80, 120
-    adjust_learning_rate = RunnerTool.adjust_learning_rate2
-    net, net_name, batch_size = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4", 64
-
+    # val_freq = 5
     # dataset_name = "tieredimagenet"
     # train_epoch = 150
     # first_epoch, t_epoch = 80, 120
     # adjust_learning_rate = RunnerTool.adjust_learning_rate2
-    # net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 32
+    # net, net_name, batch_size = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4", 64
+
+    val_freq = 2
+    dataset_name = "tieredimagenet"
+    train_epoch = 50
+    first_epoch, t_epoch = 30, 40
+    adjust_learning_rate = RunnerTool.adjust_learning_rate2
+    net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 32
     ###############################################################################################
 
     transform_train, transform_test = MyTransforms.get_transform(
