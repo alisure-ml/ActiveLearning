@@ -865,10 +865,6 @@ class FSLTestTool(object):
             pass
         return accuracies
 
-    @staticmethod
-    def to_cuda(x):
-        return x.cuda() if torch.cuda.is_available() else x
-
     pass
 
 
@@ -1022,6 +1018,146 @@ class ICTestTool(object):
             Tools.print("Epoch: {} Test  {:.4f}/{:.4f} {:.4f}".format(epoch, acc_1_test, acc_2_test, acc_3_test), txt_path=self.txt_path)
             pass
         return acc_1_val
+
+    pass
+
+
+class EvalDataset(Dataset):
+
+    def __init__(self, task, image_features, split='train'):
+        self.task = task
+        self.split = split
+        self.image_features = image_features
+
+        self.labels = self.task.train_labels if self.split == 'train' else self.task.test_labels
+        self.image_roots = self.task.train_roots if self.split == 'train' else self.task.test_roots
+        pass
+
+    def __len__(self):
+        return len(self.image_roots)
+
+    def __getitem__(self, idx):
+        image = self.image_features[self.image_roots[idx]]
+        label = self.labels[idx]
+        return image, label
+
+    @staticmethod
+    def folders(data_root):
+        train_folder = os.path.join(data_root, MyDataset.dataset_split_train)
+        val_folder = os.path.join(data_root, MyDataset.dataset_split_val)
+        test_folder = os.path.join(data_root, MyDataset.dataset_split_test)
+
+        folders_train = [os.path.join(train_folder, label) for label in os.listdir(train_folder)
+                         if os.path.isdir(os.path.join(train_folder, label))]
+        folders_val = [os.path.join(val_folder, label) for label in os.listdir(val_folder)
+                       if os.path.isdir(os.path.join(val_folder, label))]
+        folders_test = [os.path.join(test_folder, label) for label in os.listdir(test_folder)
+                        if os.path.isdir(os.path.join(test_folder, label))]
+
+        random.seed(1)
+        random.shuffle(folders_train)
+        random.shuffle(folders_val)
+        random.shuffle(folders_test)
+        return folders_train, folders_val, folders_test
+
+    @staticmethod
+    def get_data_loader(task, image_features, num_per_class=1, split="train", sampler_test=False, shuffle=False):
+        if split == "train":
+            sampler = ClassBalancedSampler(num_per_class, task.num_classes, task.train_num, shuffle=shuffle)
+        else:
+            if not sampler_test:
+                sampler = ClassBalancedSampler(num_per_class, task.num_classes, task.test_num, shuffle=shuffle)
+            else:  # test
+                sampler = ClassBalancedSamplerTest(task.num_classes, task.test_num, shuffle=shuffle)
+                pass
+            pass
+
+        dataset = EvalDataset(task, image_features=image_features, split=split)
+        return DataLoader(dataset, batch_size=num_per_class * task.num_classes, sampler=sampler)
+
+    pass
+
+
+class FSLEvalTool(object):
+
+    def __init__(self, model_fn, data_root, image_features, num_way=5, num_shot=1,
+                 episode_size=15, test_episode=600, txt_path=None):
+        self.model_fn = model_fn
+        self.image_features = image_features
+        self.txt_path = txt_path
+
+        self.folders_train, self.folders_val, self.folders_test = TestDataset.folders(data_root)
+
+        self.test_episode = test_episode
+        self.num_way = num_way
+        self.num_shot = num_shot
+        self.episode_size = episode_size
+        pass
+
+    @staticmethod
+    def _compute_confidence_interval(data):
+        a = 1.0 * np.array(data)
+        m = np.mean(a)
+        std = np.std(a)
+        pm = 1.96 * (std / np.sqrt(len(a)))
+        return m, pm
+
+    def eval(self, num_way=5, num_shot=1, episode_size=15, test_episode=1000):
+        acc_list = self._val_no_mean(self.folders_test, sampler_test=True, num_way=num_way,
+                                     num_shot=num_shot, episode_size=episode_size, test_episode=test_episode)
+        m, pm = self._compute_confidence_interval(acc_list)
+        return m, pm
+
+    def _val_no_mean(self, folders, sampler_test, num_way, num_shot, episode_size, test_episode):
+        accuracies = []
+        for i in range(test_episode):
+            total_rewards = 0
+            counter = 0
+            # 随机选5类，每类中取出1个作为训练样本，每类取出15个作为测试样本
+            task = Task(folders, num_way, num_shot, episode_size)
+            sample_data_loader = EvalDataset.get_data_loader(task, self.image_features, num_shot, "train",
+                                                             sampler_test=sampler_test, shuffle=False)
+            num_per_class = 5 if num_shot > 1 else 3
+            batch_data_loader = EvalDataset.get_data_loader(task, self.image_features, num_per_class, "val",
+                                                            sampler_test=sampler_test, shuffle=True)
+            samples, labels = sample_data_loader.__iter__().next()
+
+            with torch.no_grad():
+                samples = RunnerTool.to_cuda(samples)
+                for batches, batch_labels in batch_data_loader:
+                    results = self.model_fn(samples, RunnerTool.to_cuda(batches), num_way=num_way, num_shot=num_shot)
+
+                    _, predict_labels = torch.max(results.data, 1)
+                    batch_size = batch_labels.shape[0]
+                    rewards = [1 if predict_labels[j].cpu() == batch_labels[j] else 0 for j in range(batch_size)]
+                    total_rewards += np.sum(rewards)
+
+                    counter += batch_size
+                    pass
+                pass
+
+            accuracies.append(total_rewards / 1.0 / counter)
+            pass
+        return accuracies
+
+    pass
+
+
+class EvalFeatureDataset(Dataset):
+
+    def __init__(self, data_list, transform):
+        self.data_list = data_list
+        self.transform = transform
+        pass
+
+    def __len__(self):
+        return len(self.data_list)
+
+    def __getitem__(self, idx):
+        image_filename = self.data_list[idx][-1]
+        image = Image.open(image_filename).convert('RGB')
+        image = self.transform(image)
+        return image, image_filename
 
     pass
 

@@ -57,7 +57,7 @@ for index, txt_content in enumerate(all_txt_content):
     pass
 
 
-color = ["r", "g", "b", "k", "y", "c", "m", "w"]
+color = ["r", "g", "b", "k", "y", "c", "m"]
 linestyle = ["-", ":"]
 for split in ["shots", "ways"]:
     plt.figure(figsize=(8, 6))
