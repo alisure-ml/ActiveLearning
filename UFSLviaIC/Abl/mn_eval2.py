@@ -150,7 +150,7 @@ def final_eval(gpu_id, name, mn_checkpoint, dataset_name, is_conv_4,
     image_features = runner.get_features()
     test_tool_fsl = runner.get_test_tool(image_features=image_features)
 
-    ways, shots = MyDataset.get_ways_shots(dataset_name=dataset_name)
+    ways, shots = MyDataset.get_ways_shots(dataset_name=dataset_name, split=split)
     for index, way in enumerate(ways):
         Tools.print("{}/{} way={}".format(index, len(ways), way))
         m, pm = test_tool_fsl.eval(num_way=way, num_shot=1, episode_size=15, test_episode=test_episode, split=split)

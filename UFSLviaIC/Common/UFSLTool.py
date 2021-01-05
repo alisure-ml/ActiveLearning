@@ -74,13 +74,27 @@ class MyDataset(object):
         return data_root
 
     @staticmethod
-    def get_ways_shots(dataset_name):
+    def get_ways_shots(dataset_name, split):
         if dataset_name == MyDataset.dataset_name_miniimagenet:
-            ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-            shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+            if split == MyDataset.dataset_split_test:
+                ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+                shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+            elif split == MyDataset.dataset_split_val:
+                ways = [2, 5, 10, 15, 16]
+                shots = [1, 5, 10, 15, 20, 30, 40, 50]
+            else:
+                ways = [2, 5, 10, 15, 20, 30, 50]
+                shots = [1, 5, 10, 15, 20, 30, 40, 50]
         elif dataset_name == MyDataset.dataset_name_tieredimagenet:
-            ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 35, 30, 35, 40, 45, 50]
-            shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+            if split == MyDataset.dataset_split_test:
+                ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 35, 30, 35, 40, 45, 50]
+                shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+            elif split == MyDataset.dataset_split_val:
+                ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 35, 30, 35, 40, 45, 50]
+                shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+            else:
+                ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 35, 30, 35, 40, 45, 50]
+                shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
         else:
             raise Exception(".")
         return ways, shots
