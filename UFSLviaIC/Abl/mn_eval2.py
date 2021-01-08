@@ -143,7 +143,7 @@ class Config(object):
 
 
 def final_eval(gpu_id, name, mn_checkpoint, dataset_name, is_conv_4,
-               test_episode=1000, result_dir="result", split=MyDataset.dataset_split_test):
+               test_episode=1000, result_dir="result", split=MyDataset.dataset_split_test, ways_and_shots=None):
     config = Config(gpu_id, dataset_name=dataset_name, is_conv_4=is_conv_4,
                     name=name, mn_checkpoint=mn_checkpoint, result_dir=result_dir, split=split)
     runner = Runner(config=config)
@@ -153,15 +153,23 @@ def final_eval(gpu_id, name, mn_checkpoint, dataset_name, is_conv_4,
     image_features = runner.get_features()
     test_tool_fsl = runner.get_test_tool(image_features=image_features)
 
-    ways, shots = MyDataset.get_ways_shots(dataset_name=dataset_name, split=split)
-    for index, way in enumerate(ways):
-        Tools.print("{}/{} way={}".format(index, len(ways), way))
-        m, pm = test_tool_fsl.eval(num_way=way, num_shot=1, episode_size=15, test_episode=test_episode, split=split)
-        Tools.print("way={},shot=1,acc={},con={}".format(way, m, pm), txt_path=config.log_file)
-    for index, shot in enumerate(shots):
-        Tools.print("{}/{} shot={}".format(index, len(shots), shot))
-        m, pm = test_tool_fsl.eval(num_way=5, num_shot=shot, episode_size=15, test_episode=test_episode, split=split)
-        Tools.print("way=5,shot={},acc={},con={}".format(shot, m, pm), txt_path=config.log_file)
+    if ways_and_shots is None:
+        ways, shots = MyDataset.get_ways_shots(dataset_name=dataset_name, split=split)
+        for index, way in enumerate(ways):
+            Tools.print("{}/{} way={}".format(index, len(ways), way))
+            m, pm = test_tool_fsl.eval(num_way=way, num_shot=1, episode_size=15, test_episode=test_episode, split=split)
+            Tools.print("way={},shot=1,acc={},con={}".format(way, m, pm), txt_path=config.log_file)
+        for index, shot in enumerate(shots):
+            Tools.print("{}/{} shot={}".format(index, len(shots), shot))
+            m, pm = test_tool_fsl.eval(num_way=5, num_shot=shot, episode_size=15, test_episode=test_episode, split=split)
+            Tools.print("way=5,shot={},acc={},con={}".format(shot, m, pm), txt_path=config.log_file)
+    else:
+        for index, (way, shot) in enumerate(ways_and_shots):
+            Tools.print("{}/{} way={} shot={}".format(index, len(ways_and_shots), way, shot))
+            m, pm = test_tool_fsl.eval(num_way=way, num_shot=shot, episode_size=15, test_episode=test_episode, split=split)
+            Tools.print("way={},shot={},acc={},con={}".format(way, shot, m, pm), txt_path=config.log_file)
+            pass
+
     pass
 
 
@@ -216,14 +224,27 @@ def miniimagenet_our_eval(gpu_id=0, result_dir="result_our"):
     dataset_name = MyDataset.dataset_name_miniimagenet
     checkpoint_path = "../models_abl/{}/mn".format(dataset_name)
 
+    ways_and_shots = [[5, 1], [5, 5], [20, 1], [20, 5]]
     param_list = [
-        {"name": "ufsl_res18_conv4", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "ufsl", "1_2100_64_5_1_500_200_512_1_1.0_1.0_mn.pkl")},
+        {"name": "cluster_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "cluster", "1_cluster_conv4_300_64_5_1_100_100_png.pkl")},
+        {"name": "css_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "css", "2_css_conv4_300_64_5_1_100_100_png.pkl")},
+        {"name": "random_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "random", "2_random_conv4_300_64_5_1_100_100_png.pkl")},
+        {"name": "label_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "label", "2_400_64_10_1_200_100_png.pkl")},
         {"name": "ufsl_res34head_conv4", "is_conv_4": True,
          "mn": os.path.join(checkpoint_path, "ufsl", "3_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
 
-        {"name": "ufsl_res34head_res12", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "ufsl", "1_R12S_1500_32_5_1_300_200_512_1_1.0_1.0_head_png_mn.pkl")},
+        {"name": "cluster_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_res12_300_32_5_1_100_100_png.pkl")},
+        {"name": "css_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "css", "2_css_res12_300_32_5_1_100_100_png.pkl")},
+        {"name": "random_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "random", "1_random_res12_300_32_5_1_100_100_png.pkl")},
+        {"name": "label_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "label", "2_100_32_BasicBlock1_0.01_norm2_png_pn_5_1.pkl")},
         {"name": "ufsl_res34head_res12", "is_conv_4": False,
          "mn": os.path.join(checkpoint_path, "ufsl", "2_R12S_1500_32_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
     ]
@@ -237,11 +258,8 @@ def miniimagenet_our_eval(gpu_id=0, result_dir="result_our"):
     for index, param in enumerate(param_list):
         Tools.print("{} / {}".format(index, len(param_list)))
         final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
-                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_train)
-        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
-                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_val)
-        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
-                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_test)
+                   is_conv_4=param["is_conv_4"], result_dir=result_dir,
+                   split=MyDataset.dataset_split_test, ways_and_shots=ways_and_shots)
         pass
 
     pass
@@ -298,16 +316,29 @@ def tieredimagenet_our_eval(gpu_id=0, result_dir="result_our"):
     dataset_name = MyDataset.dataset_name_tieredimagenet
     checkpoint_path = "../models_abl/{}/mn".format(dataset_name)
 
+    ways_and_shots = [[5, 1], [5, 5], [20, 1], [20, 5]]
     param_list = [
-        {"name": "ufsl_res18_conv4", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_conv4_200_5_1_384_mn.pkl")},
-        # {"name": "ufsl_res34head_conv4", "is_conv_4": True,
-        #  "mn": os.path.join(checkpoint_path, "ufsl", "3_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
+        {"name": "cluster_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_conv4_150_64_5_1_80_120_png.pkl")},
+        {"name": "css_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "css", "1_css_conv4_150_64_5_1_80_120_png.pkl")},
+        {"name": "random_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "random", "2_random_conv4_150_64_5_1_80_120_png.pkl")},
+        {"name": "label_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "label", "0123_100_256_5_1_conv4.pkl")},
+        # {"name": "ufsl_res18_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_conv4_200_5_1_384_mn.pkl")},
 
-        {"name": "ufsl_res18_res12", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_resnet12_100_5_1_128_mn.pkl")},
-        # {"name": "ufsl_res34head_res12", "is_conv_4": False,
-        #  "mn": os.path.join(checkpoint_path, "ufsl", "2_R12S_1500_32_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
+        {"name": "cluster_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_res12_30_32_5_1_16_24_png.pkl")},
+        {"name": "css_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "css", "1_css_res12_50_32_5_1_30_40_png.pkl")},
+        {"name": "random_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "random", "1_random_res12_30_32_5_1_16_8_png.pkl")},
+        {"name": "label_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "label", "0123_100_64_5_1_res12.pkl")},
+        # {"name": "ufsl_res18_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_resnet12_100_5_1_128_mn.pkl")},
     ]
 
     for index, param in enumerate(param_list):
@@ -319,11 +350,8 @@ def tieredimagenet_our_eval(gpu_id=0, result_dir="result_our"):
     for index, param in enumerate(param_list):
         Tools.print("{} / {}".format(index, len(param_list)))
         final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
-                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_train)
-        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
-                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_val)
-        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
-                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_test)
+                   is_conv_4=param["is_conv_4"], result_dir=result_dir,
+                   split=MyDataset.dataset_split_test, ways_and_shots=ways_and_shots)
         pass
 
     pass
@@ -333,6 +361,7 @@ def tieredimagenet_our_eval(gpu_id=0, result_dir="result_our"):
 
 
 if __name__ == '__main__':
-    tieredimagenet_final_eval()
-    # tieredimagenet_our_eval()
+    miniimagenet_our_eval(result_dir="result_table")
+    # tieredimagenet_final_eval()
+    tieredimagenet_our_eval(result_dir="result_table")
     pass

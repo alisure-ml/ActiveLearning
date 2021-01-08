@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 from alisuretool.Tools import Tools
 
 
-dataset_name = "miniimagenet"
+# dataset_name = "miniimagenet"
+dataset_name = "tieredimagenet"
 result_dir = "result"
 
 txt_path = "/mnt/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/{}/mn/{}".format(dataset_name, result_dir)

@@ -329,7 +329,8 @@ class RunnerIC(object):
         if os.path.exists(ic_dir):
             checkpoint = torch.load(ic_dir)
             if ic_dir_checkpoint:
-                checkpoint = {"module.{}".format(key): checkpoint[key] for key in checkpoint}
+                if not list(self.ic_model.state_dict().keys())[0] == list(checkpoint.keys())[0]:
+                    checkpoint = {"module.{}".format(key): checkpoint[key] for key in checkpoint}
             self.ic_model.load_state_dict(checkpoint)
             Tools.print("load ic model success from {}".format(ic_dir))
         pass
@@ -563,7 +564,7 @@ class RunnerFSL(object):
 
 
 class Config(object):
-    gpu_id = "1,2,3"
+    gpu_id = "0,1,2,3"
     gpu_num = len(gpu_id.split(","))
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
@@ -593,19 +594,22 @@ class Config(object):
     fsl_episode_size = 15
     fsl_test_episode = 600
 
-    fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 96
-    # fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
+    # fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 96
+    fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
 
     fsl_learning_rate = 0.01
+    fsl_batch_size = fsl_batch_size * gpu_num
 
     # fsl_val_freq = 5
     # fsl_train_epoch = 200
     # fsl_lr_schedule = [100, 150]
-    fsl_batch_size = fsl_batch_size * gpu_num
 
+    # fsl_val_freq = 2
+    # fsl_train_epoch = 100
+    # fsl_lr_schedule = [50, 80]
     fsl_val_freq = 2
-    fsl_train_epoch = 100
-    fsl_lr_schedule = [50, 80]
+    fsl_train_epoch = 50
+    fsl_lr_schedule = [30, 40]
     ###############################################################################################
 
     model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
@@ -635,8 +639,9 @@ class Config(object):
     _root_path = "../tiered_imagenet/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete"
     mn_dir = Tools.new_dir("{}/{}_mn.pkl".format(_root_path, model_name))
     ic_dir = Tools.new_dir("{}/{}_ic.pkl".format(_root_path, model_name))
-    ic_dir_checkpoint = None
+    # ic_dir_checkpoint = None
     # ic_dir_checkpoint = "../tiered_imagenet/models/ic_res_xx/3_resnet_18_64_2048_1_1900_300_200_False_ic.pkl"
+    ic_dir_checkpoint = "../tiered_imagenet/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/123_res34_head_1200_384_2048_conv4_100_5_1_288_ic.pkl"
 
     Tools.print(model_name)
     Tools.print(data_root)
@@ -674,18 +679,27 @@ class Config(object):
 
 """
 123_res34_head_1200_384_2048_conv4_100_5_1_288_ic
-2021-01-08 17:28:50 load ic model success from ../tiered_imagenet/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/123_res34_head_1200_384_2048_conv4_100_5_1_288_ic.pkl
+../tiered_imagenet/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/123_res34_head_1200_384_2048_conv4_100_5_1_288_ic.pkl
 2021-01-08 14:50:07 Test 1170 .......
 2021-01-08 14:55:13 Epoch: 1170 Train 0.3558/0.6511 0.0000
 2021-01-08 14:55:13 Epoch: 1170 Val   0.4054/0.7416 0.0000
 2021-01-08 14:55:13 Epoch: 1170 Test  0.3471/0.6674 0.0000
 2021-01-08 14:55:13 Save networks for epoch: 1170
+
+123_res34_head_1200_384_2048_conv4_100_5_1_288_mn
+../tiered_imagenet/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/123_res34_head_1200_384_2048_conv4_100_5_1_288_mn.pkl
+2021-01-09 00:39:45     84 loss:0.037 ok:0.137(61645/448695) lr:[0.001111111111111111]
+2021-01-09 00:40:16 Train 84 Accuracy: 0.5206666666666666
+2021-01-09 00:40:48 Val   84 Accuracy: 0.501
+2021-01-09 00:41:20 Test1 84 Accuracy: 0.49299999999999994
+2021-01-09 00:41:20 Save networks for epoch: 84
+
 """
 
 
 if __name__ == '__main__':
     runner_ic = RunnerIC()
-    runner_ic.train()
+    # runner_ic.train()
     runner_ic.load_model(ic_dir_checkpoint=Config.ic_dir_checkpoint)
     data_train, classes = runner_ic.eval()
 
