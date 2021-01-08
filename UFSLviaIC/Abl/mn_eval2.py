@@ -34,7 +34,10 @@ class Runner(object):
     def load_model(self):
         mn_dir = self.config.mn_checkpoint
         if os.path.exists(mn_dir):
-            self.matching_net.load_state_dict(torch.load(mn_dir))
+            checkpoint = torch.load(mn_dir)
+            if "module." in list(checkpoint.keys())[0]:
+                checkpoint = {key.replace("module.", ""): checkpoint[key] for key in checkpoint}
+            self.matching_net.load_state_dict(checkpoint)
             Tools.print("load matching net success from {}".format(mn_dir), txt_path=self.config.log_file)
         pass
 
@@ -244,9 +247,92 @@ def miniimagenet_our_eval(gpu_id=0, result_dir="result_our"):
     pass
 
 
+def tieredimagenet_final_eval(gpu_id=0, result_dir="result"):
+    dataset_name = MyDataset.dataset_name_tieredimagenet
+    checkpoint_path = "../models_abl/{}/mn".format(dataset_name)
+
+    param_list = [
+        {"name": "cluster_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_conv4_150_64_5_1_80_120_png.pkl")},
+        {"name": "css_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "css", "1_css_conv4_150_64_5_1_80_120_png.pkl")},
+        {"name": "random_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "random", "2_random_conv4_150_64_5_1_80_120_png.pkl")},
+        {"name": "label_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "label", "0123_100_256_5_1_conv4.pkl")},
+        {"name": "ufsl_res18_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_conv4_200_5_1_384_mn.pkl")},
+        # {"name": "ufsl_res34head_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "ufsl", "3_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
+
+        {"name": "cluster_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_res12_30_32_5_1_16_24_png.pkl")},
+        {"name": "css_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "css", "1_css_res12_50_32_5_1_30_40_png.pkl")},
+        {"name": "random_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "random", "1_random_res12_30_32_5_1_16_8_png.pkl")},
+        {"name": "label_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "label", "0123_100_64_5_1_res12.pkl")},
+        {"name": "ufsl_res18_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_resnet12_100_5_1_128_mn.pkl")},
+        # {"name": "ufsl_res34head_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "ufsl", "2_R12S_1500_32_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
+    ]
+
+    for index, param in enumerate(param_list):
+        Tools.print("Check: {} / {}".format(index, len(param_list)))
+        Runner(config=Config(gpu_id, dataset_name=dataset_name, is_conv_4=param["is_conv_4"],
+                             name=param["name"], mn_checkpoint=param["mn"], is_check=True)).load_model()
+        pass
+
+    for index, param in enumerate(param_list):
+        Tools.print("{} / {}".format(index, len(param_list)))
+        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"],
+                   dataset_name=dataset_name, is_conv_4=param["is_conv_4"], result_dir=result_dir)
+        pass
+
+    pass
+
+
+def tieredimagenet_our_eval(gpu_id=0, result_dir="result_our"):
+    dataset_name = MyDataset.dataset_name_tieredimagenet
+    checkpoint_path = "../models_abl/{}/mn".format(dataset_name)
+
+    param_list = [
+        {"name": "ufsl_res18_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_conv4_200_5_1_384_mn.pkl")},
+        # {"name": "ufsl_res34head_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "ufsl", "3_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
+
+        {"name": "ufsl_res18_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_resnet12_100_5_1_128_mn.pkl")},
+        # {"name": "ufsl_res34head_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "ufsl", "2_R12S_1500_32_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
+    ]
+
+    for index, param in enumerate(param_list):
+        Tools.print("Check: {} / {}".format(index, len(param_list)))
+        Runner(config=Config(gpu_id, dataset_name=dataset_name, is_conv_4=param["is_conv_4"],
+                             name=param["name"], mn_checkpoint=param["mn"], is_check=True)).load_model()
+        pass
+
+    for index, param in enumerate(param_list):
+        Tools.print("{} / {}".format(index, len(param_list)))
+        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
+                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_train)
+        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
+                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_val)
+        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
+                   is_conv_4=param["is_conv_4"], result_dir=result_dir, split=MyDataset.dataset_split_test)
+        pass
+
+    pass
+
+
 ##############################################################################################################
 
 
 if __name__ == '__main__':
-    miniimagenet_our_eval()
+    tieredimagenet_final_eval()
+    # tieredimagenet_our_eval()
     pass

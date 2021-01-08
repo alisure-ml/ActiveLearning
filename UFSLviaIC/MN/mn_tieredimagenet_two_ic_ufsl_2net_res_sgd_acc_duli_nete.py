@@ -672,6 +672,17 @@ class Config(object):
 """
 
 
+"""
+123_res34_head_1200_384_2048_conv4_100_5_1_288_ic
+2021-01-08 17:28:50 load ic model success from ../tiered_imagenet/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/123_res34_head_1200_384_2048_conv4_100_5_1_288_ic.pkl
+2021-01-08 14:50:07 Test 1170 .......
+2021-01-08 14:55:13 Epoch: 1170 Train 0.3558/0.6511 0.0000
+2021-01-08 14:55:13 Epoch: 1170 Val   0.4054/0.7416 0.0000
+2021-01-08 14:55:13 Epoch: 1170 Test  0.3471/0.6674 0.0000
+2021-01-08 14:55:13 Save networks for epoch: 1170
+"""
+
+
 if __name__ == '__main__':
     runner_ic = RunnerIC()
     runner_ic.train()
