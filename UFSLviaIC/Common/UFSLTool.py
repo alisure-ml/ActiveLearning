@@ -98,6 +98,7 @@ class MyDataset(object):
         else:
             raise Exception(".")
         return ways, shots
+
     pass
 
 

@@ -276,8 +276,8 @@ class Config(object):
 
     ###############################################################################################
     baseline_type_list = ["random", "css", "cluster"]
-    baseline_type = "css"
-    # baseline_type = "random"
+    # baseline_type = "css"
+    baseline_type = "random"
     # baseline_type = "cluster"
     ###############################################################################################
 
@@ -292,7 +292,7 @@ class Config(object):
     # val_freq = 10
     # dataset_name = "miniimagenet"
     # train_epoch = 150
-    # first_epoch, t_epoch = 80, 120
+    # first_epoch, t_epoch = 80, 40
     # adjust_learning_rate = RunnerTool.adjust_learning_rate2
     # net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 32
     ###############################################################################################
@@ -301,14 +301,16 @@ class Config(object):
     # val_freq = 5
     # dataset_name = "tieredimagenet"
     # train_epoch = 150
-    # first_epoch, t_epoch = 80, 120
+    # first_epoch, t_epoch = 80, 40
     # adjust_learning_rate = RunnerTool.adjust_learning_rate2
     # net, net_name, batch_size = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4", 64
 
     val_freq = 2
     dataset_name = "tieredimagenet"
-    train_epoch = 50
-    first_epoch, t_epoch = 30, 40
+    # train_epoch = 50
+    # first_epoch, t_epoch = 30, 10
+    train_epoch = 30
+    first_epoch, t_epoch = 16, 8
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
     net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 32
     ###############################################################################################
@@ -428,6 +430,42 @@ res12 cluster
 
 # tieredimagenet
 """
+2021-01-05 02:49:08 load net success from ../models_baseline/css/1_css_conv4_150_64_5_1_80_120_png.pkl
+2021-01-05 02:49:37 Train 150 Accuracy: 0.39644444444444443
+2021-01-05 02:50:05 Val   150 Accuracy: 0.40644444444444444
+2021-01-05 02:50:33 Test1 150 Accuracy: 0.4
+2021-01-05 02:51:43 Test2 150 Accuracy: 0.4020222222222222
+2021-01-05 02:57:29 episode=150, Test accuracy=0.40624444444444446
+2021-01-05 02:57:29 episode=150, Test accuracy=0.40786666666666666
+2021-01-05 02:57:29 episode=150, Test accuracy=0.40915555555555555
+2021-01-05 02:57:29 episode=150, Test accuracy=0.4118222222222222
+2021-01-05 02:57:29 episode=150, Test accuracy=0.40286666666666665
+2021-01-05 02:57:29 episode=150, Mean Test accuracy=0.4075911111111111
+
+2021-01-06 19:05:28 load net success from ../models_baseline/cluster/tieredimagenet/2_cluster_conv4_150_64_5_1_80_120_png.pkl
+2021-01-06 19:05:56 Train 150 Accuracy: 0.43644444444444447
+2021-01-06 19:06:24 Val   150 Accuracy: 0.41111111111111115
+2021-01-06 19:06:52 Test1 150 Accuracy: 0.4228888888888889
+2021-01-06 19:08:01 Test2 150 Accuracy: 0.4120666666666667
+2021-01-06 19:13:50 episode=150, Test accuracy=0.41531111111111113
+2021-01-06 19:13:50 episode=150, Test accuracy=0.4204222222222222
+2021-01-06 19:13:50 episode=150, Test accuracy=0.4246888888888889
+2021-01-06 19:13:50 episode=150, Test accuracy=0.42717777777777777
+2021-01-06 19:13:50 episode=150, Test accuracy=0.42033333333333334
+2021-01-06 19:13:50 episode=150, Mean Test accuracy=0.4215866666666666
+
+
+2021-01-08 07:53:08 load net success from ../models_baseline/tieredimagenet/css/1_css_res12_50_32_5_1_30_40_png.pkl
+2021-01-08 07:53:43 Train 50 Accuracy: 0.4575555555555556
+2021-01-08 07:54:16 Val   50 Accuracy: 0.44933333333333336
+2021-01-08 07:54:49 Test1 50 Accuracy: 0.43322222222222223
+2021-01-08 07:56:27 Test2 50 Accuracy: 0.4276222222222222
+2021-01-08 08:04:34 episode=50, Test accuracy=0.4270444444444445
+2021-01-08 08:04:34 episode=50, Test accuracy=0.42840000000000006
+2021-01-08 08:04:34 episode=50, Test accuracy=0.4403333333333334
+2021-01-08 08:04:34 episode=50, Test accuracy=0.42684444444444447
+2021-01-08 08:04:34 episode=50, Test accuracy=0.42875555555555556
+2021-01-08 08:04:34 episode=50, Mean Test accuracy=0.4302755555555556
 
 """
 
