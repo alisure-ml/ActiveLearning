@@ -23,6 +23,8 @@ class MyDataset(object):
 
     dataset_name_miniimagenet = "miniimagenet"
     dataset_name_tieredimagenet = "tieredimagenet"
+    dataset_name_cifarfs = "CIFARFS"
+    dataset_name_fc100 = "FC100"
 
     dataset_split_train = "train"
     dataset_split_val = "val"
@@ -69,13 +71,29 @@ class MyDataset(object):
                     data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/tiered-imagenet'
             else:
                 data_root = "F:\\data\\UFSL\\tiered-imagenet"
+        elif dataset_name == MyDataset.dataset_name_cifarfs:
+            if "Linux" in platform.platform():
+                data_root = '/mnt/4T/Data/data/UFSL/CIFARFS'
+                if not os.path.isdir(data_root):
+                    data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/CIFARFS'
+            else:
+                data_root = "F:\\data\\UFSL\\CIFARFS"
+        elif dataset_name == MyDataset.dataset_name_fc100:
+            if "Linux" in platform.platform():
+                data_root = '/mnt/4T/Data/data/UFSL/FC100'
+                if not os.path.isdir(data_root):
+                    data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/FC100'
+            else:
+                data_root = "F:\\data\\UFSL\\FC100"
         else:
             raise Exception("..........................")
         return data_root
 
     @staticmethod
     def get_ways_shots(dataset_name, split):
-        if dataset_name == MyDataset.dataset_name_miniimagenet:
+        if dataset_name == MyDataset.dataset_name_miniimagenet \
+                or dataset_name == MyDataset.dataset_name_cifarfs \
+                or dataset_name == MyDataset.dataset_name_fc100:
             if split == MyDataset.dataset_split_test:
                 ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
                 shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
@@ -139,18 +157,54 @@ class MyTransforms(object):
     def get_transform_tieredimagenet(cls, normalize, has_ic=True, is_fsl_simple=True, is_css=False):
         return cls.get_transform_miniimagenet(normalize, has_ic, is_fsl_simple, is_css)
 
+    @staticmethod
+    def get_transform_cifar(normalize, has_ic=True, is_fsl_simple=True, is_css=False, size=32):
+        change = transforms.Resize(size) if size > 32 else lambda x: x
+        transform_train_ic = transforms.Compose([
+            change, transforms.RandomResizedCrop(size=size, scale=(0.2, 1.)),
+            transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize
+        ])
+
+        transform_train_fsl_simple = transforms.Compose([
+            change, transforms.RandomResizedCrop(size=size),
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        transform_train_fsl_hard = transforms.Compose([
+            change, transforms.RandomResizedCrop(size=size),
+            transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        transform_train_fsl_css = transforms.Compose([
+            change, transforms.RandomRotation(20),
+            transforms.RandomResizedCrop(size=size),
+            transforms.ColorJitter(0.8, 0.8, 0.8, 0.2), transforms.RandomGrayscale(p=0.2),
+            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        transform_train_fsl = transform_train_fsl_simple if is_fsl_simple else transform_train_fsl_hard
+        transform_train_fsl = transform_train_fsl_css if is_css else transform_train_fsl
+
+        transform_test = transforms.Compose([change, transforms.ToTensor(), normalize])
+
+        if has_ic:
+            return transform_train_ic, transform_train_fsl, transform_test
+        else:
+            return transform_train_fsl, transform_test
+        pass
+
     @classmethod
-    def get_transform(cls, dataset_name, has_ic=True, is_fsl_simple=True, is_css=False):
+    def get_transform(cls, dataset_name, has_ic=True, is_fsl_simple=True, is_css=False, cifar_size=32):
         normalize_1 = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
                                              std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
         normalize_2 = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
                                               np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
+        normalize_3 = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
         if dataset_name == MyDataset.dataset_name_miniimagenet:
             return cls.get_transform_miniimagenet(normalize_1, has_ic=has_ic,
                                                   is_fsl_simple=is_fsl_simple, is_css=is_css)
         elif dataset_name == MyDataset.dataset_name_tieredimagenet:
             return cls.get_transform_tieredimagenet(normalize_1, has_ic=has_ic,
                                                     is_fsl_simple=is_fsl_simple, is_css=is_css)
+        elif dataset_name == MyDataset.dataset_name_cifarfs or dataset_name == MyDataset.dataset_name_fc100:
+            return cls.get_transform_cifar(normalize_3, has_ic=has_ic,
+                                           is_fsl_simple=is_fsl_simple, is_css=is_css, size=cifar_size)
         else:
             raise Exception("......")
         pass
