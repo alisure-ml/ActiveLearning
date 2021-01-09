@@ -52,7 +52,7 @@ for index, txt_content in enumerate(all_txt_content):
     net_index = 1 if net == "conv4" else 2
     net = "Conv4" if net == "conv4" else "ResNet12"
     if method == "ufsl":
-        if "18" in net:
+        if "18" in txt_name[-2]:
             continue
         name = "{}4-{}({})".format(net_index, "Our", net)
     elif method == "cluster":

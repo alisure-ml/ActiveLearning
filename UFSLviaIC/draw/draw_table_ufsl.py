@@ -13,11 +13,13 @@ all_txt = glob(os.path.join(txt_path, "*.txt"))
 all_txt_name = []
 all_txt_content = []
 for txt in all_txt:
+    txt_name_list = os.path.basename(txt).split("_")
+    if len(txt_name_list) == 5 and "18" in txt_name_list[2]:
+        continue
     with open(txt) as file:
         txt_content = file.readlines()
         all_txt_content.append(txt_content)
         pass
-    txt_name_list = os.path.basename(txt).split("_")
     txt_name_list = [txt_name_list[1], txt_name_list[-2]]
     all_txt_name.append(txt_name_list)
     pass
@@ -61,7 +63,7 @@ for backbone_key in ["Conv-4", "ResNet-12"]:
     result_str = []
     for method_key in ["Random", "CSS", "Clustering", "Label", "Ours"]:
         acc_dict = acc_result_dict[method_key][backbone_key]
-        now_str = "{} & {} & {:.2f}\\tiny{} & {:.2f}\\tiny{} & {:.2f}\\tiny{} & {:.2f}\\tiny{} \\\\".format(
+        now_str = "{} & {} & {:.2f}\\small{} & {:.2f}\\small{} & {:.2f}\\small{} & {:.2f}\\small{} \\\\".format(
             method_key, backbone_key,
             acc_dict["5-1"]["acc"], "{$\\pm$" + "{:.2f}".format(acc_dict["5-1"]["con"]) + "\\%}",
             acc_dict["5-5"]["acc"], "{$\\pm$" + "{:.2f}".format(acc_dict["5-5"]["con"]) + "\\%}",

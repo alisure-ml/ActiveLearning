@@ -270,31 +270,31 @@ def tieredimagenet_final_eval(gpu_id=0, result_dir="result"):
     checkpoint_path = "../models_abl/{}/mn".format(dataset_name)
 
     param_list = [
-        {"name": "cluster_conv4", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_conv4_150_64_5_1_80_120_png.pkl")},
-        {"name": "css_conv4", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "css", "1_css_conv4_150_64_5_1_80_120_png.pkl")},
-        {"name": "random_conv4", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "random", "2_random_conv4_150_64_5_1_80_120_png.pkl")},
-        {"name": "label_conv4", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "label", "0123_100_256_5_1_conv4.pkl")},
-        {"name": "ufsl_res18_conv4", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_conv4_200_5_1_384_mn.pkl")},
-        # {"name": "ufsl_res34head_conv4", "is_conv_4": True,
-        #  "mn": os.path.join(checkpoint_path, "ufsl", "3_2100_64_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
+        # {"name": "cluster_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_conv4_150_64_5_1_80_120_png.pkl")},
+        # {"name": "css_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "css", "1_css_conv4_150_64_5_1_80_120_png.pkl")},
+        # {"name": "random_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "random", "2_random_conv4_150_64_5_1_80_120_png.pkl")},
+        # {"name": "label_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "label", "0123_100_256_5_1_conv4.pkl")},
+        # {"name": "ufsl_res18_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_conv4_200_5_1_384_mn.pkl")},
+        {"name": "ufsl_res34head_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "ufsl", "123_res34_head_1200_384_2048_conv4_100_5_1_288_mn.pkl")},
 
-        {"name": "cluster_res12", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_res12_30_32_5_1_16_24_png.pkl")},
-        {"name": "css_res12", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "css", "1_css_res12_50_32_5_1_30_40_png.pkl")},
-        {"name": "random_res12", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "random", "1_random_res12_30_32_5_1_16_8_png.pkl")},
-        {"name": "label_res12", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "label", "0123_100_64_5_1_res12.pkl")},
-        {"name": "ufsl_res18_res12", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_resnet12_100_5_1_128_mn.pkl")},
-        # {"name": "ufsl_res34head_res12", "is_conv_4": False,
-        #  "mn": os.path.join(checkpoint_path, "ufsl", "2_R12S_1500_32_5_1_500_200_512_1_1.0_1.0_head_png_mn.pkl")},
+        # {"name": "cluster_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_res12_30_32_5_1_16_24_png.pkl")},
+        # {"name": "css_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "css", "1_css_res12_50_32_5_1_30_40_png.pkl")},
+        # {"name": "random_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "random", "1_random_res12_30_32_5_1_16_8_png.pkl")},
+        # {"name": "label_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "label", "0123_100_64_5_1_res12.pkl")},
+        # {"name": "ufsl_res18_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_resnet12_100_5_1_128_mn.pkl")},
+        {"name": "ufsl_res34head_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "ufsl", "0123_res34_head_1200_1024_2048_resnet12_50_5_1_128_mn.pkl")},
     ]
 
     for index, param in enumerate(param_list):
@@ -318,27 +318,31 @@ def tieredimagenet_our_eval(gpu_id=0, result_dir="result_our"):
 
     ways_and_shots = [[5, 1], [5, 5], [20, 1], [20, 5]]
     param_list = [
-        {"name": "cluster_conv4", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_conv4_150_64_5_1_80_120_png.pkl")},
-        {"name": "css_conv4", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "css", "1_css_conv4_150_64_5_1_80_120_png.pkl")},
-        {"name": "random_conv4", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "random", "2_random_conv4_150_64_5_1_80_120_png.pkl")},
-        {"name": "label_conv4", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "label", "0123_100_256_5_1_conv4.pkl")},
+        # {"name": "cluster_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_conv4_150_64_5_1_80_120_png.pkl")},
+        # {"name": "css_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "css", "1_css_conv4_150_64_5_1_80_120_png.pkl")},
+        # {"name": "random_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "random", "2_random_conv4_150_64_5_1_80_120_png.pkl")},
+        # {"name": "label_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "label", "0123_100_256_5_1_conv4.pkl")},
         # {"name": "ufsl_res18_conv4", "is_conv_4": True,
         #  "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_conv4_200_5_1_384_mn.pkl")},
+        {"name": "ufsl_res34head_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "ufsl", "123_res34_head_1200_384_2048_conv4_100_5_1_288_mn.pkl")},
 
-        {"name": "cluster_res12", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_res12_30_32_5_1_16_24_png.pkl")},
-        {"name": "css_res12", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "css", "1_css_res12_50_32_5_1_30_40_png.pkl")},
-        {"name": "random_res12", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "random", "1_random_res12_30_32_5_1_16_8_png.pkl")},
-        {"name": "label_res12", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "label", "0123_100_64_5_1_res12.pkl")},
+        # {"name": "cluster_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "cluster", "2_cluster_res12_30_32_5_1_16_24_png.pkl")},
+        # {"name": "css_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "css", "1_css_res12_50_32_5_1_30_40_png.pkl")},
+        # {"name": "random_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "random", "1_random_res12_30_32_5_1_16_8_png.pkl")},
+        # {"name": "label_res12", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "label", "0123_100_64_5_1_res12.pkl")},
         # {"name": "ufsl_res18_res12", "is_conv_4": False,
         #  "mn": os.path.join(checkpoint_path, "ufsl", "0123_res18_1200_1024_2048_resnet12_100_5_1_128_mn.pkl")},
+        {"name": "ufsl_res34head_res12", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "ufsl", "0123_res34_head_1200_1024_2048_resnet12_50_5_1_128_mn.pkl")},
     ]
 
     for index, param in enumerate(param_list):
@@ -361,7 +365,7 @@ def tieredimagenet_our_eval(gpu_id=0, result_dir="result_our"):
 
 
 if __name__ == '__main__':
-    miniimagenet_our_eval(result_dir="result_table")
-    # tieredimagenet_final_eval()
+    # miniimagenet_our_eval(result_dir="result_table")
+    tieredimagenet_final_eval()
     tieredimagenet_our_eval(result_dir="result_table")
     pass
