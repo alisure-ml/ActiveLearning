@@ -385,7 +385,12 @@ class Runner(object):
 
 
 """
-
+0_32_resnet_34_64_1024_1_1500_300_200_True_ic.pkl
+2021-01-10 12:02:50 load ic model success from ../models_CIFARFS/models/ic_res_xx/0_32_resnet_34_64_1024_1_1500_300_200_True_ic.pkl
+2021-01-10 12:02:50 Test 1500 .......
+2021-01-10 12:03:02 Epoch: 1500 Train 0.6046/0.8583 0.0000
+2021-01-10 12:03:02 Epoch: 1500 Val   0.6460/0.9327 0.0000
+2021-01-10 12:03:02 Epoch: 1500 Test  0.6775/0.9487 0.0000
 """
 
 
