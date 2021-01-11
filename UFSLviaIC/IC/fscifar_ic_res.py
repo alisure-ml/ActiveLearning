@@ -391,6 +391,12 @@ class Runner(object):
 2021-01-10 12:03:02 Epoch: 1500 Train 0.6046/0.8583 0.0000
 2021-01-10 12:03:02 Epoch: 1500 Val   0.6460/0.9327 0.0000
 2021-01-10 12:03:02 Epoch: 1500 Test  0.6775/0.9487 0.0000
+
+2021-01-11 02:14:39 load ic model success from ../models_CIFARFS/models/ic_res_xx/1_84_resnet_34_64_1024_1_1500_300_200_True_ic.pkl
+2021-01-11 02:14:39 Test 1500 .......
+2021-01-11 02:15:11 Epoch: 1500 Train 0.6009/0.8559 0.0000
+2021-01-11 02:15:11 Epoch: 1500 Val   0.6694/0.9426 0.0000
+2021-01-11 02:15:11 Epoch: 1500 Test  0.6913/0.9553 0.0000
 """
 
 
@@ -398,22 +404,24 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
     batch_size = 64
     val_freq = 10
     knn = 100
-    ic_out_dim = 1024
     ic_ratio = 1
 
     ##############################################################################################################
-    dataset_name = "CIFARFS"
-    # dataset_name = "FC100"
+    # dataset_name = "CIFARFS"
+    dataset_name = "FC100"
 
     # image_size = 84
     image_size = 32
+
+    # ic_out_dim = 1024
+    ic_out_dim = 512
 
     # resnet, vggnet, net_name = resnet18, None, "resnet_18"
     resnet, vggnet, net_name = resnet34, None, "resnet_34"
