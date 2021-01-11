@@ -342,6 +342,7 @@ class Config(object):
 2021-01-10 21:11:36 episode=400, Test accuracy=0.6625333333333334
 2021-01-10 21:11:36 episode=400, Mean Test accuracy=0.6629244444444444
 
+2_CIFARFS_32_res12_400_5_1_aug1.pkl
 2021-01-11 15:32:58 load proto net success from ../models_CIFARFS/mn/fsl_modify/2_CIFARFS_32_res12_400_5_1_aug1.pkl
 2021-01-11 15:33:17 Train 400 Accuracy: 0.98
 2021-01-11 15:33:36 Val   400 Accuracy: 0.5976666666666667
@@ -353,6 +354,19 @@ class Config(object):
 2021-01-11 15:40:31 episode=400, Test accuracy=0.6745777777777778
 2021-01-11 15:40:31 episode=400, Test accuracy=0.6694888888888889
 2021-01-11 15:40:31 episode=400, Mean Test accuracy=0.6773644444444445
+
+3_CIFARFS_32_res12large_400_5_1_aug1_10.pkl
+2021-01-12 00:39:59 load proto net success from ../models_CIFARFS/mn/fsl_modify/3_CIFARFS_32_res12large_400_5_1_aug1_10.pkl
+2021-01-12 00:40:20 Train 400 Accuracy: 0.9827777777777779
+2021-01-12 00:40:41 Val   400 Accuracy: 0.5988888888888889
+2021-01-12 00:41:03 Test1 400 Accuracy: 0.6781111111111111
+2021-01-12 00:42:06 Test2 400 Accuracy: 0.6826888888888889
+2021-01-12 00:47:12 episode=400, Test accuracy=0.6982222222222223
+2021-01-12 00:47:12 episode=400, Test accuracy=0.6947555555555556
+2021-01-12 00:47:12 episode=400, Test accuracy=0.6974666666666667
+2021-01-12 00:47:12 episode=400, Test accuracy=0.6894888888888888
+2021-01-12 00:47:12 episode=400, Test accuracy=0.6814888888888888
+2021-01-12 00:47:12 episode=400, Mean Test accuracy=0.6922844444444444
 """
 
 
@@ -387,10 +401,10 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    runner.matching_net.eval()
-    runner.test_tool.val(episode=0, is_print=True)
+    # runner.matching_net.eval()
+    # runner.test_tool.val(episode=0, is_print=True)
 
-    runner.train()
+    # runner.train()
 
     runner.load_model()
     runner.matching_net.eval()

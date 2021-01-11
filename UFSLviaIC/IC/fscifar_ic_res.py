@@ -392,11 +392,34 @@ class Runner(object):
 2021-01-10 12:03:02 Epoch: 1500 Val   0.6460/0.9327 0.0000
 2021-01-10 12:03:02 Epoch: 1500 Test  0.6775/0.9487 0.0000
 
+1_84_resnet_34_64_1024_1_1500_300_200_True_ic.pkl
 2021-01-11 02:14:39 load ic model success from ../models_CIFARFS/models/ic_res_xx/1_84_resnet_34_64_1024_1_1500_300_200_True_ic.pkl
 2021-01-11 02:14:39 Test 1500 .......
 2021-01-11 02:15:11 Epoch: 1500 Train 0.6009/0.8559 0.0000
 2021-01-11 02:15:11 Epoch: 1500 Val   0.6694/0.9426 0.0000
 2021-01-11 02:15:11 Epoch: 1500 Test  0.6913/0.9553 0.0000
+"""
+
+
+"""
+1_FC100_32_resnet_34_64_512_1_1500_300_200_True_ic.pkl
+2021-01-11 23:46:47 load ic model success from ../models_CIFARFS/models/ic_res_xx/1_FC100_32_resnet_34_64_512_1_1500_300_200_True_ic.pkl
+2021-01-11 23:46:47 Test 1500 .......
+2021-01-11 23:47:02 Epoch: 1500 Train 0.6312/0.9010 0.0000
+2021-01-11 23:47:02 Epoch: 1500 Val   0.4491/0.8022 0.0000
+2021-01-11 23:47:02 Epoch: 1500 Test  0.4330/0.8199 0.0000
+
+2021-01-11 23:27:50 load proto net success from ../models_CIFARFS/models/ic_res_xx/1_FC100_32_resnet_34_64_512_1_1500_300_200_True_ic.pkl
+2021-01-11 23:28:32 Train 400 Accuracy: 0.6137777777777778
+2021-01-11 23:29:17 Val   400 Accuracy: 0.328
+2021-01-11 23:30:00 Test1 400 Accuracy: 0.3562222222222223
+2021-01-11 23:33:04 Test2 400 Accuracy: 0.3567111111111111
+2021-01-11 23:48:20 episode=400, Test accuracy=0.35066666666666674
+2021-01-11 23:48:20 episode=400, Test accuracy=0.3503555555555556
+2021-01-11 23:48:20 episode=400, Test accuracy=0.3482
+2021-01-11 23:48:20 episode=400, Test accuracy=0.3518444444444444
+2021-01-11 23:48:20 episode=400, Test accuracy=0.3502222222222222
+2021-01-11 23:48:20 episode=400, Mean Test accuracy=0.3502577777777778
 """
 
 

@@ -420,7 +420,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     #######################################################################################
@@ -442,8 +442,8 @@ class Config(object):
     dataset_name = "CIFARFS"
     # dataset_name = "FC100"
     resnet, modify_head, ic_net_name = resnet34, True, "res34_head"
-    matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
-    # matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 64
+    # matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+    matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 64
     ###############################################################################################
 
     ###############################################################################################

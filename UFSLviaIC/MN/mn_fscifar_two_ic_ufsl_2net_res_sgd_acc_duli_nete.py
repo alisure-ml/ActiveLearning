@@ -507,7 +507,7 @@ class Config(object):
 
     ic_ratio = 1
     ic_knn = 100
-    ic_out_dim = 1024
+    # ic_out_dim = 1024
     ic_val_freq = 10
     ic_learning_rate = 0.01
     ic_train_epoch = 1500
@@ -536,8 +536,10 @@ class Config(object):
         # fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
         # fsl_train_epoch, fsl_lr_schedule = 300, [150, 250]
         fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
-        fsl_train_epoch, fsl_lr_schedule = 200, [100, 150]
+        # fsl_train_epoch, fsl_lr_schedule = 200, [100, 150]
+        fsl_train_epoch, fsl_lr_schedule = 400, [200, 300]
 
+        ic_out_dim = 1024
         # ic_dir_checkpoint = None
         ic_dir_checkpoint = "../models_CIFARFS/models/ic_res_xx/0_32_resnet_34_64_1024_1_1500_300_200_True_ic.pkl"
     else:
@@ -549,7 +551,9 @@ class Config(object):
         fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
         fsl_train_epoch, fsl_lr_schedule = 200, [100, 150]
 
+        ic_out_dim = 512
         # ic_dir_checkpoint = None
+        ic_dir_checkpoint = "../models_CIFARFS/models/ic_res_xx/1_FC100_32_resnet_34_64_512_1_1500_300_200_True_ic.pkl"
         pass
     ###############################################################################################
 
@@ -598,6 +602,20 @@ class Config(object):
 2021-01-11 20:39:50 episode=400, Test accuracy=0.5248666666666668
 2021-01-11 20:39:50 episode=400, Test accuracy=0.5131111111111111
 2021-01-11 20:39:50 episode=400, Mean Test accuracy=0.5198177777777777
+
+
+
+2021-01-12 00:15:24 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/2_CIFARFS_32_res34_head_1500_64_1024_resnet12_200_5_1_32_aug1_mn.pkl
+2021-01-12 00:15:48 Train 200 Accuracy: 0.5865555555555556
+2021-01-12 00:16:10 Val   200 Accuracy: 0.4921111111111111
+2021-01-12 00:16:36 Test1 200 Accuracy: 0.5392222222222222
+2021-01-12 00:17:47 Test2 200 Accuracy: 0.5366000000000001
+2021-01-12 00:23:23 episode=200, Test accuracy=0.5306000000000001
+2021-01-12 00:23:23 episode=200, Test accuracy=0.5388444444444445
+2021-01-12 00:23:23 episode=200, Test accuracy=0.5313777777777777
+2021-01-12 00:23:23 episode=200, Test accuracy=0.537222222222222
+2021-01-12 00:23:23 episode=200, Test accuracy=0.5378
+2021-01-12 00:23:23 episode=200, Mean Test accuracy=0.5351688888888889
 """
 
 
