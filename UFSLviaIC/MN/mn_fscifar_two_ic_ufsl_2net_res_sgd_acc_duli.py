@@ -23,7 +23,7 @@ from mn_tool_net import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
 class CIFARFSDataset(object):
 
-    def __init__(self, data_list, num_way, num_shot, image_size=84):
+    def __init__(self, data_list, num_way, num_shot, image_size=32):
         self.data_list, self.num_way, self.num_shot = data_list, num_way, num_shot
 
         self.data_id = np.asarray(range(len(self.data_list)))
@@ -38,17 +38,27 @@ class CIFARFSDataset(object):
             pass
 
         normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-        change = transforms.Resize(image_size) if image_size > 32 else lambda x: x
-
         self.transform_train_ic = transforms.Compose([
-            change, transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
+            transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize
         ])
-        self.transform_train_fsl = transforms.Compose([
-            change, transforms.RandomResizedCrop(size=image_size),
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test =  transforms.Compose([change, transforms.ToTensor(), normalize])
+
+        if Config.aug_name == 1:
+            normalize = transforms.Normalize([0.5071, 0.4867, 0.4408], [0.2675, 0.2565, 0.2761])
+            self.transform_train_fsl = transforms.Compose([
+                transforms.RandomCrop(image_size, padding=4),
+                transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+                transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        elif Config.aug_name == 2:
+            normalize = transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])
+            self.transform_train_fsl = transforms.Compose([
+                transforms.RandomResizedCrop(size=image_size),
+                transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+        else:
+            raise Exception(".................")
+
+        self.transform_test =  transforms.Compose([transforms.ToTensor(), normalize])
         pass
 
     def __len__(self):
@@ -219,7 +229,7 @@ class Runner(object):
 
         # all data
         self.data_train = CIFARFSDataset.get_data_all(Config.data_root)
-        self.task_train = CIFARFSDataset(self.data_train, Config.num_way, Config.num_shot, image_size=Config.image_size)
+        self.task_train = CIFARFSDataset(self.data_train, Config.num_way, Config.num_shot)
         self.task_train_loader = DataLoader(self.task_train, Config.batch_size, True, num_workers=Config.num_workers)
 
         # IC
@@ -413,8 +423,8 @@ class Config(object):
     gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
+    #######################################################################################
     num_workers = 16
-
     num_way = 5
     num_shot = 1
     val_freq = 10
@@ -426,29 +436,33 @@ class Config(object):
     learning_rate = 0.01
     loss_fsl_ratio = 1.0
     loss_ic_ratio = 1.0
+    #######################################################################################
 
     #######################################################################################
     dataset_name = "CIFARFS"
     # dataset_name = "FC100"
-    # image_size = 84
-    image_size = 32
-    #######################################################################################
-
-    ###############################################################################################
-    resnet = resnet34
-    modify_head = True
-
+    resnet, modify_head, ic_net_name = resnet34, True, "res34_head"
     matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
-    # matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
-
-    train_epoch = 1800
-    first_epoch, t_epoch = 400, 200
-    adjust_learning_rate = RunnerTool.adjust_learning_rate1
+    # matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 64
     ###############################################################################################
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        gpu_id, dataset_name, image_size, net_name, train_epoch, batch_size, num_way, num_shot,
-        first_epoch, t_epoch, ic_out_dim, ic_ratio, loss_fsl_ratio, loss_ic_ratio)
+    ###############################################################################################
+    if dataset_name == "CIFARFS":
+        aug_name = 1  # other
+        # aug_name = 2  # my
+        train_epoch, first_epoch, t_epoch = 1600, 400, 200
+        adjust_learning_rate = RunnerTool.adjust_learning_rate1
+    else:
+        aug_name = 1  # other
+        # aug_name = 2  # my
+        train_epoch, first_epoch, t_epoch = 1600, 400, 200
+        adjust_learning_rate = RunnerTool.adjust_learning_rate1
+        pass
+    ###############################################################################################
+
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_aug{}".format(
+        gpu_id, dataset_name, 32, net_name, train_epoch, batch_size, num_way, num_shot,
+        first_epoch, t_epoch, ic_out_dim, ic_ratio, aug_name)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/UFSL/{}'.format(dataset_name)
@@ -467,7 +481,23 @@ class Config(object):
 
 
 """
-
+0_CIFARFS_32_conv4_1600_64_5_1_400_200_1024_1_aug2_mn
+2021-01-11 19:12:46 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_CIFARFS_32_conv4_1600_64_5_1_400_200_1024_1_aug2_mn.pkl
+2021-01-11 19:12:46 load ic model success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_CIFARFS_32_conv4_1600_64_5_1_400_200_1024_1_aug2_ic.pkl
+2021-01-11 19:12:46 Test 1600 .......
+2021-01-11 19:13:02 Epoch: 1600 Train 0.6052/0.8587 0.0000
+2021-01-11 19:13:02 Epoch: 1600 Val   0.6386/0.9339 0.0000
+2021-01-11 19:13:02 Epoch: 1600 Test  0.6769/0.9491 0.0000
+2021-01-11 19:13:19 Train 1600 Accuracy: 0.5351111111111111
+2021-01-11 19:13:36 Val   1600 Accuracy: 0.48088888888888887
+2021-01-11 19:13:53 Test1 1600 Accuracy: 0.5091111111111112
+2021-01-11 19:14:34 Test2 1600 Accuracy: 0.5064666666666666
+2021-01-11 19:17:54 episode=1600, Test accuracy=0.5026
+2021-01-11 19:17:54 episode=1600, Test accuracy=0.5054444444444445
+2021-01-11 19:17:54 episode=1600, Test accuracy=0.5168222222222222
+2021-01-11 19:17:54 episode=1600, Test accuracy=0.5128444444444445
+2021-01-11 19:17:54 episode=1600, Test accuracy=0.5023777777777778
+2021-01-11 19:17:54 episode=1600, Mean Test accuracy=0.5080177777777778
 """
 
 

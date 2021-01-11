@@ -31,20 +31,22 @@ class CIFARDataset(object):
             self.data_dict[label].append((index, label, image_filename))
             pass
 
-        # mean, std = [0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010]
-        mean, std = [0.5071, 0.4867, 0.4408], [0.2675, 0.2565, 0.2761]
-        normalize = transforms.Normalize(mean, std)
-        change = transforms.Resize(image_size) if image_size > 32 else lambda x: x
+        if Config.aug_name == 1:
+            normalize = transforms.Normalize([0.5071, 0.4867, 0.4408], [0.2675, 0.2565, 0.2761])
+            self.transform = transforms.Compose([
+                transforms.RandomCrop(image_size, padding=4),
+                transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+                transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+            self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
+        elif Config.aug_name == 2:
+            normalize = transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])
+            self.transform = transforms.Compose([
+                transforms.RandomResizedCrop(size=image_size),
+                transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+            self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
+        else:
+            raise Exception(".................")
 
-        self.transform = transforms.Compose([
-            change, transforms.RandomCrop(image_size, padding=4),
-            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-
-            # change, transforms.RandomResizedCrop(size=image_size),
-            # transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
-
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([change, transforms.ToTensor(), normalize])
         pass
 
     def __len__(self):
@@ -113,7 +115,7 @@ class Runner(object):
 
         # all data
         self.data_train = CIFARDataset.get_data_all(Config.data_root)
-        self.task_train = CIFARDataset(self.data_train, Config.num_way, Config.num_shot, image_size=Config.image_size)
+        self.task_train = CIFARDataset(self.data_train, Config.num_way, Config.num_shot)
         self.task_train_loader = DataLoader(self.task_train, Config.batch_size, True, num_workers=Config.num_workers)
 
         # model
@@ -129,7 +131,7 @@ class Runner(object):
         self.matching_net_scheduler = MultiStepLR(self.matching_net_optim, Config.train_epoch_lr, gamma=0.5)
 
         self.test_tool = FSLTestTool(self.matching_test, data_root=Config.data_root,
-                                     num_way=Config.num_way, num_shot=Config.num_shot,
+                                     num_way=Config.num_way_test, num_shot=Config.num_shot,
                                      episode_size=Config.episode_size, test_episode=Config.test_episode,
                                      transform=self.task_train.transform_test)
         pass
@@ -165,18 +167,18 @@ class Runner(object):
 
         sample_z = self.matching_net(samples)  # 5x64*5*5
         batch_z = self.matching_net(batches)  # 75x64*5*5
-        z_support = sample_z.view(Config.num_way * Config.num_shot, -1)
+        z_support = sample_z.view(Config.num_way_test * Config.num_shot, -1)
         z_query = batch_z.view(batch_num, -1)
         _, z_dim = z_query.shape
 
-        z_support_expand = z_support.unsqueeze(0).expand(batch_num, Config.num_way * Config.num_shot, z_dim)
-        z_query_expand = z_query.unsqueeze(1).expand(batch_num, Config.num_way * Config.num_shot, z_dim)
+        z_support_expand = z_support.unsqueeze(0).expand(batch_num, Config.num_way_test * Config.num_shot, z_dim)
+        z_query_expand = z_query.unsqueeze(1).expand(batch_num, Config.num_way_test * Config.num_shot, z_dim)
 
         # 相似性
         z_support_expand = self.norm(z_support_expand)
         similarities = torch.sum(z_support_expand * z_query_expand, -1)
         similarities = torch.softmax(similarities, dim=1)
-        similarities = similarities.view(batch_num, Config.num_way, Config.num_shot)
+        similarities = similarities.view(batch_num, Config.num_way_test, Config.num_shot)
         predicts = torch.mean(similarities, dim=-1)
         return predicts
 
@@ -245,29 +247,44 @@ class Config(object):
 
     learning_rate = 0.001
     num_workers = 16
-    train_epoch = 400
-    train_epoch_lr = [200, 300]
-
-    num_way = 5
+    # num_way = 5
+    # num_way_test = 5
+    # val_freq = 10
     num_shot = 1
-
-    val_freq = 10
     episode_size = 15
     test_episode = 600
 
     ##############################################################################################################
-    # dataset_name = "CIFARFS"
-    dataset_name = "FC100"
+    dataset_name = "CIFARFS"
+    # dataset_name = "FC100"
 
-    image_size = 32
-    # image_size = 84
-
-    matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
-    # matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 32
+    if dataset_name == "CIFARFS":
+        is_large = True
+        # matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+        matching_net = ResNet12Small(avg_pool=True, drop_rate=0.1, large=is_large)
+        net_name, batch_size = "res12{}".format("large" if is_large else ""), 64
+        aug_name = 1  # other
+        train_epoch = 400
+        train_epoch_lr = [200, 300]
+        val_freq = 10
+        num_way = 5
+        num_way_test = 5
+    else:
+        # matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+        matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 64
+        aug_name = 1  # other
+        # aug_name = 2  # my
+        train_epoch = 60
+        train_epoch_lr = [30, 50]
+        val_freq = 2
+        # num_way = 20
+        num_way = 5
+        num_way_test = 5
+        pass
     ##############################################################################################################
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_otheraug".format(
-        gpu_id, dataset_name, image_size, net_name, train_epoch, num_way, num_shot)
+    model_name = "{}_{}_{}_{}_{}_{}_{}_aug{}_{}".format(
+        gpu_id, dataset_name, 32, net_name, train_epoch, num_way, num_shot, aug_name, val_freq)
 
     mn_dir = Tools.new_dir("../models_CIFARFS/mn/fsl_modify/{}.pkl".format(model_name))
     log_file = mn_dir.replace(".pkl", ".txt")
@@ -288,20 +305,7 @@ class Config(object):
 
 
 """
-2021-01-10 06:25:42 load proto net success from ../models_CIFARFS/mn/fsl_modify/3_CIFARFS_84_conv4_400_5_1.pkl
-2021-01-10 06:25:58 Train 400 Accuracy: 0.6938888888888889
-2021-01-10 06:26:14 Val   400 Accuracy: 0.5297777777777778
-2021-01-10 06:26:30 Test1 400 Accuracy: 0.6032222222222222
-2021-01-10 06:27:14 Test2 400 Accuracy: 0.593488888888889
-2021-01-10 06:30:54 episode=400, Test accuracy=0.5964666666666667
-2021-01-10 06:30:54 episode=400, Test accuracy=0.5942888888888889
-2021-01-10 06:30:54 episode=400, Test accuracy=0.589088888888889
-2021-01-10 06:30:54 episode=400, Test accuracy=0.5951777777777778
-2021-01-10 06:30:54 episode=400, Test accuracy=0.5913555555555555
-2021-01-10 06:30:54 episode=400, Mean Test accuracy=0.5932755555555556
-
-
-2021-01-10 02:33:41 load proto net success from ../models_CIFARFS/mn/fsl_modify/2_CIFARFS_32_conv4_400_5_1.pkl
+2021-01-10 02:33:41 load proto net success from ../models_CIFARFS/mn/fsl_modify/2_CIFARFS_32_conv4_400_5_1_aug2.pkl
 2021-01-10 02:33:56 Train 400 Accuracy: 0.7832222222222224
 2021-01-10 02:34:10 Val   400 Accuracy: 0.5287777777777778
 2021-01-10 02:34:24 Test1 400 Accuracy: 0.6115555555555555
@@ -313,8 +317,20 @@ class Config(object):
 2021-01-10 02:38:07 episode=400, Test accuracy=0.6017333333333332
 2021-01-10 02:38:07 episode=400, Mean Test accuracy=0.6027333333333333
 
+2021-01-11 18:56:17 load proto net success from ../models_CIFARFS/mn/fsl_modify/3_CIFARFS_32_conv4_400_5_1_aug1.pkl
+2021-01-11 18:56:37 Train 400 Accuracy: 0.8556666666666668
+2021-01-11 18:56:55 Val   400 Accuracy: 0.56
+2021-01-11 18:57:15 Test1 400 Accuracy: 0.6452222222222223
+2021-01-11 18:58:02 Test2 400 Accuracy: 0.6318444444444444
+2021-01-11 19:01:44 episode=400, Test accuracy=0.6412666666666667
+2021-01-11 19:01:44 episode=400, Test accuracy=0.6355333333333333
+2021-01-11 19:01:44 episode=400, Test accuracy=0.6336444444444445
+2021-01-11 19:01:44 episode=400, Test accuracy=0.6380444444444445
+2021-01-11 19:01:44 episode=400, Test accuracy=0.6370666666666667
+2021-01-11 19:01:44 episode=400, Mean Test accuracy=0.6371111111111112
 
-2021-01-10 21:04:30 load proto net success from ../models_CIFARFS/mn/fsl_modify/2_CIFARFS_32_res12_400_5_1.pkl
+
+2021-01-10 21:04:30 load proto net success from ../models_CIFARFS/mn/fsl_modify/2_CIFARFS_32_res12_400_5_1_aug2.pkl
 2021-01-10 21:04:51 Train 400 Accuracy: 0.9308888888888889
 2021-01-10 21:05:14 Val   400 Accuracy: 0.5978888888888889
 2021-01-10 21:05:35 Test1 400 Accuracy: 0.6652222222222222
@@ -326,18 +342,44 @@ class Config(object):
 2021-01-10 21:11:36 episode=400, Test accuracy=0.6625333333333334
 2021-01-10 21:11:36 episode=400, Mean Test accuracy=0.6629244444444444
 
+2021-01-11 15:32:58 load proto net success from ../models_CIFARFS/mn/fsl_modify/2_CIFARFS_32_res12_400_5_1_aug1.pkl
+2021-01-11 15:33:17 Train 400 Accuracy: 0.98
+2021-01-11 15:33:36 Val   400 Accuracy: 0.5976666666666667
+2021-01-11 15:33:55 Test1 400 Accuracy: 0.6706666666666666
+2021-01-11 15:34:47 Test2 400 Accuracy: 0.6677333333333333
+2021-01-11 15:40:31 episode=400, Test accuracy=0.6790666666666667
+2021-01-11 15:40:31 episode=400, Test accuracy=0.6810222222222222
+2021-01-11 15:40:31 episode=400, Test accuracy=0.6826666666666668
+2021-01-11 15:40:31 episode=400, Test accuracy=0.6745777777777778
+2021-01-11 15:40:31 episode=400, Test accuracy=0.6694888888888889
+2021-01-11 15:40:31 episode=400, Mean Test accuracy=0.6773644444444445
+"""
 
-2021-01-11 09:13:36 load proto net success from ../models_CIFARFS/mn/fsl_modify/2_CIFARFS_32_res12_400_5_1_hard.pkl
-2021-01-11 09:13:54 Train 400 Accuracy: 0.8306666666666668
-2021-01-11 09:14:11 Val   400 Accuracy: 0.5607777777777777
-2021-01-11 09:14:26 Test1 400 Accuracy: 0.6395555555555555
-2021-01-11 09:15:16 Test2 400 Accuracy: 0.6198444444444445
-2021-01-11 09:19:29 episode=400, Test accuracy=0.6307777777777779
-2021-01-11 09:19:29 episode=400, Test accuracy=0.6294
-2021-01-11 09:19:29 episode=400, Test accuracy=0.6254000000000001
-2021-01-11 09:19:29 episode=400, Test accuracy=0.6255777777777778
-2021-01-11 09:19:29 episode=400, Test accuracy=0.6261555555555556
-2021-01-11 09:19:29 episode=400, Mean Test accuracy=0.6274622222222223
+
+"""
+2021-01-11 14:35:22 load proto net success from ../models_CIFARFS/mn/fsl_modify/3_FC100_32_conv4_400_5_1_aug1.pkl
+2021-01-11 14:35:36 Train 400 Accuracy: 0.8192222222222222
+2021-01-11 14:35:51 Val   400 Accuracy: 0.3088888888888889
+2021-01-11 14:36:05 Test1 400 Accuracy: 0.3447777777777778
+2021-01-11 14:36:44 Test2 400 Accuracy: 0.35035555555555553
+2021-01-11 14:39:55 episode=400, Test accuracy=0.3497777777777778
+2021-01-11 14:39:55 episode=400, Test accuracy=0.3494888888888889
+2021-01-11 14:39:55 episode=400, Test accuracy=0.34575555555555554
+2021-01-11 14:39:55 episode=400, Test accuracy=0.3510888888888889
+2021-01-11 14:39:55 episode=400, Test accuracy=0.3526222222222222
+2021-01-11 14:39:55 episode=400, Mean Test accuracy=0.3497466666666667
+
+2021-01-11 14:44:22 load proto net success from ../models_CIFARFS/mn/fsl_modify/2_FC100_32_res12_400_5_1_aug1.pkl
+2021-01-11 14:44:47 Train 400 Accuracy: 0.9253333333333335
+2021-01-11 14:45:12 Val   400 Accuracy: 0.3194444444444445
+2021-01-11 14:45:38 Test1 400 Accuracy: 0.383
+2021-01-11 14:47:10 Test2 400 Accuracy: 0.37133333333333335
+2021-01-11 14:54:45 episode=400, Test accuracy=0.37853333333333333
+2021-01-11 14:54:45 episode=400, Test accuracy=0.37202222222222225
+2021-01-11 14:54:45 episode=400, Test accuracy=0.3735111111111111
+2021-01-11 14:54:45 episode=400, Test accuracy=0.3749111111111111
+2021-01-11 14:54:45 episode=400, Test accuracy=0.3738444444444445
+2021-01-11 14:54:45 episode=400, Mean Test accuracy=0.3745644444444444
 """
 
 

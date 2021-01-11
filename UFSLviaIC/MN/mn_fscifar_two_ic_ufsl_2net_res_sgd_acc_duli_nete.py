@@ -25,19 +25,17 @@ from mn_tool_net import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
 class ICDataset(object):
 
-    def __init__(self, data_list, image_size=84):
+    def __init__(self, data_list, image_size=32):
         self.data_list = data_list
         self.train_label = [one[1] for one in self.data_list]
 
         normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-        change = transforms.Resize(image_size) if image_size > 32 else lambda x: x
-
         self.transform_train_ic = transforms.Compose([
-            change, transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
+            transforms.RandomResizedCrop(size=image_size, scale=(0.2, 1.)),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
             transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize
         ])
-        self.transform_test =  transforms.Compose([change, transforms.ToTensor(), normalize])
+        self.transform_test =  transforms.Compose([transforms.ToTensor(), normalize])
         pass
 
     def __len__(self):
@@ -71,7 +69,7 @@ class ICDataset(object):
 
 class FSLDataset(object):
 
-    def __init__(self, data_list, classes, num_way, num_shot, image_size=84):
+    def __init__(self, data_list, classes, num_way, num_shot, image_size=32):
         self.num_way, self.num_shot = num_way, num_shot
         self.true_label = [one[1] for one in data_list]
         self.data_list = [(one[0], class_one, one[2]) for one, class_one in zip(data_list, classes)]
@@ -84,12 +82,21 @@ class FSLDataset(object):
             pass
         Tools.print("class number = {}".format(len(self.data_dict.keys())))
 
-        normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-        change = transforms.Resize(image_size) if image_size > 32 else lambda x: x
-        self.transform_train_fsl = transforms.Compose([
-            change, transforms.RandomResizedCrop(size=image_size),
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test =  transforms.Compose([change, transforms.ToTensor(), normalize])
+        if Config.aug_name == 1:
+            normalize = transforms.Normalize([0.5071, 0.4867, 0.4408], [0.2675, 0.2565, 0.2761])
+            self.transform_train_fsl = transforms.Compose([
+                transforms.RandomCrop(image_size, padding=4),
+                transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+                transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+            self.transform_test =  transforms.Compose([transforms.ToTensor(), normalize])
+        elif Config.aug_name == 2:
+            normalize = transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])
+            self.transform_train_fsl = transforms.Compose([
+                transforms.RandomResizedCrop(size=image_size),
+                transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
+            self.transform_test =  transforms.Compose([transforms.ToTensor(), normalize])
+        else:
+            raise Exception(".................")
         pass
 
     def __len__(self):
@@ -224,7 +231,7 @@ class RunnerIC(object):
 
         # data
         self.data_train = ICDataset.get_data_all(Config.data_root)
-        self.tiered_imagenet_dataset = ICDataset(self.data_train, image_size=Config.image_size)
+        self.tiered_imagenet_dataset = ICDataset(self.data_train)
         self.ic_train_loader = DataLoader(self.tiered_imagenet_dataset, Config.ic_batch_size,
                                           shuffle=True, num_workers=Config.num_workers)
         self.ic_train_loader_eval = DataLoader(self.tiered_imagenet_dataset, Config.ic_batch_size,
@@ -357,8 +364,7 @@ class RunnerFSL(object):
     def __init__(self, data_train, classes):
         # all data
         self.data_train = data_train
-        self.task_train = FSLDataset(self.data_train, classes, Config.fsl_num_way,
-                                     Config.fsl_num_shot, image_size=Config.image_size)
+        self.task_train = FSLDataset(self.data_train, classes, Config.fsl_num_way, Config.fsl_num_shot)
         self.task_train_loader = DataLoader(self.task_train, Config.fsl_batch_size, True, num_workers=Config.num_workers)
 
         # model
@@ -493,21 +499,11 @@ class RunnerFSL(object):
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 2
+
+    #######################################################################################
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-
     num_workers = 8
-
-    #######################################################################################
-    dataset_name = "CIFARFS"
-    # dataset_name = "FC100"
-    # image_size = 84
-    image_size = 32
-    #######################################################################################
-
-    #######################################################################################
-    # ic_resnet, ic_modify_head, ic_net_name = resnet18, False, "res18"
-    ic_resnet, ic_modify_head, ic_net_name = resnet34, True, "res34_head"
 
     ic_ratio = 1
     ic_knn = 100
@@ -517,32 +513,49 @@ class Config(object):
     ic_train_epoch = 1500
     ic_first_epoch, ic_t_epoch = 300, 200
     ic_batch_size = 64
-
     ic_adjust_learning_rate = RunnerTool.adjust_learning_rate1
-    #######################################################################################
 
-    ###############################################################################################
     fsl_num_way = 5
     fsl_num_shot = 1
-
     fsl_episode_size = 15
     fsl_test_episode = 600
-
     fsl_val_freq = 10
     fsl_learning_rate = 0.01
-
-    # fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
-    # fsl_train_epoch = 400
-    # fsl_lr_schedule = [200, 300]
-
-    fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
-    fsl_train_epoch = 200
-    fsl_lr_schedule = [100, 150]
     ###############################################################################################
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
-        gpu_id, dataset_name, image_size, ic_net_name, ic_train_epoch, ic_batch_size, ic_out_dim,
-        fsl_net_name, fsl_train_epoch, fsl_num_way, fsl_num_shot, fsl_batch_size)
+    #######################################################################################
+    dataset_name = "CIFARFS"
+    # dataset_name = "FC100"
+    # ic_resnet, ic_modify_head, ic_net_name = resnet18, False, "res18"
+    ic_resnet, ic_modify_head, ic_net_name = resnet34, True, "res34_head"
+
+    if dataset_name == "CIFARFS":
+        aug_name = 1  # other
+        # aug_name = 2  # my
+
+        # fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+        # fsl_train_epoch, fsl_lr_schedule = 300, [150, 250]
+        fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
+        fsl_train_epoch, fsl_lr_schedule = 200, [100, 150]
+
+        # ic_dir_checkpoint = None
+        ic_dir_checkpoint = "../models_CIFARFS/models/ic_res_xx/0_32_resnet_34_64_1024_1_1500_300_200_True_ic.pkl"
+    else:
+        aug_name = 1  # other
+        # aug_name = 2  # my
+
+        # fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+        # fsl_train_epoch, fsl_lr_schedule = 400, [200, 300]
+        fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
+        fsl_train_epoch, fsl_lr_schedule = 200, [100, 150]
+
+        # ic_dir_checkpoint = None
+        pass
+    ###############################################################################################
+
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_aug{}".format(
+        gpu_id, dataset_name, 32, ic_net_name, ic_train_epoch, ic_batch_size, ic_out_dim,
+        fsl_net_name, fsl_train_epoch, fsl_num_way, fsl_num_shot, fsl_batch_size, aug_name)
 
     if "Linux" in platform.platform():
         data_root = '/mnt/4T/Data/data/UFSL/{}'.format(dataset_name)
@@ -554,8 +567,6 @@ class Config(object):
     _root_path = "../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete"
     mn_dir = Tools.new_dir("{}/{}_mn.pkl".format(_root_path, model_name))
     ic_dir = Tools.new_dir("{}/{}_ic.pkl".format(_root_path, model_name))
-    # ic_dir_checkpoint = None
-    ic_dir_checkpoint = "../models_CIFARFS/models/ic_res_xx/0_32_resnet_34_64_1024_1_1500_300_200_True_ic.pkl"
 
     Tools.print(model_name)
     Tools.print(data_root)
@@ -563,7 +574,8 @@ class Config(object):
 
 
 """
-2021-01-10 15:48:20 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/0_CIFARFS_32_res34_head_1500_64_1024_conv4_400_5_1_64_mn.pkl
+0_CIFARFS_32_res34_head_1500_64_1024_conv4_400_5_1_64_mn_aug2.pkl
+2021-01-10 15:48:20 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/0_CIFARFS_32_res34_head_1500_64_1024_conv4_400_5_1_64_mn_aug2.pkl
 2021-01-10 15:48:34 Train 400 Accuracy: 0.5374444444444444
 2021-01-10 15:48:49 Val   400 Accuracy: 0.4578888888888889
 2021-01-10 15:49:03 Test1 400 Accuracy: 0.4918888888888889
@@ -575,6 +587,17 @@ class Config(object):
 2021-01-10 15:52:45 episode=400, Test accuracy=0.4931555555555555
 2021-01-10 15:52:45 episode=400, Mean Test accuracy=0.49751555555555554
 
+2021-01-11 20:34:22 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/2_CIFARFS_32_res34_head_1500_64_1024_conv4_400_5_1_64_aug1_mn.pkl
+2021-01-11 20:34:41 Train 400 Accuracy: 0.556111111111111
+2021-01-11 20:35:03 Val   400 Accuracy: 0.4686666666666666
+2021-01-11 20:35:26 Test1 400 Accuracy: 0.5193333333333334
+2021-01-11 20:36:20 Test2 400 Accuracy: 0.5235333333333333
+2021-01-11 20:39:50 episode=400, Test accuracy=0.5178666666666667
+2021-01-11 20:39:50 episode=400, Test accuracy=0.5210444444444445
+2021-01-11 20:39:50 episode=400, Test accuracy=0.5222
+2021-01-11 20:39:50 episode=400, Test accuracy=0.5248666666666668
+2021-01-11 20:39:50 episode=400, Test accuracy=0.5131111111111111
+2021-01-11 20:39:50 episode=400, Mean Test accuracy=0.5198177777777777
 """
 
 

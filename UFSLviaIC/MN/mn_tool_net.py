@@ -434,14 +434,20 @@ class BasicBlock(nn.Module):
 
 class ResNet12Small(nn.Module):
 
-    def __init__(self, block=BasicBlock, avg_pool=False, drop_rate=0.0):
+    def __init__(self, block=BasicBlock, avg_pool=False, drop_rate=0.0, large=False):
         super().__init__()
         self.inplanes = 3
-
-        self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
-        self.layer2 = self._make_layer(block, 128, stride=2, drop_rate=drop_rate)
-        self.layer3 = self._make_layer(block, 256, stride=2, drop_rate=drop_rate)
-        self.layer4 = self._make_layer(block, 512, stride=2, drop_rate=drop_rate)
+        if large:
+            self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
+            self.layer2 = self._make_layer(block, 160, stride=2, drop_rate=drop_rate)
+            self.layer3 = self._make_layer(block, 320, stride=2, drop_rate=drop_rate)
+            self.layer4 = self._make_layer(block, 640, stride=2, drop_rate=drop_rate)
+        else:
+            self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
+            self.layer2 = self._make_layer(block, 128, stride=2, drop_rate=drop_rate)
+            self.layer3 = self._make_layer(block, 256, stride=2, drop_rate=drop_rate)
+            self.layer4 = self._make_layer(block, 512, stride=2, drop_rate=drop_rate)
+            pass
 
         self.keep_avg_pool = avg_pool
         self.avgpool = nn.AdaptiveAvgPool2d(1)
