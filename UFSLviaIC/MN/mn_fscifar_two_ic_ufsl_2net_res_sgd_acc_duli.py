@@ -420,7 +420,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 3
+    gpu_id = 0
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     #######################################################################################
@@ -441,9 +441,10 @@ class Config(object):
     #######################################################################################
     dataset_name = "CIFARFS"
     # dataset_name = "FC100"
+    ic_out_dim = 512
     resnet, modify_head, ic_net_name = resnet34, True, "res34_head"
-    # matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
-    matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 64
+    matching_net, net_name, batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+    # matching_net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 64
     ###############################################################################################
 
     ###############################################################################################
@@ -498,6 +499,60 @@ class Config(object):
 2021-01-11 19:17:54 episode=1600, Test accuracy=0.5128444444444445
 2021-01-11 19:17:54 episode=1600, Test accuracy=0.5023777777777778
 2021-01-11 19:17:54 episode=1600, Mean Test accuracy=0.5080177777777778
+
+2021-01-12 22:33:23 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_CIFARFS_32_conv4_1600_64_5_1_400_200_1024_1_aug1_mn.pkl
+2021-01-12 22:33:23 load ic model success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_CIFARFS_32_conv4_1600_64_5_1_400_200_1024_1_aug1_ic.pkl
+2021-01-12 22:33:23 Test 1600 .......
+2021-01-12 22:33:38 Epoch: 1600 Train 0.6023/0.8591 0.0000
+2021-01-12 22:33:38 Epoch: 1600 Val   0.6347/0.9325 0.0000
+2021-01-12 22:33:38 Epoch: 1600 Test  0.6700/0.9464 0.0000
+2021-01-12 22:33:53 Train 1600 Accuracy: 0.569
+2021-01-12 22:34:07 Val   1600 Accuracy: 0.4922222222222223
+2021-01-12 22:34:22 Test1 1600 Accuracy: 0.5224444444444445
+2021-01-12 22:34:59 Test2 1600 Accuracy: 0.5124222222222222
+2021-01-12 22:38:11 episode=1600, Test accuracy=0.5154666666666666
+2021-01-12 22:38:11 episode=1600, Test accuracy=0.5166444444444445
+2021-01-12 22:38:11 episode=1600, Test accuracy=0.5123777777777777
+2021-01-12 22:38:11 episode=1600, Test accuracy=0.5114666666666666
+2021-01-12 22:38:11 episode=1600, Test accuracy=0.5160222222222223
+2021-01-12 22:38:11 episode=1600, Mean Test accuracy=0.5143955555555555
+"""
+
+
+"""
+2021-01-12 15:54:44 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_FC100_32_conv4_1800_64_5_1_400_200_1024_1_1.0_1.0_aug1_mn.pkl
+2021-01-12 15:54:44 load ic model success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_FC100_32_conv4_1800_64_5_1_400_200_1024_1_1.0_1.0_aug1_ic.pkl
+2021-01-12 15:54:44 Test 1800 .......
+2021-01-12 15:54:59 Epoch: 1800 Train 0.6362/0.9015 0.0000
+2021-01-12 15:54:59 Epoch: 1800 Val   0.4653/0.8093 0.0000
+2021-01-12 15:54:59 Epoch: 1800 Test  0.4535/0.8300 0.0000
+2021-01-12 15:55:13 Train 1800 Accuracy: 0.6184444444444444
+2021-01-12 15:55:26 Val   1800 Accuracy: 0.3174444444444445
+2021-01-12 15:55:40 Test1 1800 Accuracy: 0.33122222222222225
+2021-01-12 15:56:16 Test2 1800 Accuracy: 0.3282
+2021-01-12 15:59:18 episode=1800, Test accuracy=0.3421777777777778
+2021-01-12 15:59:18 episode=1800, Test accuracy=0.3424888888888889
+2021-01-12 15:59:18 episode=1800, Test accuracy=0.33497777777777776
+2021-01-12 15:59:18 episode=1800, Test accuracy=0.3381555555555556
+2021-01-12 15:59:18 episode=1800, Test accuracy=0.3277111111111111
+2021-01-12 15:59:18 episode=1800, Mean Test accuracy=0.33710222222222225
+
+2021-01-13 16:10:46 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_FC100_32_resnet12_1600_64_5_1_400_200_1024_1_aug1_mn.pkl
+2021-01-13 16:10:46 load ic model success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_FC100_32_resnet12_1600_64_5_1_400_200_1024_1_aug1_ic.pkl
+2021-01-13 16:10:46 Test 1600 .......
+2021-01-13 16:11:02 Epoch: 1600 Train 0.6388/0.9035 0.0000
+2021-01-13 16:11:02 Epoch: 1600 Val   0.4647/0.8085 0.0000
+2021-01-13 16:11:02 Epoch: 1600 Test  0.4537/0.8357 0.0000
+2021-01-13 16:11:25 Train 1600 Accuracy: 0.6912222222222223
+2021-01-13 16:11:48 Val   1600 Accuracy: 0.3488888888888889
+2021-01-13 16:12:11 Test1 1600 Accuracy: 0.35244444444444445
+2021-01-13 16:13:36 Test2 1600 Accuracy: 0.3566888888888889
+2021-01-13 16:20:43 episode=1600, Test accuracy=0.3532666666666666
+2021-01-13 16:20:43 episode=1600, Test accuracy=0.3622666666666666
+2021-01-13 16:20:43 episode=1600, Test accuracy=0.3581333333333333
+2021-01-13 16:20:43 episode=1600, Test accuracy=0.35364444444444443
+2021-01-13 16:20:43 episode=1600, Test accuracy=0.34933333333333333
+2021-01-13 16:20:43 episode=1600, Mean Test accuracy=0.35532888888888886
 """
 
 

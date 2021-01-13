@@ -15,9 +15,8 @@ from torch.utils.data import DataLoader, Dataset
 from torch.optim.lr_scheduler import StepLR, MultiStepLR
 from mn_tool_fsl_test import FSLTestTool
 sys.path.append("../IC")
-from fscifar_ic_res import ICResNet
+from fscifar_ic_res import ICResNet, ResNet12Small, Normalize, RunnerTool
 from torchvision.models import resnet18, resnet34, resnet50, vgg16_bn
-from mn_tool_net import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
 
 ##############################################################################################################
@@ -136,8 +135,14 @@ class Runner(object):
     def matching_test(self, samples, batches):
         batch_num, _, _, _ = batches.shape
 
-        sample_z = self.matching_net(samples)[0]  # 5x64*5*5
-        batch_z = self.matching_net(batches)[0]  # 75x64*5*5
+        if Config.no_last:
+            sample_z = self.matching_net(samples, no_last=True)  # 5x64*5*5
+            batch_z = self.matching_net(batches, no_last=True)  # 75x64*5*5
+        else:
+            sample_z = self.matching_net(samples)[0]  # 5x64*5*5
+            batch_z = self.matching_net(batches)[0]  # 75x64*5*5
+            pass
+
         z_support = sample_z.view(Config.num_way * Config.num_shot, -1)
         z_query = batch_z.view(batch_num, -1)
         _, z_dim = z_query.shape
@@ -160,7 +165,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 3
+    gpu_id = 1
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     learning_rate = 0.001
@@ -169,6 +174,7 @@ class Config(object):
 
     num_way = 5
     num_shot = 1
+    no_last = False
 
     val_freq = 10
     episode_size = 15
@@ -179,8 +185,14 @@ class Config(object):
     dataset_name = "FC100"
 
     image_size = 32
-    mn_dir = "../models_CIFARFS/models/ic_res_xx/1_FC100_32_resnet_34_64_512_1_1500_300_200_True_ic.pkl"
-    matching_net, net_name, batch_size = ICResNet(low_dim=512, modify_head=True, resnet=resnet34), "conv4", 64
+    # mn_dir = "../models_CIFARFS/models/ic_res_xx/1_FC100_32_resnet_34_64_512_1_1500_300_200_True_ic.pkl"
+    # matching_net, net_name, batch_size = ICResNet(low_dim=512, modify_head=True, resnet=resnet34), "conv4", 64
+    # mn_dir = "../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_FC100_32_conv4_1800_64_5_1_400_200_1024_1_1.0_1.0_aug1_ic.pkl"
+    # matching_net, net_name, batch_size = ICResNet(low_dim=1024, modify_head=True, resnet=resnet34), "conv4", 64
+
+    no_last = True
+    mn_dir = "../models_CIFARFS/models/ic_res_xx/2_FC100_32_resnet12small_64_512_1_1500_300_200_True_ic.pkl"
+    matching_net, net_name, batch_size = ICResNet(low_dim=512, modify_head=True, resnet12=ResNet12Small), "resnet12", 64
     ##############################################################################################################
 
     if "Linux" in platform.platform():
@@ -200,6 +212,7 @@ class Config(object):
 
 
 """
+1_FC100_32_resnet_34_64_512_1_1500_300_200_True_ic
 2021-01-11 14:43:18 load proto net success from ../models_CIFARFS/models/ic_res_xx/1_FC100_32_resnet_34_64_512_1_1500_300_200_True_ic.pkl
 2021-01-11 14:44:00 Train 400 Accuracy: 0.5477777777777778
 2021-01-11 14:44:43 Val   400 Accuracy: 0.3092222222222223
@@ -211,6 +224,19 @@ class Config(object):
 2021-01-11 15:03:19 episode=400, Test accuracy=0.3237555555555556
 2021-01-11 15:03:19 episode=400, Test accuracy=0.32106666666666667
 2021-01-11 15:03:19 episode=400, Mean Test accuracy=0.32106666666666667
+
+0_FC100_32_conv4_1800_64_5_1_400_200_1024_1_1
+2021-01-12 16:32:48 load proto net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_FC100_32_conv4_1800_64_5_1_400_200_1024_1_1.0_1.0_aug1_ic.pkl
+2021-01-12 16:33:29 Train 400 Accuracy: 0.615
+2021-01-12 16:34:10 Val   400 Accuracy: 0.3376666666666667
+2021-01-12 16:34:51 Test1 400 Accuracy: 0.3661111111111111
+2021-01-12 16:37:46 Test2 400 Accuracy: 0.35535555555555554
+2021-01-12 16:52:35 episode=400, Test accuracy=0.3528222222222222
+2021-01-12 16:52:35 episode=400, Test accuracy=0.35024444444444447
+2021-01-12 16:52:35 episode=400, Test accuracy=0.3479111111111111
+2021-01-12 16:52:35 episode=400, Test accuracy=0.3506
+2021-01-12 16:52:35 episode=400, Test accuracy=0.3516222222222223
+2021-01-12 16:52:35 episode=400, Mean Test accuracy=0.35064
 """
 
 

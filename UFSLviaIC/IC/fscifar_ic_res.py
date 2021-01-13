@@ -1,4 +1,5 @@
 import os
+import sys
 import math
 import torch
 import random
@@ -14,6 +15,8 @@ from torch.optim import lr_scheduler
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from torchvision.models import resnet18, resnet34, resnet50, vgg16_bn
+sys.path.append("../Common")
+from UFSLTool import ResNet12Small, C4Net, RunnerTool
 
 
 ##############################################################################################################
@@ -88,10 +91,11 @@ class Normalize(nn.Module):
 
 class ICResNet(nn.Module):
 
-    def __init__(self, low_dim=512, modify_head=False, resnet=None, vggnet=None):
+    def __init__(self, low_dim=512, modify_head=False, resnet=None, vggnet=None, resnet12=None):
         super().__init__()
         self.is_res = True if resnet else False
         self.is_vgg = True if vggnet else False
+        self.is_resnet12 = True if resnet12 else False
 
         if self.is_res:
             self.resnet = resnet(num_classes=low_dim)
@@ -103,19 +107,32 @@ class ICResNet(nn.Module):
             self.avgpool = nn.AdaptiveAvgPool2d(1)
             self.fc = nn.Linear(512, low_dim)
             pass
+        elif self.is_resnet12:
+            self.resnet12 = resnet12()
+            self.fc = nn.Linear(512, low_dim)
+            pass
         else:
             raise Exception("......")
 
         self.l2norm = Normalize(2)
         pass
 
-    def forward(self, x):
+    def forward(self, x, no_last=False):
         if self.is_res:
             out_logits = self.resnet(x)
         elif self.is_vgg:
             features = self.vggnet.features(x)
             features = self.avgpool(features)
             features = torch.flatten(features, 1)
+            out_logits = self.fc(features)
+            pass
+        elif self.is_resnet12:
+            features= self.resnet12(x)
+            features = torch.flatten(features, 1)
+
+            if no_last:
+                return features
+
             out_logits = self.fc(features)
             pass
         else:
@@ -205,7 +222,7 @@ class Runner(object):
 
         # model
         self.ic_model = self.to_cuda(ICResNet(Config.ic_out_dim, modify_head=Config.modify_head,
-                                              resnet=Config.resnet, vggnet=Config.vggnet))
+                                              resnet=Config.resnet, vggnet=Config.vggnet, resnet12=Config.resnet12))
         self.ic_loss = self.to_cuda(nn.CrossEntropyLoss())
 
         self.ic_model_optim = torch.optim.SGD(
@@ -420,6 +437,36 @@ class Runner(object):
 2021-01-11 23:48:20 episode=400, Test accuracy=0.3518444444444444
 2021-01-11 23:48:20 episode=400, Test accuracy=0.3502222222222222
 2021-01-11 23:48:20 episode=400, Mean Test accuracy=0.3502577777777778
+
+
+2_FC100_32_resnet12small_64_512_1_1500_300_200_True_ic.pkl
+2021-01-13 00:01:58 load ic model success from ../models_CIFARFS/models/ic_res_xx/2_FC100_32_resnet12small_64_512_1_1500_300_200_True_ic.pkl
+2021-01-13 00:01:58 Test 1500 .......
+2021-01-13 00:02:09 Epoch: 1500 Train 0.6300/0.9076 0.0000
+2021-01-13 00:02:09 Epoch: 1500 Val   0.4515/0.8102 0.0000
+2021-01-13 00:02:09 Epoch: 1500 Test  0.4428/0.8276 0.0000
+
+2021-01-13 00:18:16 load proto net success from ../models_CIFARFS/models/ic_res_xx/2_FC100_32_resnet12small_64_512_1_1500_300_200_True_ic.pkl
+2021-01-13 00:18:42 Train 400 Accuracy: 0.614
+2021-01-13 00:19:09 Val   400 Accuracy: 0.347
+2021-01-13 00:19:35 Test1 400 Accuracy: 0.34933333333333333
+2021-01-13 00:21:13 Test2 400 Accuracy: 0.3578222222222222
+2021-01-13 00:29:17 episode=400, Test accuracy=0.3554222222222222
+2021-01-13 00:29:17 episode=400, Test accuracy=0.3564888888888889
+2021-01-13 00:29:17 episode=400, Test accuracy=0.3528
+2021-01-13 00:29:17 episode=400, Test accuracy=0.3572666666666667
+2021-01-13 00:29:17 episode=400, Test accuracy=0.35715555555555556
+2021-01-13 00:29:17 episode=400, Mean Test accuracy=0.3558266666666666
+
+
+
+0_FC100_32_resnet_50_64_256_1_1500_300_200_True_ic.pkl
+2021-01-13 07:21:37 load ic model success from ../models_CIFARFS/models/ic_res_xx/0_FC100_32_resnet_50_64_256_1_1500_300_200_True_ic.pkl
+2021-01-13 07:21:37 Test 1500 .......
+2021-01-13 07:21:54 Epoch: 1500 Train 0.6161/0.9056 0.0000
+2021-01-13 07:21:54 Epoch: 1500 Val   0.4420/0.7968 0.0000
+2021-01-13 07:21:54 Epoch: 1500 Test  0.4233/0.8142 0.0000
+
 """
 
 
@@ -427,7 +474,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -445,9 +492,13 @@ class Config(object):
 
     # ic_out_dim = 1024
     ic_out_dim = 512
+    # ic_out_dim = 256
 
-    # resnet, vggnet, net_name = resnet18, None, "resnet_18"
-    resnet, vggnet, net_name = resnet34, None, "resnet_34"
+    resnet, vggnet, resnet12 = None, None, None
+    # resnet, net_name = resnet18, "resnet_18"
+    # resnet, net_name = resnet34, "resnet_34"
+    # resnet, net_name = resnet50, "resnet_50"
+    resnet12, net_name = ResNet12Small, "resnet12small"
 
     # modify_head = False
     modify_head = True
