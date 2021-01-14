@@ -15,7 +15,7 @@ from mn_tool_ic_test import ICTestTool
 from mn_tool_fsl_test import FSLTestTool
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
-from torchvision.models import resnet18, resnet34
+from torchvision.models import resnet18, resnet34, resnet50
 from torch.optim.lr_scheduler import StepLR, MultiStepLR
 from mn_tool_net import MatchingNet, Normalize, RunnerTool, ResNet12Small
 
@@ -533,18 +533,28 @@ class Config(object):
         aug_name = 1  # other
         # aug_name = 2  # my
 
-        fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+        # fsl_matching_net, fsl_net_name, fsl_batch_size = MatchingNet(hid_dim=64, z_dim=64), "conv4", 64
+        # fsl_train_epoch, fsl_lr_schedule = 300, [150, 250]
+        fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
         fsl_train_epoch, fsl_lr_schedule = 300, [150, 250]
-        # fsl_matching_net, fsl_net_name, fsl_batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "resnet12", 32
-        # fsl_train_epoch, fsl_lr_schedule = 200, [100, 150]
-        # fsl_train_epoch, fsl_lr_schedule = 400, [200, 300]
+
+        # ic_dir_checkpoint = None
 
         # ic_out_dim = 1024
-        # ic_dir_checkpoint = None
+        # ic_resnet, ic_modify_head, ic_net_name = resnet34, True, "res34_head"
         # ic_dir_checkpoint = "../models_CIFARFS/models/ic_res_xx/0_32_resnet_34_64_1024_1_1500_300_200_True_ic.pkl"
 
-        ic_out_dim = 512
-        ic_dir_checkpoint = "../models_CIFARFS/models/ic_res_xx/1_CIFARFS_32_resnet_34_64_512_1_1500_300_200_True_ic.pkl"
+        # ic_out_dim = 512
+        # ic_resnet, ic_modify_head, ic_net_name = resnet34, True, "res34_head"
+        # ic_dir_checkpoint = "../models_CIFARFS/models/ic_res_xx/1_CIFARFS_32_resnet_34_64_512_1_1500_300_200_True_ic.pkl"
+
+        ic_out_dim = 256
+        ic_resnet, ic_modify_head, ic_net_name = resnet50, True, "res50_head"
+        ic_dir_checkpoint = "../models_CIFARFS/models/ic_res_xx/2_CIFARFS_32_resnet_50_64_256_1_1500_300_200_True_ic.pkl"
+
+        # ic_out_dim = 256
+        # ic_resnet, ic_modify_head, ic_net_name = resnet34, True, "res34_head"
+        # ic_dir_checkpoint = "../models_CIFARFS/models/ic_res_xx/1_CIFARFS_32_resnet_34_64_256_1_1500_300_200_True_ic.pkl"
     else:
         aug_name = 1  # other
         # aug_name = 2  # my
@@ -691,6 +701,108 @@ class Config(object):
 2021-01-12 03:50:10 episode=200, Test accuracy=0.34104444444444443
 2021-01-12 03:50:10 episode=200, Test accuracy=0.34075555555555553
 2021-01-12 03:50:10 episode=200, Mean Test accuracy=0.34144
+"""
+
+
+"""
+# ic_out_dim = 256
+# ic_resnet, ic_modify_head, ic_net_name = resnet50, True, "res50_head"
+# ic_dir_checkpoint = "../models_CIFARFS/models/ic_res_xx/2_CIFARFS_32_resnet_50_64_256_1_1500_300_200_True_ic.pkl"
+2_CIFARFS_32_res50_head_1500_64_256_conv4_300_5_1_64_aug1_mn.pkl
+2021-01-13 21:50:31 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/2_CIFARFS_32_res50_head_1500_64_256_conv4_300_5_1_64_aug1_mn.pkl
+2021-01-13 21:50:52 Train 300 Accuracy: 0.6156666666666666
+2021-01-13 21:51:12 Val   300 Accuracy: 0.4805555555555556
+2021-01-13 21:51:29 Test1 300 Accuracy: 0.5398888888888889
+2021-01-13 21:52:11 Test2 300 Accuracy: 0.5382666666666667
+2021-01-13 21:56:10 episode=300, Test accuracy=0.5343555555555556
+2021-01-13 21:56:10 episode=300, Test accuracy=0.5404
+2021-01-13 21:56:10 episode=300, Test accuracy=0.5461777777777778
+2021-01-13 21:56:10 episode=300, Test accuracy=0.5439111111111111
+2021-01-13 21:56:10 episode=300, Test accuracy=0.5305111111111112
+2021-01-13 21:56:10 episode=300, Mean Test accuracy=0.5390711111111111
+
+2021-01-14 03:03:27 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/2_CIFARFS_32_res34_head_1500_64_256_resnet12_300_5_1_32_aug1_mn.pkl
+2021-01-14 03:03:42 Train 300 Accuracy: 0.6398888888888888
+2021-01-14 03:03:57 Val   300 Accuracy: 0.49155555555555563
+2021-01-14 03:04:12 Test1 300 Accuracy: 0.5432222222222223
+2021-01-14 03:04:58 Test2 300 Accuracy: 0.543688888888889
+2021-01-14 03:08:53 episode=300, Test accuracy=0.5405777777777778
+2021-01-14 03:08:53 episode=300, Test accuracy=0.5533111111111111
+2021-01-14 03:08:53 episode=300, Test accuracy=0.5521777777777777
+2021-01-14 03:08:53 episode=300, Test accuracy=0.5501777777777778
+2021-01-14 03:08:53 episode=300, Test accuracy=0.5464888888888889
+2021-01-14 03:08:53 episode=300, Mean Test accuracy=0.5485466666666666
+
+
+
+# ic_out_dim = 256
+# ic_resnet, ic_modify_head, ic_net_name = resnet34, True, "res34_head"
+# ic_dir_checkpoint = "../models_CIFARFS/models/ic_res_xx/1_CIFARFS_32_resnet_34_64_256_1_1500_300_200_True_ic.pkl"
+1_CIFARFS_32_res34_head_1500_64_256_conv4_300_5_1_64_aug1_mn.pkl
+2021-01-13 21:53:25 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/1_CIFARFS_32_res34_head_1500_64_256_conv4_300_5_1_64_aug1_mn.pkl
+2021-01-13 21:53:43 Train 300 Accuracy: 0.597111111111111
+2021-01-13 21:54:00 Val   300 Accuracy: 0.4877777777777778
+2021-01-13 21:54:17 Test1 300 Accuracy: 0.5401111111111112
+2021-01-13 21:55:04 Test2 300 Accuracy: 0.5352444444444444
+2021-01-13 21:59:00 episode=300, Test accuracy=0.5268
+2021-01-13 21:59:00 episode=300, Test accuracy=0.5324222222222222
+2021-01-13 21:59:00 episode=300, Test accuracy=0.5329555555555555
+2021-01-13 21:59:00 episode=300, Test accuracy=0.5363111111111111
+2021-01-13 21:59:00 episode=300, Test accuracy=0.5264666666666666
+2021-01-13 21:59:00 episode=300, Mean Test accuracy=0.5309911111111111
+
+2021-01-14 03:01:39 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/1_CIFARFS_32_res50_head_1500_64_256_resnet12_300_5_1_32_aug1_mn.pkl
+2021-01-14 03:01:55 Train 300 Accuracy: 0.5962222222222222
+2021-01-14 03:02:10 Val   300 Accuracy: 0.49122222222222217
+2021-01-14 03:02:25 Test1 300 Accuracy: 0.5301111111111111
+2021-01-14 03:03:11 Test2 300 Accuracy: 0.5318888888888889
+2021-01-14 03:06:58 episode=300, Test accuracy=0.5229111111111111
+2021-01-14 03:06:58 episode=300, Test accuracy=0.5312444444444444
+2021-01-14 03:06:58 episode=300, Test accuracy=0.5332444444444445
+2021-01-14 03:06:58 episode=300, Test accuracy=0.5326000000000001
+2021-01-14 03:06:58 episode=300, Test accuracy=0.5244222222222222
+2021-01-14 03:06:58 episode=300, Mean Test accuracy=0.5288844444444445
+
+
+"""
+
+
+"""
+2021-01-14 02:24:29 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_CIFARFS_32_conv4_1600_64_5_1_400_200_512_1_aug1_mn.pkl
+2021-01-14 02:24:29 load ic model success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/0_CIFARFS_32_conv4_1600_64_5_1_400_200_512_1_aug1_ic.pkl
+
+2021-01-14 02:24:29 Test 1600 .......
+2021-01-14 02:24:44 Epoch: 1600 Train 0.6037/0.8610 0.0000
+2021-01-14 02:24:44 Epoch: 1600 Val   0.6281/0.9333 0.0000
+2021-01-14 02:24:44 Epoch: 1600 Test  0.6710/0.9453 0.0000
+2021-01-14 02:24:58 Train 1600 Accuracy: 0.5867777777777777
+2021-01-14 02:25:13 Val   1600 Accuracy: 0.4881111111111111
+2021-01-14 02:25:27 Test1 1600 Accuracy: 0.5307777777777778
+2021-01-14 02:26:08 Test2 1600 Accuracy: 0.5251333333333335
+2021-01-14 02:29:19 episode=1600, Test accuracy=0.5245333333333334
+2021-01-14 02:29:19 episode=1600, Test accuracy=0.5279333333333334
+2021-01-14 02:29:19 episode=1600, Test accuracy=0.5247555555555555
+2021-01-14 02:29:19 episode=1600, Test accuracy=0.5219777777777778
+2021-01-14 02:29:19 episode=1600, Test accuracy=0.5292888888888889
+2021-01-14 02:29:19 episode=1600, Mean Test accuracy=0.5256977777777778
+
+2021-01-14 01:55:33 load matching net success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_CIFARFS_32_resnet12_1600_64_5_1_400_200_1024_1_aug1_mn.pkl
+2021-01-14 01:55:33 load ic model success from ../models_CIFARFS/mn/two_ic_ufsl_2net_res_sgd_acc_duli/3_CIFARFS_32_resnet12_1600_64_5_1_400_200_1024_1_aug1_ic.pkl
+
+2021-01-14 01:55:33 Test 1600 .......
+2021-01-14 01:55:49 Epoch: 1600 Train 0.5919/0.8520 0.0000
+2021-01-14 01:55:49 Epoch: 1600 Val   0.6283/0.9337 0.0000
+2021-01-14 01:55:49 Epoch: 1600 Test  0.6663/0.9435 0.0000
+2021-01-14 01:56:07 Train 1600 Accuracy: 0.6344444444444444
+2021-01-14 01:56:25 Val   1600 Accuracy: 0.5023333333333333
+2021-01-14 01:56:49 Test1 1600 Accuracy: 0.5556666666666666
+2021-01-14 01:57:51 Test2 1600 Accuracy: 0.5456888888888888
+2021-01-14 02:03:36 episode=1600, Test accuracy=0.5511555555555555
+2021-01-14 02:03:36 episode=1600, Test accuracy=0.5489111111111111
+2021-01-14 02:03:36 episode=1600, Test accuracy=0.5441777777777778
+2021-01-14 02:03:36 episode=1600, Test accuracy=0.5477333333333333
+2021-01-14 02:03:36 episode=1600, Test accuracy=0.5473333333333333
+2021-01-14 02:03:36 episode=1600, Mean Test accuracy=0.5478622222222223
 """
 
 

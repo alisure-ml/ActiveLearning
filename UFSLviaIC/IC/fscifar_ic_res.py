@@ -415,6 +415,22 @@ class Runner(object):
 2021-01-11 02:15:11 Epoch: 1500 Train 0.6009/0.8559 0.0000
 2021-01-11 02:15:11 Epoch: 1500 Val   0.6694/0.9426 0.0000
 2021-01-11 02:15:11 Epoch: 1500 Test  0.6913/0.9553 0.0000
+
+
+2_CIFARFS_32_resnet_50_64_256_1_1500_300_200_True_ic.pkl
+2021-01-13 10:10:05 load ic model success from ../models_CIFARFS/models/ic_res_xx/2_CIFARFS_32_resnet_50_64_256_1_1500_300_200_True_ic.pkl
+2021-01-13 10:10:05 Test 1500 .......
+2021-01-13 10:10:22 Epoch: 1500 Train 0.5903/0.8597 0.0000
+2021-01-13 10:10:22 Epoch: 1500 Val   0.6291/0.9320 0.0000
+2021-01-13 10:10:22 Epoch: 1500 Test  0.6629/0.9491 0.0000
+
+1_CIFARFS_32_resnet_34_64_256_1_1500_300_200_True_ic.pkl
+2021-01-13 05:39:58 load ic model success from ../models_CIFARFS/models/ic_res_xx/1_CIFARFS_32_resnet_34_64_256_1_1500_300_200_True_ic.pkl
+2021-01-13 05:39:58 Test 1500 .......
+2021-01-13 05:40:14 Epoch: 1500 Train 0.5920/0.8573 0.0000
+2021-01-13 05:40:14 Epoch: 1500 Val   0.6267/0.9305 0.0000
+2021-01-13 05:40:14 Epoch: 1500 Test  0.6554/0.9477 0.0000
+
 """
 
 
