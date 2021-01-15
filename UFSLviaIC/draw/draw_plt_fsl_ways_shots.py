@@ -7,7 +7,8 @@ from alisuretool.Tools import Tools
 
 
 # dataset_name = "miniimagenet"
-dataset_name = "tieredimagenet"
+# dataset_name = "tieredimagenet"
+dataset_name = "CIFARFS"
 result_dir = "result"
 
 txt_path = "/mnt/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/{}/mn/{}".format(dataset_name, result_dir)
@@ -50,31 +51,31 @@ for index, txt_content in enumerate(all_txt_content):
         method, net = txt_name[1], txt_name[-1]
 
     net_index = 1 if net == "conv4" else 2
-    net = "Conv4" if net == "conv4" else "ResNet12"
+    net = "Conv-4" if net == "conv4" else "ResNet-12"
     if method == "ufsl":
         if "18" in txt_name[-2]:
             continue
-        name = "{}4-{}({})".format(net_index, "Our", net)
+        name = "{}4-{}({})".format(net_index, net, "Ours")
     elif method == "cluster":
-        name = "{}3-{}({})".format(net_index, "Cluster", net)
+        name = "{}3-{}({})".format(net_index, net, "Clustering")
     elif method == "css":
-        name = "{}2-{}({})".format(net_index, "CSS", net)
+        name = "{}2-{}({})".format(net_index, net, "CSS")
     elif method == "random":
-        name = "{}1-{}({})".format(net_index, "Random", net)
+        name = "{}1-{}({})".format(net_index, net, "Random")
     elif method == "label":
-        name = "{}5-{}({})".format(net_index, "Label", net)
+        name = "{}5-{}({})".format(net_index, net, "Label")
     else:
         raise Exception(".........")
         pass
 
-    ways_shots_dict[name] = {"ways": ways_dict, "shots": shots_dict}
+    ways_shots_dict[name] = {"way": ways_dict, "shot": shots_dict}
     pass
 
 
 color = ["g", "b", "m", "r", "y"]  # , "k", "c"
 linestyle = ["-.", "-"]
-for split in ["shots", "ways"]:
-    plt.figure(figsize=(8, 6))
+for split in ["shot", "way"]:
+    plt.figure(figsize=(8, 7))
 
     handles1, labels1 = [], []
     ways_shots_dict_keys = sorted(list(ways_shots_dict.keys()))
@@ -92,14 +93,16 @@ for split in ["shots", "ways"]:
         labels1.append(key[3:])
         pass
 
-    plt.legend(handles=handles1, labels=labels1, loc='best', ncol=2, fontsize=14)
+    plt.legend(handles=handles1, labels=labels1, loc='best', ncol=2, fontsize=15)
     plt.grid(linestyle='--')
     plt.ylim(0.0, 0.9)
+    plt.xlabel(split, fontsize=20)
+    plt.ylabel('accuracy', fontsize=20)
     plt.locator_params("y", nbins=10)
-    plt.tick_params(labelsize=16)
-    # plt.subplots_adjust(top=0.96, bottom=0.10, left=0.12, right=0.98, hspace=0, wspace=0)
-    plt.subplots_adjust(top=0.96, bottom=0.06, left=0.09, right=0.98, hspace=0, wspace=0)
+    plt.tick_params(labelsize=18)
+    plt.subplots_adjust(top=0.97, bottom=0.10, left=0.11, right=0.99, hspace=0, wspace=0)
+    # plt.subplots_adjust(top=0.96, bottom=0.06, left=0.09, right=0.98, hspace=0, wspace=0)
 
-    plt.savefig(Tools.new_dir(os.path.join("plot", "fsl", "{}_{}.pdf".format(dataset_name, split))))
+    plt.savefig(Tools.new_dir(os.path.join("plot_new", "fsl", "{}_{}.pdf".format(dataset_name, split))))
     plt.show()
     pass

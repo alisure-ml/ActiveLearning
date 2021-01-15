@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt  # matplotlib.colors.BASE_COLORS
 from alisuretool.Tools import Tools
 
 
-txt_path = "/mnt/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/ic_res_xx"
+txt_path = "/mnt/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/ic_res_xx_small"
 all_txt = glob(os.path.join(txt_path, "*.txt"))
 all_txt_name = []
 all_txt_content = []
@@ -63,7 +63,7 @@ for index, txt_content in enumerate(all_txt_content):
 
 
 # Conv-4 & 32.02 & 76.5 & 32.5 & 76.5 & 32.5 & 76.5 & 128 \\
-dim = 512
+dim = 1024
 result_str = []
 for acc_dict_key in ["Conv-4", "ResNet-18", "ResNet-34", "ResNet-50", "VGG-16"]:
     acc_dict = acc_result_dict[acc_dict_key][dim]

@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt  # matplotlib.colors.BASE_COLORS
 from alisuretool.Tools import Tools
 
 
-txt_path = "/mnt/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/ic_res_xx"
+# txt_path = "/mnt/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/ic_res_xx_small"
+txt_path = "/media/ubuntu/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/ic_res_xx_small"
+
 all_txt = glob(os.path.join(txt_path, "*.txt"))
 all_txt_name = []
 all_txt_content = []
@@ -35,7 +37,6 @@ for index, txt_content in enumerate(all_txt_content):
 
     txt_name = all_txt_name[index]
 
-    head = "*" if txt_name[-3] == "head" else ""
     if txt_name[0] == "vgg16":
         d = int(txt_name[3])
         name = "VGG-16"
@@ -52,7 +53,6 @@ for index, txt_content in enumerate(all_txt_content):
             name = "ResNet-18"
         else:
             raise Exception("")
-        name = name + head
         pass
 
     if name not in acc_result_dict:
@@ -61,9 +61,8 @@ for index, txt_content in enumerate(all_txt_content):
     pass
 
 
-
 x_data = ["64", "128", '256', '512', '1024', '2048']
-color = ["r", "g", "b", "k", "y", "c", "g", "m"]
+color = ["g", "b", "r", "k", "y", "c", "g", "m"]
 for split in ["Train", "Val", "Test"]:
     plt.figure(figsize=(8, 6))
 
@@ -77,30 +76,31 @@ for split in ["Train", "Val", "Test"]:
         top_5 = [now_acc[int(x)]["acc"][split][1] for x in x_data]
         ln1, = plt.plot(x_data, top_1, color=color[acc_index], linewidth=2.0, linestyle='-')
         plt.scatter(x_data, top_1, s=20, color=color[acc_index])
-        ln2, = plt.plot(x_data, top_5, color=color[acc_index], linewidth=2.0, linestyle=':')
-        plt.scatter(x_data, top_5, s=20, color=color[acc_index])
+        # ln2, = plt.plot(x_data, top_5, color=color[acc_index], linewidth=2.0, linestyle='-.')
+        # plt.scatter(x_data, top_5, s=20, color=color[acc_index])
         handles1.append(ln1)
-        handles2.append(ln2)
-        labels1.append("{} Top-1".format(acc_key))
-        labels2.append("{} Top-5".format(acc_key))
+        # handles2.append(ln2)
+        # labels1.append("{} top-1".format(acc_key))
+        # labels2.append("{} top-5".format(acc_key))
+        labels1.append("{}".format(acc_key))
         pass
 
-    plt.legend(handles=handles1 + handles2, labels=labels1 + labels2, loc='lower center', ncol=2, fontsize=14)
+    plt.legend(handles=handles1 + handles2, labels=labels1 + labels2, loc='best', ncol=1, fontsize=14)
     plt.grid(linestyle='--')
-    plt.ylim(0.0, 1.0)
+    plt.ylim(0.35, 0.7)
     plt.locator_params("y", nbins=10)
-    plt.xlabel('Dimension', fontsize=18)
-    plt.ylabel('Accuracy', fontsize=18)
+    plt.xlabel('dimension', fontsize=18)
+    plt.ylabel('accuracy', fontsize=18)
     plt.tick_params(labelsize=16)
-    plt.subplots_adjust(top=0.96, bottom=0.10, left=0.12, right=0.98, hspace=0, wspace=0)
+    plt.subplots_adjust(top=0.96, bottom=0.10, left=0.12, right=0.99, hspace=0, wspace=0)
 
-    plt.savefig(Tools.new_dir(os.path.join("plot", "ic", "abl_acc_ic_{}.pdf".format(split))))
+    plt.savefig(Tools.new_dir(os.path.join("plot_new", "ic", "abl_acc_ic_{}2.pdf".format(split))))
     plt.show()
     pass
 
 
 x_data = ["64", "128", '256', '512', '1024', '2048']
-color = ["r", "g", "b", "k", "y", "c", "g", "m"]
+color = ["g", "b", "r", "k", "y", "c", "g", "m"]
 plt.figure(figsize=(8, 6))
 
 handles1, labels1 = [], []
@@ -117,15 +117,15 @@ for acc_index, acc_key in enumerate(acc_result_key):
     labels1.append("{}".format(acc_key))
     pass
 
-plt.legend(handles=handles1, labels=labels1, loc='lower center', ncol=3, fontsize=14)
+plt.legend(handles=handles1, labels=labels1, loc='best', ncol=1, fontsize=14)
 plt.grid(linestyle='--')
-plt.ylim(0, 80)
+plt.ylim(0, 90)
 plt.locator_params("y", nbins=10)
-plt.xlabel('Dimension', fontsize=18)
-plt.ylabel('Training Time per Epoch (s)', fontsize=18)
+plt.xlabel('dimension', fontsize=18)
+plt.ylabel('training time per epoch (in seconds)', fontsize=18)
 plt.tick_params(labelsize=16)
-plt.subplots_adjust(top=0.96, bottom=0.10, left=0.12, right=0.98, hspace=0, wspace=0)
+plt.subplots_adjust(top=0.96, bottom=0.10, left=0.10, right=0.99, hspace=0, wspace=0)
 
-plt.savefig(Tools.new_dir(os.path.join("plot", "ic", "abl_acc_ic_Train_time.pdf")))
+plt.savefig(Tools.new_dir(os.path.join("plot_new", "ic", "abl_acc_ic_Train_time2.pdf")))
 plt.show()
 
