@@ -191,7 +191,7 @@ if __name__ == '__main__':
         ["../models_abl/miniimagenet/mn/ufsl/1_R12S_1500_32_5_1_300_200_512_1_1.0_1.0_head_png_mn.pkl", False],
     ]
     for checkpoint_dir, is_c4net in checkpoint_dir_list:
-        features_dir = checkpoint_dir.replace("models_abl", "vis").replace(".pkl", "")
+        features_dir = checkpoint_dir.replace("models_abl", "vis").replace(".pkl", "").replace("1.0", "1_0").replace("0.01", "0_01")
         config = Config(checkpoint_dir=checkpoint_dir, features_dir=features_dir, is_c4net=is_c4net)
         runner = Runner(config=config)
         runner.load_model()
