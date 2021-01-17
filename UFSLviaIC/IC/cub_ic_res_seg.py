@@ -390,13 +390,6 @@ class Runner(object):
 
 
 """
-2020-12-18 04:27:10 Train: [2100] 2924/1535
-2020-12-18 04:27:22 load ic model success from ../cub/models/ic_res_xx/2_resnet_18_64_512_1_2100_500_200_False_ic.pkl
-2020-12-18 04:27:22 Test 2100 .......
-2020-12-18 04:27:33 Epoch: 2100 Train 0.1786/0.4126 0.0000
-2020-12-18 04:27:33 Epoch: 2100 Val   0.2322/0.5417 0.0000
-2020-12-18 04:27:33 Epoch: 2100 Test  0.2374/0.5367 0.0000
-
 2020-12-18 15:16:24 load ic model success from ../cub/models/ic_res_xx/2_resnet_18_64_512_1_1500_300_200_False_2_ic.pkl
 2020-12-18 15:16:24 Test 0 .......
 2020-12-18 15:16:31 Epoch: 0 Train 0.2698/0.5529 0.0000
