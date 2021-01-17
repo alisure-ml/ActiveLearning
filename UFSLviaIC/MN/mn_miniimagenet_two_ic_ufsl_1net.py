@@ -485,7 +485,8 @@ class Runner(object):
 class Config(object):
     multi_gpu = True
 
-    gpu_id = "0,1,2,3" if multi_gpu else "1"
+    # gpu_id = "0,1,2,3" if multi_gpu else "0"
+    gpu_id = "1,2,3" if multi_gpu else "0"
     gpu_num = len(gpu_id.split(","))
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
@@ -510,8 +511,8 @@ class Config(object):
 
     ###############################################################################################
     # matching_net, batch_size, net_name = OneNet(encoder=EncoderC4(), low_dim=ic_out_dim), 64, "C4"
-    matching_net, batch_size, net_name = OneNet(encoder=EncoderResNet12(), low_dim=ic_out_dim), 32, "R12S"
-    # matching_net, batch_size, net_name = OneNet(encoder=EncoderResNet34(), low_dim=ic_out_dim), 32, "R34"
+    # matching_net, batch_size, net_name = OneNet(encoder=EncoderResNet12(), low_dim=ic_out_dim), 32, "R12S"
+    matching_net, batch_size, net_name = OneNet(encoder=EncoderResNet34(), low_dim=ic_out_dim), 32, "R34"
     ###############################################################################################
     batch_size = batch_size * gpu_num
 
