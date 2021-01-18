@@ -25,6 +25,7 @@ class MyDataset(object):
     dataset_name_tieredimagenet = "tieredimagenet"
     dataset_name_cifarfs = "CIFARFS"
     dataset_name_fc100 = "FC100"
+    dataset_name_omniglot = "omniglot"
 
     dataset_split_train = "train"
     dataset_split_val = "val"
@@ -85,6 +86,15 @@ class MyDataset(object):
                     data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/FC100'
             else:
                 data_root = "F:\\data\\UFSL\\FC100"
+        elif dataset_name == MyDataset.dataset_name_omniglot:
+            if "Linux" in platform.platform():
+                data_root = '/mnt/4T/Data/data/UFSL/omniglot_rot'
+                if not os.path.isdir(data_root):
+                    data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/omniglot_rot'
+                if not os.path.isdir(data_root):
+                    data_root = '/home/ubuntu/Dataset/Partition1/ALISURE/Data/UFSL/omniglot_rot'
+            else:
+                data_root = "F:\\data\\omniglot_rot"
         else:
             raise Exception("..........................")
         return data_root
@@ -189,6 +199,18 @@ class MyTransforms(object):
             return transform_train_fsl, transform_test
         pass
 
+    @staticmethod
+    def get_transform_omniglot(normalize, has_ic=True):
+        transform_train_ic = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
+        transform_train_fsl = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
+        transform_test = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
+
+        if has_ic:
+            return transform_train_ic, transform_train_fsl, transform_test
+        else:
+            return transform_train_fsl, transform_test
+        pass
+
     @classmethod
     def get_transform(cls, dataset_name, has_ic=True, is_fsl_simple=True, is_css=False, cifar_size=32):
         normalize_1 = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
@@ -196,6 +218,7 @@ class MyTransforms(object):
         normalize_2 = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
                                               np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
         normalize_3 = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        normalize_4 = transforms.Normalize(mean=[0.92206], std=[0.08426])
         if dataset_name == MyDataset.dataset_name_miniimagenet:
             return cls.get_transform_miniimagenet(normalize_1, has_ic=has_ic,
                                                   is_fsl_simple=is_fsl_simple, is_css=is_css)
@@ -205,6 +228,8 @@ class MyTransforms(object):
         elif dataset_name == MyDataset.dataset_name_cifarfs or dataset_name == MyDataset.dataset_name_fc100:
             return cls.get_transform_cifar(normalize_3, has_ic=has_ic,
                                            is_fsl_simple=is_fsl_simple, is_css=is_css, size=cifar_size)
+        elif dataset_name == MyDataset.dataset_name_omniglot:
+            return cls.get_transform_omniglot(normalize_4, has_ic=has_ic)
         else:
             raise Exception("......")
         pass

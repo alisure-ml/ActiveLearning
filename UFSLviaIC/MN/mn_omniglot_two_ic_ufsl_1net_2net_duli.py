@@ -9,19 +9,17 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
-from mn_miniimagenet_fsl_test_tool import TestTool
-from mn_miniimagenet_ic_test_tool import ICTestTool
-from mn_miniimagenet_tool import Normalize, RunnerTool
-from mn_miniimagenet_two_ic_ufsl_1net import EncoderC4, EncoderResNet12, EncoderResNet34
+from mn_tool_ic_test import ICTestTool
+from mn_tool_fsl_test import FSLTestTool
+from mn_tool_net import Normalize, RunnerTool, MatchingNet
 
 
 ##############################################################################################################
 
 
-class MiniImageNetDataset(object):
+class OmniglotDataset(object):
 
     def __init__(self, data_list, num_way, num_shot):
         self.data_list, self.num_way, self.num_shot = data_list, num_way, num_shot
@@ -36,16 +34,11 @@ class MiniImageNetDataset(object):
             self.data_dict[label].append((index, label, image_filename))
             pass
 
-        normalize = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
-                                         std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
-        self.transform_train_ic = transforms.Compose([
-            transforms.RandomResizedCrop(size=84, scale=(0.2, 1.)),
-            transforms.ColorJitter(0.4, 0.4, 0.4, 0.4), transforms.RandomGrayscale(p=0.2),
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_train_fsl = transforms.Compose([
-            transforms.RandomCrop(84, padding=8),
-            transforms.RandomHorizontalFlip(), transforms.ToTensor(), normalize])
-        self.transform_test = transforms.Compose([transforms.ToTensor(), normalize])
+        normalize = transforms.Normalize(mean=[0.92206], std=[0.08426])
+        self.transform_train_ic = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
+        self.transform_train_fsl = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
+        self.transform_ic_test = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
+        self.transform_fsl_test = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
         pass
 
     def __len__(self):
@@ -65,8 +58,8 @@ class MiniImageNetDataset(object):
         is_ok_list = [self.data_list[one][1] == now_label_image_tuple[1] for one in now_label_k_shot_index]
 
         # 其他样本
-        other_label_k_shot_index_list = self._get_samples_by_clustering_label(_now_label, False,
-                                                                              num=self.num_shot * (self.num_way - 1))
+        other_label_k_shot_index_list = self._get_samples_by_clustering_label(
+            _now_label, False, num=self.num_shot * (self.num_way - 1))
 
         # c_way_k_shot
         c_way_k_shot_index_list = now_label_k_shot_index + other_label_k_shot_index_list
@@ -123,6 +116,25 @@ class MiniImageNetDataset(object):
 
 
 ##############################################################################################################
+
+
+class EncoderC4(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.encoder = MatchingNet(64, 64)
+        self.out_dim = 64
+        pass
+
+    def forward(self, x):
+        out = self.encoder(x)
+        out = torch.flatten(out, 1)
+        return out
+
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs)
+
+    pass
 
 
 class ICResNet(nn.Module):
@@ -210,8 +222,8 @@ class Runner(object):
         self.adjust_learning_rate = Config.adjust_learning_rate
 
         # all data
-        self.data_train = MiniImageNetDataset.get_data_all(Config.data_root)
-        self.task_train = MiniImageNetDataset(self.data_train, Config.num_way, Config.num_shot)
+        self.data_train = OmniglotDataset.get_data_all(Config.data_root)
+        self.task_train = OmniglotDataset(self.data_train, Config.num_way, Config.num_shot)
         self.task_train_loader = DataLoader(self.task_train, Config.batch_size, True, num_workers=Config.num_workers)
 
         # IC
@@ -241,13 +253,14 @@ class Runner(object):
         self.fsl_loss = RunnerTool.to_cuda(nn.MSELoss())
 
         # Eval
-        self.test_tool_fsl = TestTool(self.matching_test, data_root=Config.data_root,
-                                      num_way=Config.num_way, num_shot=Config.num_shot,
-                                      episode_size=Config.episode_size, test_episode=Config.test_episode,
-                                      transform=self.task_train.transform_test)
+        self.test_tool_fsl = FSLTestTool(self.matching_test, data_root=Config.data_root,
+                                         num_way=Config.num_way_test, num_shot=Config.num_shot,
+                                         episode_size=Config.episode_size, test_episode=Config.test_episode,
+                                         transform=self.task_train.transform_fsl_test)
         self.test_tool_ic = ICTestTool(feature_encoder=None, ic_model=self.ic_model,
                                        data_root=Config.data_root, batch_size=Config.batch_size,
-                                       num_workers=Config.num_workers, ic_out_dim=Config.ic_out_dim)
+                                       num_workers=Config.num_workers, ic_out_dim=Config.ic_out_dim,
+                                       transform=self.task_train_loader.dataset.transform_ic_test)
         pass
 
     def load_model(self):
@@ -290,18 +303,18 @@ class Runner(object):
 
         sample_z = self.matching_net(samples)  # 5x64*5*5
         batch_z = self.matching_net(batches)  # 75x64*5*5
-        z_support = sample_z.view(Config.num_way * Config.num_shot, -1)
+        z_support = sample_z.view(Config.num_way_test * Config.num_shot, -1)
         z_query = batch_z.view(batch_num, -1)
         _, z_dim = z_query.shape
 
-        z_support_expand = z_support.unsqueeze(0).expand(batch_num, Config.num_way * Config.num_shot, z_dim)
-        z_query_expand = z_query.unsqueeze(1).expand(batch_num, Config.num_way * Config.num_shot, z_dim)
+        z_support_expand = z_support.unsqueeze(0).expand(batch_num, Config.num_way_test * Config.num_shot, z_dim)
+        z_query_expand = z_query.unsqueeze(1).expand(batch_num, Config.num_way_test * Config.num_shot, z_dim)
 
         # 相似性
         z_support_expand = self.norm(z_support_expand)
         similarities = torch.sum(z_support_expand * z_query_expand, -1)
         similarities = torch.softmax(similarities, dim=1)
-        similarities = similarities.view(batch_num, Config.num_way, Config.num_shot)
+        similarities = similarities.view(batch_num, Config.num_way_test, Config.num_shot)
         predicts = torch.mean(similarities, dim=-1)
 
         if Config.multi_gpu:
@@ -419,58 +432,55 @@ class Runner(object):
 
 
 class Config(object):
-    multi_gpu = True
+    multi_gpu = False
 
-    gpu_id = "0,1,2,3" if multi_gpu else "0"
-    # gpu_id = "1,2,3" if multi_gpu else "0"
+    # gpu_id = "0,1,2,3" if multi_gpu else "0"
+    gpu_id = "1,2,3" if multi_gpu else "1"
     gpu_num = len(gpu_id.split(","))
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-    num_workers = 32
+    num_workers = 16
 
-    num_way = 5
+    num_way = 10
+    num_way_test = 5
     num_shot = 1
 
-    val_freq = 10
+    val_freq = 5
     episode_size = 15
     test_episode = 600
 
     # ic
-    ic_out_dim = 512
+    ic_out_dim = 2048
     ic_ratio = 1
 
     learning_rate = 0.01
 
-    train_epoch = 1500
-    first_epoch, t_epoch = 500, 200
+    train_epoch = 700
+    first_epoch, t_epoch = 200, 100
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
     ###############################################################################################
-    # ic_net, net_name = EncoderC4(), "ICConv4"
-    ic_net, net_name = EncoderResNet12(), "ICResNet12"
-    # ic_net, net_name = EncoderResNet34(), "ICResNet34"
-
-    # matching_net, batch_size, net_name = EncoderC4(), 64, net_name + "MNConv4"
-    matching_net, batch_size, net_name = EncoderResNet12(), 16, net_name + "MNResNet12"
-    # matching_net, batch_size, net_name = EncoderResNet34(), 16, net_name + "MNRResNet34"
+    ic_net, net_name = EncoderC4(), "ICConv4"
+    matching_net, batch_size, net_name = EncoderC4(), 64, net_name + "MNConv4"
     ###############################################################################################
     batch_size = batch_size * gpu_num
 
-    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_png".format(
+    model_name = "{}_{}_{}_{}_{}_{}_{}_{}_{}_{}".format(
         gpu_id.replace(",", ""), net_name, train_epoch, batch_size,
         num_way, num_shot, first_epoch, t_epoch, ic_out_dim, ic_ratio)
     Tools.print(model_name)
 
     if "Linux" in platform.platform():
-        data_root = '/mnt/4T/Data/data/miniImagenet'
+        data_root = '/mnt/4T/Data/data/UFSL/omniglot_rot'
         if not os.path.isdir(data_root):
-            data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
+            data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/omniglot_rot'
+        if not os.path.isdir(data_root):
+            data_root = '/home/ubuntu/Dataset/Partition1/ALISURE/Data/UFSL/omniglot_rot'
     else:
-        data_root = "F:\\data\\miniImagenet"
-    data_root = os.path.join(data_root, "miniImageNet_png")
+        data_root = "F:\\data\\omniglot_rot"
     Tools.print(data_root)
 
-    _root_path = "../models_abl/mn/two_ic_ufsl_1net_2net_duli"
+    _root_path = "../omniglot/mn/two_ic_ufsl_1net_2net_duli"
     mn_dir = Tools.new_dir("{}/{}_mn.pkl".format(_root_path, model_name))
     ic_dir = Tools.new_dir("{}/{}_ic.pkl".format(_root_path, model_name))
     pass
@@ -480,10 +490,10 @@ if __name__ == '__main__':
     runner = Runner()
     # runner.load_model()
 
-    # runner.matching_net.eval()
-    # runner.ic_model.eval()
-    # runner.test_tool_ic.val(epoch=0, is_print=True)
-    # runner.test_tool_fsl.val(episode=0, is_print=True)
+    runner.matching_net.eval()
+    runner.ic_model.eval()
+    runner.test_tool_ic.val(epoch=0, is_print=True)
+    runner.test_tool_fsl.val(episode=0, is_print=True)
 
     runner.train()
 
