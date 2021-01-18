@@ -9,13 +9,12 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
-import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
-from torchvision.models import resnet18, resnet34
 from mn_miniimagenet_fsl_test_tool import TestTool
 from mn_miniimagenet_ic_test_tool import ICTestTool
-from mn_miniimagenet_tool import MatchingNet, ResNet12Small, BasicBlock, Normalize, RunnerTool
+from mn_miniimagenet_tool import Normalize, RunnerTool
+from mn_miniimagenet_two_ic_ufsl_1net import EncoderC4, EncoderResNet12, EncoderResNet34
 
 
 ##############################################################################################################
@@ -65,8 +64,8 @@ class MiniImageNetDataset(object):
         is_ok_list = [self.data_list[one][1] == now_label_image_tuple[1] for one in now_label_k_shot_index]
 
         # 其他样本
-        other_label_k_shot_index_list = self._get_samples_by_clustering_label(
-            _now_label, False, num=self.num_shot * (self.num_way - 1))
+        other_label_k_shot_index_list = self._get_samples_by_clustering_label(_now_label, False,
+                                                                              num=self.num_shot * (self.num_way - 1))
 
         # c_way_k_shot
         c_way_k_shot_index_list = now_label_k_shot_index + other_label_k_shot_index_list
@@ -125,78 +124,7 @@ class MiniImageNetDataset(object):
 ##############################################################################################################
 
 
-class EncoderC4(nn.Module):
-
-    def __init__(self):
-        super().__init__()
-        self.encoder = MatchingNet(64, 64)
-        self.out_dim = 1600
-        pass
-
-    def forward(self, x):
-        out = self.encoder(x)
-        out = torch.flatten(out, 1)
-        return out
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class EncoderResNet12(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.encoder = ResNet12Small(avg_pool=True, drop_rate=0.1)
-        self.out_dim = 512
-        pass
-
-    def forward(self, x):
-        out = self.encoder(x)
-        out = torch.flatten(out, 1)
-        return out
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class EncoderResNet34(nn.Module):
-
-    def __init__(self):
-        super().__init__()
-        self.encoder = resnet34(num_classes=512)
-        self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.out_dim = 512
-        pass
-
-    def forward(self, x):
-        out = self.forward_impl(x)
-        out = torch.flatten(out, 1)
-        return out
-
-    def forward_impl(self, x):
-        x = self.encoder.conv1(x)
-        x = self.encoder.bn1(x)
-        x = self.encoder.relu(x)
-        x = self.encoder.maxpool(x)
-
-        x = self.encoder.layer1(x)
-        x = self.encoder.layer2(x)
-        x = self.encoder.layer3(x)
-        x = self.encoder.layer4(x)
-
-        x = self.encoder.avgpool(x)
-        return x
-
-    def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-    pass
-
-
-class OneNet(nn.Module):
+class ICResNet(nn.Module):
 
     def __init__(self, encoder, low_dim=512):
         super().__init__()
@@ -205,22 +133,11 @@ class OneNet(nn.Module):
         self.l2norm = Normalize(2)
         pass
 
-    def forward(self, x, only_fsl=False, only_ic=False, all_out=False):
-        out_fsl = self.encoder(x)
-
-        if only_fsl:
-            return out_fsl
-
-        out_ic = self.fc(out_fsl)
-        out_ic_l2norm = self.l2norm(out_ic)
-
-        if only_ic:
-            return out_ic, out_ic_l2norm
-
-        if all_out:
-            return out_fsl, out_ic, out_ic_l2norm
-
-        return out_ic, out_ic_l2norm
+    def forward(self, x):
+        out = self.encoder(x)
+        out_logits = self.fc(out)
+        out_l2norm = self.l2norm(out_logits)
+        return out_logits, out_l2norm
 
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
@@ -260,7 +177,6 @@ class ProduceClass(object):
         out_data = out.data.cpu()
         top_k = out_data.topk(self.out_dim, dim=1)[1].cpu()
         indexes_cpu = indexes.cpu()
-
         batch_size = top_k.size(0)
         class_labels = np.zeros(shape=(batch_size,), dtype=np.int)
 
@@ -304,16 +220,20 @@ class Runner(object):
 
         # model
         self.matching_net = RunnerTool.to_cuda(Config.matching_net)
+        self.ic_model = RunnerTool.to_cuda(ICResNet(low_dim=Config.ic_out_dim, encoder=Config.ic_net))
         self.norm = Normalize(2)
         if Config.multi_gpu:
             self.matching_net = RunnerTool.to_cuda(nn.DataParallel(self.matching_net))
             cudnn.benchmark = True
             pass
         RunnerTool.to_cuda(self.matching_net.apply(RunnerTool.weights_init))
+        RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
 
         # optim
         self.matching_net_optim = torch.optim.SGD(
             self.matching_net.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
+        self.ic_model_optim = torch.optim.SGD(
+            self.ic_model.parameters(), lr=Config.learning_rate, momentum=0.9, weight_decay=5e-4)
 
         # loss
         self.ic_loss = RunnerTool.to_cuda(nn.CrossEntropyLoss())
@@ -324,7 +244,7 @@ class Runner(object):
                                       num_way=Config.num_way, num_shot=Config.num_shot,
                                       episode_size=Config.episode_size, test_episode=Config.test_episode,
                                       transform=self.task_train.transform_test)
-        self.test_tool_ic = ICTestTool(feature_encoder=None, ic_model=self.matching_net,
+        self.test_tool_ic = ICTestTool(feature_encoder=None, ic_model=self.ic_model,
                                        data_root=Config.data_root, batch_size=Config.batch_size,
                                        num_workers=Config.num_workers, ic_out_dim=Config.ic_out_dim)
         pass
@@ -333,15 +253,17 @@ class Runner(object):
         if os.path.exists(Config.mn_dir):
             self.matching_net.load_state_dict(torch.load(Config.mn_dir))
             Tools.print("load matching net success from {}".format(Config.mn_dir))
+
+        if os.path.exists(Config.ic_dir):
+            self.ic_model.load_state_dict(torch.load(Config.ic_dir))
+            Tools.print("load ic model success from {}".format(Config.ic_dir))
         pass
 
-    def matching(self, task_data):  # task_data[:, -1]
+    def matching(self, task_data):
         data_batch_size, data_image_num, data_num_channel, data_width, data_weight = task_data.shape
         data_x = task_data.view(-1, data_num_channel, data_width, data_weight)
-        net_out, ic_out_logits, ic_out_l2norm = self.matching_net(data_x, all_out=True)
+        net_out = self.matching_net(data_x)
         z = net_out.view(data_batch_size, data_image_num, -1)
-        ic_out_logits = ic_out_logits.view(data_batch_size, data_image_num, -1)[:, -1]
-        ic_out_l2norm = ic_out_l2norm.view(data_batch_size, data_image_num, -1)[:, -1]
 
         # 特征
         z_support, z_query = z.split(Config.num_shot * Config.num_way, dim=1)
@@ -355,7 +277,7 @@ class Runner(object):
         similarities = torch.softmax(similarities, dim=1)
         similarities = similarities.view(z_batch_size, Config.num_way, Config.num_shot)
         predicts = torch.mean(similarities, dim=-1)
-        return predicts, ic_out_logits, ic_out_l2norm
+        return predicts
 
     def matching_test(self, samples, batches):
         if Config.multi_gpu:
@@ -364,8 +286,9 @@ class Runner(object):
             pass
 
         batch_num, _, _, _ = batches.shape
-        sample_z = self.matching_net(samples, only_fsl=True)  # 5x64*5*5
-        batch_z = self.matching_net(batches, only_fsl=True)  # 75x64*5*5
+
+        sample_z = self.matching_net(samples)  # 5x64*5*5
+        batch_z = self.matching_net(batches)  # 75x64*5*5
         z_support = sample_z.view(Config.num_way * Config.num_shot, -1)
         z_query = batch_z.view(batch_num, -1)
         _, z_dim = z_query.shape
@@ -392,12 +315,13 @@ class Runner(object):
         # Init Update
         try:
             self.matching_net.eval()
+            self.ic_model.eval()
             Tools.print("Init label {} .......")
             self.produce_class.reset()
             for task_data, task_labels, task_index, task_ok in tqdm(self.task_train_loader):
                 ic_labels = RunnerTool.to_cuda(task_index[:, -1])
                 task_data, task_labels = RunnerTool.to_cuda(task_data), RunnerTool.to_cuda(task_labels)
-                ic_out_logits, ic_out_l2norm = self.matching_net(task_data[:, -1], only_ic=True)
+                ic_out_logits, ic_out_l2norm = self.ic_model(task_data[:, -1])
                 self.produce_class.cal_label(ic_out_l2norm, ic_labels)
                 pass
             Tools.print("Epoch: {}/{}".format(self.produce_class.count, self.produce_class.count_2))
@@ -407,11 +331,14 @@ class Runner(object):
         best_accuracy = 0.0
         for epoch in range(1, 1 + Config.train_epoch):
             self.matching_net.train()
+            self.ic_model.train()
 
             Tools.print()
             mn_lr= self.adjust_learning_rate(self.matching_net_optim, epoch,
                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
-            Tools.print('Epoch: [{}] mn_lr={}'.format(epoch, mn_lr))
+            ic_lr = self.adjust_learning_rate(self.ic_model_optim, epoch,
+                                              Config.first_epoch, Config.t_epoch, Config.learning_rate)
+            Tools.print('Epoch: [{}] mn_lr={} ic_lr={}'.format(epoch, mn_lr, ic_lr))
 
             self.produce_class.reset()
             Tools.print(self.task_train.classes)
@@ -423,7 +350,8 @@ class Runner(object):
 
                 ###########################################################################
                 # 1 calculate features
-                relations, ic_out_logits, ic_out_l2norm = self.matching(task_data)
+                relations = self.matching(task_data)
+                ic_out_logits, ic_out_l2norm = self.ic_model(task_data[:, -1])
 
                 # 2
                 ic_targets = self.produce_class.get_label(ic_labels)
@@ -437,8 +365,13 @@ class Runner(object):
                 all_loss_fsl += loss_fsl.item()
                 all_loss_ic += loss_ic.item()
 
+                # 4 backward
+                self.ic_model.zero_grad()
+                loss_ic.backward()
+                self.ic_model_optim.step()
+
                 self.matching_net.zero_grad()
-                loss.backward()
+                loss_fsl.backward()
                 self.matching_net_optim.step()
 
                 # is ok
@@ -460,6 +393,7 @@ class Runner(object):
             # Val
             if epoch % Config.val_freq == 0:
                 self.matching_net.eval()
+                self.ic_model.eval()
 
                 self.test_tool_ic.val(epoch=epoch)
                 val_accuracy = self.test_tool_fsl.val(episode=epoch, is_print=True)
@@ -467,6 +401,7 @@ class Runner(object):
                 if val_accuracy > best_accuracy:
                     best_accuracy = val_accuracy
                     torch.save(self.matching_net.state_dict(), Config.mn_dir)
+                    torch.save(self.ic_model.state_dict(), Config.ic_dir)
                     Tools.print("Save networks for epoch: {}".format(epoch))
                     pass
                 pass
@@ -481,27 +416,9 @@ class Runner(object):
 ##############################################################################################################
 
 
-"""
-2021-01-18 02:31:49 load matching net success from ../models_abl/mn/two_ic_ufsl_1net/0_C4_1500_64_5_1_500_200_512_1_png.pkl
-2021-01-18 02:31:49 Test 1500 .......
-2021-01-18 02:32:01 Epoch: 1500 Train 0.3478/0.6743 0.0000
-2021-01-18 02:32:01 Epoch: 1500 Val   0.4890/0.8712 0.0000
-2021-01-18 02:32:01 Epoch: 1500 Test  0.4662/0.8542 0.0000
-2021-01-18 02:32:18 Train 1500 Accuracy: 0.44844444444444453
-2021-01-18 02:32:36 Val   1500 Accuracy: 0.4083333333333333
-2021-01-18 02:32:54 Test1 1500 Accuracy: 0.43333333333333335
-2021-01-18 02:33:49 Test2 1500 Accuracy: 0.4403555555555556
-2021-01-18 02:38:17 episode=1500, Test accuracy=0.4426666666666667
-2021-01-18 02:38:17 episode=1500, Test accuracy=0.43717777777777767
-2021-01-18 02:38:17 episode=1500, Test accuracy=0.4368444444444445
-2021-01-18 02:38:17 episode=1500, Test accuracy=0.43935555555555555
-2021-01-18 02:38:17 episode=1500, Test accuracy=0.4349555555555556
-2021-01-18 02:38:17 episode=1500, Mean Test accuracy=0.4382
-"""
-
 
 class Config(object):
-    multi_gpu = True
+    multi_gpu = False
 
     # gpu_id = "0,1,2,3" if multi_gpu else "0"
     gpu_id = "1,2,3" if multi_gpu else "0"
@@ -528,9 +445,13 @@ class Config(object):
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
     ###############################################################################################
-    # matching_net, batch_size, net_name = OneNet(encoder=EncoderC4(), low_dim=ic_out_dim), 64, "C4"
-    # matching_net, batch_size, net_name = OneNet(encoder=EncoderResNet12(), low_dim=ic_out_dim), 32, "R12S"
-    matching_net, batch_size, net_name = OneNet(encoder=EncoderResNet34(), low_dim=ic_out_dim), 32, "R34"
+    ic_net, net_name = EncoderC4(), "ICConv4"
+    # ic_net, net_name = EncoderResNet12(), "ICResNet12"
+    # ic_net, net_name = EncoderResNet34(), "ICResNet34"
+
+    matching_net, batch_size, net_name = EncoderC4(), 64, net_name + "MNConv4"
+    # matching_net, batch_size, net_name = EncoderResNet12(), 32, net_name + "MNResNet12"
+    # matching_net, batch_size, net_name = EncoderResNet34(), 32, net_name + "MNRResNet34"
     ###############################################################################################
     batch_size = batch_size * gpu_num
 
@@ -548,8 +469,9 @@ class Config(object):
     data_root = os.path.join(data_root, "miniImageNet_png")
     Tools.print(data_root)
 
-    _root_path = "../models_abl/mn/two_ic_ufsl_1net"
-    mn_dir = Tools.new_dir("{}/{}.pkl".format(_root_path, model_name))
+    _root_path = "../models_abl/mn/two_ic_ufsl_1net_2net_duli"
+    mn_dir = Tools.new_dir("{}/{}_mn.pkl".format(_root_path, model_name))
+    ic_dir = Tools.new_dir("{}/{}_ic.pkl".format(_root_path, model_name))
     pass
 
 
@@ -558,6 +480,7 @@ if __name__ == '__main__':
     # runner.load_model()
 
     runner.matching_net.eval()
+    runner.ic_model.eval()
     runner.test_tool_ic.val(epoch=0, is_print=True)
     runner.test_tool_fsl.val(episode=0, is_print=True)
 
@@ -565,6 +488,7 @@ if __name__ == '__main__':
 
     runner.load_model()
     runner.matching_net.eval()
+    runner.ic_model.eval()
     runner.test_tool_ic.val(epoch=Config.train_epoch, is_print=True)
     runner.test_tool_fsl.val(episode=Config.train_epoch, is_print=True)
     runner.test_tool_fsl.test(test_avg_num=5, episode=Config.train_epoch, is_print=True)
