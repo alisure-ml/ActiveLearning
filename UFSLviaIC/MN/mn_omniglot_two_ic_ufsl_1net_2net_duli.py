@@ -9,6 +9,7 @@ import torch.nn as nn
 from PIL import Image
 import torch.nn.functional as F
 from alisuretool.Tools import Tools
+import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 from mn_tool_ic_test import ICTestTool
@@ -35,8 +36,10 @@ class OmniglotDataset(object):
             pass
 
         normalize = transforms.Normalize(mean=[0.92206], std=[0.08426])
-        self.transform_train_ic = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
-        self.transform_train_fsl = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
+        self.transform_train_ic = transforms.Compose([transforms.RandomRotation(30),
+                                                      transforms.Resize(28), transforms.ToTensor(), normalize])
+        self.transform_train_fsl = transforms.Compose([transforms.RandomRotation(30),
+                                                       transforms.Resize(28), transforms.ToTensor(), normalize])
         self.transform_ic_test = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
         self.transform_fsl_test = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
         pass
@@ -54,7 +57,13 @@ class OmniglotDataset(object):
         now_index, _, now_image_filename = now_label_image_tuple
         _now_label = self.classes[item]
 
-        now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
+        r = random.randint(0, 1)
+        if r == 0:
+            now_label_k_shot_index = [now_index]
+        else:
+            now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
+            pass
+
         is_ok_list = [self.data_list[one][1] == now_label_image_tuple[1] for one in now_label_k_shot_index]
 
         # 其他样本
@@ -71,8 +80,8 @@ class OmniglotDataset(object):
         task_list = [self.data_list[index] for index in c_way_k_shot_index_list] + [now_label_image_tuple]
 
         task_data = []
-        for one in task_list:
-            transform = self.transform_train_ic if one[2] == now_image_filename else self.transform_train_fsl
+        for _index, one in enumerate(task_list):
+            transform = self.transform_train_ic if _index == len(task_list) - 1 else self.transform_train_fsl
             task_data.append(torch.unsqueeze(self.read_image(one[2], transform), dim=0))
             pass
         task_data = torch.cat(task_data)
@@ -239,8 +248,8 @@ class Runner(object):
             self.matching_net = RunnerTool.to_cuda(nn.DataParallel(self.matching_net))
             cudnn.benchmark = True
             pass
-        RunnerTool.to_cuda(self.matching_net.apply(RunnerTool.weights_init))
-        RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
+        # RunnerTool.to_cuda(self.matching_net.apply(RunnerTool.weights_init))
+        # RunnerTool.to_cuda(self.ic_model.apply(RunnerTool.weights_init))
 
         # optim
         self.matching_net_optim = torch.optim.SGD(
@@ -260,7 +269,7 @@ class Runner(object):
         self.test_tool_ic = ICTestTool(feature_encoder=None, ic_model=self.ic_model,
                                        data_root=Config.data_root, batch_size=Config.batch_size,
                                        num_workers=Config.num_workers, ic_out_dim=Config.ic_out_dim,
-                                       transform=self.task_train_loader.dataset.transform_ic_test)
+                                       transform=self.task_train_loader.dataset.transform_ic_test, k=20)
         pass
 
     def load_model(self):
@@ -456,7 +465,7 @@ class Config(object):
     learning_rate = 0.01
 
     train_epoch = 700
-    first_epoch, t_epoch = 200, 100
+    first_epoch, t_epoch = 500, 100
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
     ###############################################################################################
@@ -470,14 +479,16 @@ class Config(object):
         num_way, num_shot, first_epoch, t_epoch, ic_out_dim, ic_ratio)
     Tools.print(model_name)
 
+    dataset_name = "omniglot_single"
+    # dataset_name = "omniglot_rot"
     if "Linux" in platform.platform():
-        data_root = '/mnt/4T/Data/data/UFSL/omniglot_rot'
+        data_root = '/mnt/4T/Data/data/UFSL/{}'.format(dataset_name)
         if not os.path.isdir(data_root):
-            data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/omniglot_rot'
+            data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/{}'.format(dataset_name)
         if not os.path.isdir(data_root):
-            data_root = '/home/ubuntu/Dataset/Partition1/ALISURE/Data/UFSL/omniglot_rot'
+            data_root = '/home/ubuntu/Dataset/Partition1/ALISURE/Data/UFSL/{}'.format(dataset_name)
     else:
-        data_root = "F:\\data\\omniglot_rot"
+        data_root = "F:\\data\\{}".format(dataset_name)
     Tools.print(data_root)
 
     _root_path = "../omniglot/mn/two_ic_ufsl_1net_2net_duli"

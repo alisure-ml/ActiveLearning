@@ -15,7 +15,7 @@ from torch.optim import lr_scheduler
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
 sys.path.append("../Common")
-from UFSLTool import ResNet12Small, C4Net, RunnerTool, Normalize
+from UFSLTool import C4Net, RunnerTool, Normalize
 
 
 ##############################################################################################################
@@ -23,12 +23,15 @@ from UFSLTool import ResNet12Small, C4Net, RunnerTool, Normalize
 
 class DatasetIC(Dataset):
 
-    def __init__(self, data_list, image_size=28):
+    def __init__(self, data_list, image_size):
         self.data_list = data_list
         self.train_label = [one[1] for one in self.data_list]
 
         normalize = transforms.Normalize(mean=[0.92206], std=[0.08426])
-        self.transform = transforms.Compose([transforms.Resize(image_size), transforms.ToTensor(), normalize])
+        self.transform = transforms.Compose([transforms.RandomRotation(30, fill=255),
+                                             transforms.Resize(image_size),
+                                             transforms.RandomCrop(image_size, padding=4, fill=255),
+                                             transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.Resize(image_size), transforms.ToTensor(), normalize])
         pass
 
@@ -357,27 +360,48 @@ class Runner(object):
 ##############################################################################################################
 
 
+"""
+2021-01-19 15:05:33 load ic model success from ../omniglot/ic/2_28_ICConv4_64_2048_1_700_200_100_ic.pkl
+2021-01-19 15:05:33 Test 700 .......
+2021-01-19 15:05:47 Epoch: 700 Train 0.3937/0.6795 0.0000
+2021-01-19 15:05:47 Epoch: 700 Val   0.4567/0.7645 0.0000
+2021-01-19 15:05:47 Epoch: 700 Test  0.3743/0.6565 0.0000
+
+2021-01-19 18:06:41 load ic model success from ../omniglot/ic/2_28_ICConv4_64_2048_1_1500_500_200_ic.pkl
+2021-01-19 18:06:41 Test 1500 .......
+2021-01-19 18:06:48 Epoch: 1500 Train 0.4229/0.7019 0.0000
+2021-01-19 18:06:48 Epoch: 1500 Val   0.4881/0.7837 0.0000
+2021-01-19 18:06:48 Epoch: 1500 Test  0.3989/0.6843 0.0000
+
+2021-01-19 23:24:03 load ic model success from ../omniglot/ic/3_28_ICConv4_64_2048_1_1500_900_200_ic.pkl
+2021-01-19 23:24:03 Test 1500 .......
+2021-01-19 23:24:09 Epoch: 1500 Train 0.7669/0.9605 0.0000
+2021-01-19 23:24:09 Epoch: 1500 Val   0.8169/0.9616 0.0000
+2021-01-19 23:24:09 Epoch: 1500 Test  0.7759/0.9591 0.0000
+"""
+
+
 ##############################################################################################################
 
 
 class Config(object):
-    gpu_id = 0
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
-    num_workers = 16
+    num_workers = 24
     batch_size = 64
     val_freq = 10
-    knn = 100
+    knn = 20
     ic_ratio = 1
 
     ##############################################################################################################
     image_size = 28
-    ic_out_dim = 512
+    ic_out_dim = 2048
     ic_net, net_name = EncoderC4(), "ICConv4"
 
     learning_rate = 0.01
-    train_epoch = 700
-    first_epoch, t_epoch = 200, 100
+    train_epoch = 1600
+    first_epoch, t_epoch = 1000, 300
     adjust_learning_rate = Runner.adjust_learning_rate1
     ##############################################################################################################
 
@@ -387,13 +411,13 @@ class Config(object):
 
     ic_dir = Tools.new_dir("../omniglot/ic/{}_ic.pkl".format(model_name))
     if "Linux" in platform.platform():
-        data_root = '/mnt/4T/Data/data/UFSL/omniglot_rot'
+        data_root = '/mnt/4T/Data/data/UFSL/omniglot_single'
         if not os.path.isdir(data_root):
-            data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/omniglot_rot'
+            data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/omniglot_single'
         if not os.path.isdir(data_root):
-            data_root = '/home/ubuntu/Dataset/Partition1/ALISURE/Data/UFSL/omniglot_rot'
+            data_root = '/home/ubuntu/Dataset/Partition1/ALISURE/Data/UFSL/omniglot_single'
     else:
-        data_root = "F:\\data\\omniglot_rot"
+        data_root = "F:\\data\\omniglot_single"
 
     Tools.print(model_name)
     Tools.print(data_root)
