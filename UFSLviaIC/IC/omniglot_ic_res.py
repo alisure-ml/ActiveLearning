@@ -385,7 +385,7 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 3
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 24
@@ -396,7 +396,8 @@ class Config(object):
 
     ##############################################################################################################
     image_size = 28
-    ic_out_dim = 2048
+    # ic_out_dim = 2048
+    ic_out_dim = 1024
     ic_net, net_name = EncoderC4(), "ICConv4"
 
     learning_rate = 0.01

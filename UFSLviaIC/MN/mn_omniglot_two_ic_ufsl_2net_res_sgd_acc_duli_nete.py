@@ -32,7 +32,11 @@ class TieredImageNetICDataset(object):
         self.train_label = [one[1] for one in self.data_list]
 
         normalize = transforms.Normalize(mean=[0.92206], std=[0.08426])
-        self.transform_train_ic = transforms.Compose([transforms.RandomRotation(30),
+        # self.transform_train_ic = transforms.Compose([transforms.RandomRotation(30),
+        #                                               transforms.Resize(image_size),
+        #                                               transforms.RandomCrop(image_size, padding=4, fill=255),
+        #                                               transforms.ToTensor(), normalize])
+        self.transform_train_ic = transforms.Compose([transforms.RandomRotation(30, fill=255),
                                                       transforms.Resize(image_size),
                                                       transforms.RandomCrop(image_size, padding=4, fill=255),
                                                       transforms.ToTensor(), normalize])
@@ -84,9 +88,13 @@ class TieredImageNetFSLDataset(object):
         Tools.print("class number = {}".format(len(self.data_dict.keys())))
 
         normalize = transforms.Normalize(mean=[0.92206], std=[0.08426])
-        self.transform_train_fsl = transforms.Compose([transforms.RandomRotation(30),
-                                                      transforms.Resize(image_size),
-                                                      transforms.RandomCrop(image_size, padding=4, fill=255),
+        # self.transform_train_fsl = transforms.Compose([transforms.RandomRotation(30),
+        #                                                transforms.Resize(image_size),
+        #                                                transforms.RandomCrop(image_size, padding=4, fill=255),
+        #                                                transforms.ToTensor(), normalize])
+        self.transform_train_fsl = transforms.Compose([transforms.RandomRotation(30, fill=255),
+                                                       transforms.Resize(image_size),
+                                                       transforms.RandomCrop(image_size, padding=4, fill=255),
                                                        transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.Resize(image_size), transforms.ToTensor(), normalize])
         pass
@@ -570,6 +578,7 @@ class Config(object):
 
 
 """
+transforms.RandomRotation(30)
 ../omniglot/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/1_ICConv4_1200_256_2048_conv4_300_5_1_96_77_mn.pkl
 2021-01-19 23:20:15 load matching net success from ../omniglot/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/1_ICConv4_1200_256_2048_conv4_300_5_1_96_77_mn.pkl
 2021-01-19 23:20:24 Train 300 Accuracy: 0.9704444444444444
@@ -582,6 +591,10 @@ class Config(object):
 2021-01-19 23:24:23 episode=300, Test accuracy=0.9498666666666667
 2021-01-19 23:24:23 episode=300, Test accuracy=0.9491111111111111
 2021-01-19 23:24:23 episode=300, Mean Test accuracy=0.9496666666666667
+
+
+transforms.RandomRotation(30, fill=255)
+
 """
 
 

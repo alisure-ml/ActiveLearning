@@ -35,13 +35,18 @@ class OmniglotDataset(object):
             self.data_dict[label].append((index, label, image_filename))
             pass
 
+        image_size = 28
         normalize = transforms.Normalize(mean=[0.92206], std=[0.08426])
-        self.transform_train_ic = transforms.Compose([transforms.RandomRotation(30),
-                                                      transforms.Resize(28), transforms.ToTensor(), normalize])
-        self.transform_train_fsl = transforms.Compose([transforms.RandomRotation(30),
-                                                       transforms.Resize(28), transforms.ToTensor(), normalize])
-        self.transform_ic_test = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
-        self.transform_fsl_test = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
+        self.transform_train_ic = transforms.Compose([transforms.RandomRotation(30, fill=255),
+                                                      transforms.Resize(image_size),
+                                                      transforms.RandomCrop(image_size, padding=4, fill=255),
+                                                      transforms.ToTensor(), normalize])
+        self.transform_train_fsl = transforms.Compose([transforms.RandomRotation(30, fill=255),
+                                                       transforms.Resize(image_size),
+                                                       transforms.RandomCrop(image_size, padding=4, fill=255),
+                                                       transforms.ToTensor(), normalize])
+        self.transform_ic_test = transforms.Compose([transforms.Resize(image_size), transforms.ToTensor(), normalize])
+        self.transform_fsl_test = transforms.Compose([transforms.Resize(image_size), transforms.ToTensor(), normalize])
         pass
 
     def __len__(self):
@@ -464,8 +469,8 @@ class Config(object):
 
     learning_rate = 0.01
 
-    train_epoch = 700
-    first_epoch, t_epoch = 500, 100
+    train_epoch = 1600
+    first_epoch, t_epoch = 1000, 300
     adjust_learning_rate = RunnerTool.adjust_learning_rate1
 
     ###############################################################################################

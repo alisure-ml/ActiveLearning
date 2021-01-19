@@ -87,14 +87,16 @@ class MyDataset(object):
             else:
                 data_root = "F:\\data\\UFSL\\FC100"
         elif dataset_name == MyDataset.dataset_name_omniglot:
+            # dataset_name = "omniglot_rot"
+            dataset_name = "omniglot_single"
             if "Linux" in platform.platform():
-                data_root = '/mnt/4T/Data/data/UFSL/omniglot_rot'
+                data_root = '/mnt/4T/Data/data/UFSL/{}'.format(dataset_name)
                 if not os.path.isdir(data_root):
-                    data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/omniglot_rot'
+                    data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/{}'.format(dataset_name)
                 if not os.path.isdir(data_root):
-                    data_root = '/home/ubuntu/Dataset/Partition1/ALISURE/Data/UFSL/omniglot_rot'
+                    data_root = '/home/ubuntu/Dataset/Partition1/ALISURE/Data/UFSL/{}'.format(dataset_name)
             else:
-                data_root = "F:\\data\\omniglot_rot"
+                data_root = "F:\\data\\{}".format(dataset_name)
         else:
             raise Exception("..........................")
         return data_root
@@ -123,6 +125,16 @@ class MyDataset(object):
             else:
                 ways = [2, 5, 10, 15, 20, 30, 40, 50]
                 shots = [1, 5, 10, 15, 20, 30, 40, 50]
+        elif dataset_name == MyDataset.dataset_name_omniglot:
+            if split == MyDataset.dataset_split_test:
+                ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100]
+                shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            elif split == MyDataset.dataset_split_val:
+                ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100]
+                shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            else:
+                ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100]
+                shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         else:
             raise Exception(".")
         return ways, shots
@@ -200,10 +212,16 @@ class MyTransforms(object):
         pass
 
     @staticmethod
-    def get_transform_omniglot(normalize, has_ic=True):
-        transform_train_ic = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
-        transform_train_fsl = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
-        transform_test = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
+    def get_transform_omniglot(normalize, has_ic=True, size=228):
+        transform_train_ic = transforms.Compose([transforms.RandomRotation(30, fill=255),
+                                                 transforms.Resize(size),
+                                                 transforms.RandomCrop(size, padding=4, fill=255),
+                                                 transforms.ToTensor(), normalize])
+        transform_train_fsl = transforms.Compose([transforms.RandomRotation(30, fill=255),
+                                                  transforms.Resize(size),
+                                                  transforms.RandomCrop(size, padding=4, fill=255),
+                                                  transforms.ToTensor(), normalize])
+        transform_test = transforms.Compose([transforms.Resize(size), transforms.ToTensor(), normalize])
 
         if has_ic:
             return transform_train_ic, transform_train_fsl, transform_test
