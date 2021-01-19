@@ -499,6 +499,7 @@ class Runner(object):
 2021-01-18 02:38:17 episode=1500, Test accuracy=0.4349555555555556
 2021-01-18 02:38:17 episode=1500, Mean Test accuracy=0.4382
 
+
 ../models_abl/mn/two_ic_ufsl_1net/0123_R12S_1500_128_5_1_500_200_512_1_png.pkl
 2021-01-18 23:49:41 load matching net success from ../models_abl/mn/two_ic_ufsl_1net/0123_R12S_1500_128_5_1_500_200_512_1_png.pkl
 2021-01-18 23:49:41 Test 1500 .......
@@ -515,6 +516,25 @@ class Runner(object):
 2021-01-19 00:00:02 episode=1500, Test accuracy=0.5305777777777778
 2021-01-19 00:00:02 episode=1500, Test accuracy=0.5224444444444444
 2021-01-19 00:00:02 episode=1500, Mean Test accuracy=0.5210266666666666
+
+
+../models_abl/mn/two_ic_ufsl_1net/123_R34_1500_96_5_1_500_200_512_1_png.pkl
+2021-01-19 05:52:46 load matching net success from ../models_abl/mn/two_ic_ufsl_1net/123_R34_1500_96_5_1_500_200_512_1_png.pkl
+2021-01-19 05:52:46 Test 1500 .......
+2021-01-19 05:53:18 Epoch: 1500 Train 0.5473/0.8228 0.0000
+2021-01-19 05:53:18 Epoch: 1500 Val   0.6252/0.9326 0.0000
+2021-01-19 05:53:18 Epoch: 1500 Test  0.5979/0.9255 0.0000
+2021-01-19 05:53:45 Train 1500 Accuracy: 0.588111111111111
+2021-01-19 05:54:11 Val   1500 Accuracy: 0.49788888888888894
+2021-01-19 05:54:38 Test1 1500 Accuracy: 0.5127777777777778
+2021-01-19 05:56:08 Test2 1500 Accuracy: 0.5098666666666666
+2021-01-19 06:03:50 episode=1500, Test accuracy=0.5129333333333334
+2021-01-19 06:03:50 episode=1500, Test accuracy=0.511311111111111
+2021-01-19 06:03:50 episode=1500, Test accuracy=0.5119555555555555
+2021-01-19 06:03:50 episode=1500, Test accuracy=0.5064666666666666
+2021-01-19 06:03:50 episode=1500, Test accuracy=0.5030222222222223
+2021-01-19 06:03:50 episode=1500, Mean Test accuracy=0.5091377777777778
+
 """
 
 
