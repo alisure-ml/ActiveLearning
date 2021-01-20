@@ -128,13 +128,13 @@ class MyDataset(object):
         elif dataset_name == MyDataset.dataset_name_omniglot:
             if split == MyDataset.dataset_split_test:
                 ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100]
-                shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                shots = [1, 2, 3, 4, 5]
             elif split == MyDataset.dataset_split_val:
                 ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100]
-                shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                shots = [1, 2, 3, 4, 5]
             else:
                 ways = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100]
-                shots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                shots = [1, 2, 3, 4, 5]
         else:
             raise Exception(".")
         return ways, shots
@@ -212,7 +212,7 @@ class MyTransforms(object):
         pass
 
     @staticmethod
-    def get_transform_omniglot(normalize, has_ic=True, size=228):
+    def get_transform_omniglot(normalize, has_ic=True, size=28):
         transform_train_ic = transforms.Compose([transforms.RandomRotation(30, fill=255),
                                                  transforms.Resize(size),
                                                  transforms.RandomCrop(size, padding=4, fill=255),
@@ -230,7 +230,7 @@ class MyTransforms(object):
         pass
 
     @classmethod
-    def get_transform(cls, dataset_name, has_ic=True, is_fsl_simple=True, is_css=False, cifar_size=32):
+    def get_transform(cls, dataset_name, has_ic=True, is_fsl_simple=True, is_css=False, cifar_size=32, omniglot_size=28):
         normalize_1 = transforms.Normalize(mean=[x / 255.0 for x in [120.39586422, 115.59361427, 104.54012653]],
                                              std=[x / 255.0 for x in [70.68188272, 68.27635443, 72.54505529]])
         normalize_2 = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
@@ -247,7 +247,7 @@ class MyTransforms(object):
             return cls.get_transform_cifar(normalize_3, has_ic=has_ic,
                                            is_fsl_simple=is_fsl_simple, is_css=is_css, size=cifar_size)
         elif dataset_name == MyDataset.dataset_name_omniglot:
-            return cls.get_transform_omniglot(normalize_4, has_ic=has_ic)
+            return cls.get_transform_omniglot(normalize_4, has_ic=has_ic, size=omniglot_size)
         else:
             raise Exception("......")
         pass

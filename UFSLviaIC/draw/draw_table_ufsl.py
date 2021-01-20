@@ -6,7 +6,8 @@ from alisuretool.Tools import Tools
 
 
 # dataset_name = "miniimagenet"
-dataset_name = "tieredimagenet"
+# dataset_name = "tieredimagenet"
+dataset_name = "omniglot"
 
 txt_path = "/media/ubuntu/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/{}/mn/result_table".format(dataset_name)
 all_txt = glob(os.path.join(txt_path, "*.txt"))
@@ -59,7 +60,8 @@ for index, txt_content in enumerate(all_txt_content):
 
 
 # Random & Conv-4 & 32.5\tiny{$\pm$0.12\%} & 76.5\tiny{$\pm$0.12\%} & 32.5\tiny{$\pm$0.12\%} & 32.5\tiny{$\pm$0.12\%} \\
-for backbone_key in ["Conv-4", "ResNet-12"]:
+# for backbone_key in ["Conv-4", "ResNet-12"]:
+for backbone_key in ["Conv-4"]:
     result_str = []
     for method_key in ["Random", "CSS", "Clustering", "Label", "Ours"]:
         acc_dict = acc_result_dict[method_key][backbone_key]

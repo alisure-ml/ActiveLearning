@@ -37,8 +37,19 @@ class Runner(object):
             checkpoint = torch.load(mn_dir)
             if "module." in list(checkpoint.keys())[0]:
                 checkpoint = {key.replace("module.", ""): checkpoint[key] for key in checkpoint}
-            self.matching_net.load_state_dict(checkpoint)
+            if "encoder.encoder." in list(checkpoint.keys())[0]:
+                checkpoint = {key.replace("encoder.encoder.", ""): checkpoint[key] for key in checkpoint}
+            if "encoder." in list(checkpoint.keys())[0]:
+                checkpoint = {key.replace("encoder.", ""): checkpoint[key] for key in checkpoint}
+            try:
+                self.matching_net.load_state_dict(checkpoint)
+            except Exception:
+                result = self.matching_net.load_state_dict(checkpoint, strict=False)
+                Tools.print(result)
             Tools.print("load matching net success from {}".format(mn_dir), txt_path=self.config.log_file)
+        else:
+            raise Exception(".....")
+            pass
         pass
 
     def matching_test(self, sample_z, batch_z, num_way, num_shot):
@@ -361,11 +372,113 @@ def tieredimagenet_our_eval(gpu_id=0, result_dir="result_our"):
     pass
 
 
+def omniglot_final_eval(gpu_id=0, result_dir="result"):
+    dataset_name = MyDataset.dataset_name_omniglot
+    checkpoint_path = "../models_abl/{}/mn".format(dataset_name)
+
+    param_list = [
+        # {"name": "cluster_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "cluster", "3_cluster_conv4_300_64_10_1_200_50_png.pkl")},
+        # {"name": "css_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "css", "2_css_conv4_300_64_10_1_200_50_png.pkl")},
+        # {"name": "random_conv4", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "random", "1_random_conv4_300_64_10_1_200_50_png.pkl")},
+        {"name": "label_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "label", "0_200_64_10_5_1_100_50.pkl")},
+        {"name": "ufsl_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "ufsl", "2_ICConv4_1200_256_1024_conv4_300_5_1_96_mn.pkl")},
+    ]
+
+    for index, param in enumerate(param_list):
+        Tools.print("Check: {} / {}".format(index, len(param_list)))
+        Runner(config=Config(gpu_id, dataset_name=dataset_name, is_conv_4=param["is_conv_4"],
+                             name=param["name"], mn_checkpoint=param["mn"], is_check=True)).load_model()
+        pass
+
+    for index, param in enumerate(param_list):
+        Tools.print("{} / {}".format(index, len(param_list)))
+        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"],
+                   dataset_name=dataset_name, is_conv_4=param["is_conv_4"], result_dir=result_dir)
+        pass
+
+    pass
+
+
+def omniglot_our_eval(gpu_id=0, result_dir="result_our"):
+    dataset_name = MyDataset.dataset_name_omniglot
+    checkpoint_path = "../models_abl/{}/mn".format(dataset_name)
+
+    ways_and_shots = [[5, 1], [5, 5], [20, 1], [20, 5]]
+    param_list = [
+        {"name": "cluster_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "cluster", "3_cluster_conv4_300_64_10_1_200_50_png.pkl")},
+        {"name": "css_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "css", "2_css_conv4_300_64_10_1_200_50_png.pkl")},
+        {"name": "random_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "random", "1_random_conv4_300_64_10_1_200_50_png.pkl")},
+        {"name": "label_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "label", "0_200_64_10_5_1_100_50.pkl")},
+        {"name": "ufsl_conv4", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "ufsl", "2_ICConv4_1200_256_1024_conv4_300_5_1_96_mn.pkl")},
+    ]
+
+    for index, param in enumerate(param_list):
+        Tools.print("Check: {} / {}".format(index, len(param_list)))
+        Runner(config=Config(gpu_id, dataset_name=dataset_name, is_conv_4=param["is_conv_4"],
+                             name=param["name"], mn_checkpoint=param["mn"], is_check=True)).load_model()
+        pass
+
+    for index, param in enumerate(param_list):
+        Tools.print("{} / {}".format(index, len(param_list)))
+        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
+                   is_conv_4=param["is_conv_4"], result_dir=result_dir,
+                   split=MyDataset.dataset_split_test, ways_and_shots=ways_and_shots)
+        pass
+
+    pass
+
+
+def miniimagenet_1net_eval(gpu_id=0, result_dir="result_1net"):
+    dataset_name = MyDataset.dataset_name_miniimagenet
+    checkpoint_path = "../models_abl/{}/1net".format(dataset_name)
+
+    ways_and_shots = [[5, 1], [5, 5]]
+    param_list = [
+        {"name": "C41net", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "0_C4_1500_64_5_1_500_200_512_1_png.pkl")},
+        {"name": "C42net", "is_conv_4": True,
+         "mn": os.path.join(checkpoint_path, "0_ICConv4MNConv4_1500_64_5_1_500_200_512_1_png_mn.pkl")},
+        {"name": "ResNet121net", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "0123_R12S_1500_128_5_1_500_200_512_1_png.pkl")},
+
+        # {"name": "label_conv4", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "2_400_64_10_1_200_100_png.pkl")},
+    ]
+
+    for index, param in enumerate(param_list):
+        Tools.print("Check: {} / {}".format(index, len(param_list)))
+        Runner(config=Config(gpu_id, dataset_name=dataset_name, is_conv_4=param["is_conv_4"],
+                             name=param["name"], mn_checkpoint=param["mn"], is_check=True)).load_model()
+        pass
+
+    for index, param in enumerate(param_list):
+        Tools.print("{} / {}".format(index, len(param_list)))
+        final_eval(gpu_id, name=param["name"], mn_checkpoint=param["mn"], dataset_name=dataset_name,
+                   is_conv_4=param["is_conv_4"], result_dir=result_dir,
+                   split=MyDataset.dataset_split_test, ways_and_shots=ways_and_shots)
+        pass
+
+    pass
+
+
 ##############################################################################################################
 
 
 if __name__ == '__main__':
     # miniimagenet_our_eval(result_dir="result_table")
-    tieredimagenet_final_eval()
-    tieredimagenet_our_eval(result_dir="result_table")
+    # tieredimagenet_final_eval()
+    # tieredimagenet_our_eval(result_dir="result_table")
+    # omniglot_final_eval(gpu_id=2)
+    # omniglot_our_eval(gpu_id=1, result_dir="result_our")
+    miniimagenet_1net_eval(gpu_id=2)
     pass

@@ -141,7 +141,7 @@ class Runner(object):
 
         # Eval
         self.test_tool_fsl = FSLTestTool(self.matching_test, data_root=Config.data_root,
-                                         num_way=Config.num_way, num_shot=Config.num_shot,
+                                         num_way=Config.num_way_test, num_shot=Config.num_shot,
                                          episode_size=Config.episode_size, test_episode=Config.test_episode,
                                          transform=self.task_train.transform_test)
         pass
@@ -172,23 +172,23 @@ class Runner(object):
         predicts = torch.mean(similarities, dim=-1)
         return predicts
 
-    def matching_test(self, samples, batches):
+    def matching_test(self, samples, batches, num_way, num_shot):
         batch_num, _, _, _ = batches.shape
 
         sample_z = self.net(samples)  # 5x64*5*5
         batch_z = self.net(batches)  # 75x64*5*5
-        z_support = sample_z.view(Config.num_way * Config.num_shot, -1)
+        z_support = sample_z.view(num_way * num_shot, -1)
         z_query = batch_z.view(batch_num, -1)
         _, z_dim = z_query.shape
 
-        z_support_expand = z_support.unsqueeze(0).expand(batch_num, Config.num_way * Config.num_shot, z_dim)
-        z_query_expand = z_query.unsqueeze(1).expand(batch_num, Config.num_way * Config.num_shot, z_dim)
+        z_support_expand = z_support.unsqueeze(0).expand(batch_num, num_way * num_shot, z_dim)
+        z_query_expand = z_query.unsqueeze(1).expand(batch_num, num_way * num_shot, z_dim)
 
         # 相似性
         z_support_expand = self.norm(z_support_expand)
         similarities = torch.sum(z_support_expand * z_query_expand, -1)
         similarities = torch.softmax(similarities, dim=1)
-        similarities = similarities.view(batch_num, Config.num_way, Config.num_shot)
+        similarities = similarities.view(batch_num, num_way, num_shot)
         predicts = torch.mean(similarities, dim=-1)
         return predicts
 
@@ -255,12 +255,13 @@ class Runner(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 16
 
     num_way = 5
+    num_way_test = 5
     num_shot = 1
     learning_rate = 0.01
 
@@ -277,8 +278,8 @@ class Config(object):
     ###############################################################################################
     baseline_type_list = ["random", "css", "cluster"]
     # baseline_type = "css"
-    baseline_type = "random"
-    # baseline_type = "cluster"
+    # baseline_type = "random"
+    baseline_type = "cluster"
     ###############################################################################################
 
     ###############################################################################################
@@ -305,14 +306,25 @@ class Config(object):
     # adjust_learning_rate = RunnerTool.adjust_learning_rate2
     # net, net_name, batch_size = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4", 64
 
-    val_freq = 2
-    dataset_name = "tieredimagenet"
-    # train_epoch = 50
-    # first_epoch, t_epoch = 30, 10
-    train_epoch = 30
-    first_epoch, t_epoch = 16, 8
+    # val_freq = 2
+    # dataset_name = "tieredimagenet"
+    # # train_epoch = 50
+    # # first_epoch, t_epoch = 30, 10
+    # train_epoch = 30
+    # first_epoch, t_epoch = 16, 8
+    # adjust_learning_rate = RunnerTool.adjust_learning_rate2
+    # net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 32
+    ###############################################################################################
+
+    ###############################################################################################
+    val_freq = 10
+    num_way = 10
+    num_way_test = 5
+    dataset_name = "omniglot"
+    train_epoch = 300
+    first_epoch, t_epoch = 200, 50
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
-    net, net_name, batch_size = ResNet12Small(avg_pool=True, drop_rate=0.1), "res12", 32
+    net, net_name, batch_size = C4Net(hid_dim=64, z_dim=64, has_norm=False), "conv4", 64
     ###############################################################################################
 
     transform_train, transform_test = MyTransforms.get_transform(
@@ -478,6 +490,46 @@ res12 cluster
 2021-01-08 13:08:12 episode=30, Test accuracy=0.4556888888888889
 2021-01-08 13:08:12 episode=30, Test accuracy=0.44133333333333336
 2021-01-08 13:08:12 episode=30, Mean Test accuracy=0.44754666666666676
+"""
+
+
+# omniglot
+"""
+2021-01-20 12:24:32 load net success from ../models_baseline/omniglot/random/1_random_conv4_300_64_10_1_200_50_png.pkl
+2021-01-20 12:24:41 Train 300 Accuracy: 0.6255555555555556
+2021-01-20 12:24:52 Val   300 Accuracy: 0.5641111111111111
+2021-01-20 12:25:03 Test1 300 Accuracy: 0.5817777777777777
+2021-01-20 12:25:56 Test2 300 Accuracy: 0.5760222222222222
+2021-01-20 12:29:48 episode=300, Test accuracy=0.5779777777777777
+2021-01-20 12:29:48 episode=300, Test accuracy=0.5778
+2021-01-20 12:29:48 episode=300, Test accuracy=0.5824222222222223
+2021-01-20 12:29:48 episode=300, Test accuracy=0.5828
+2021-01-20 12:29:48 episode=300, Test accuracy=0.5864
+2021-01-20 12:29:48 episode=300, Mean Test accuracy=0.58148
+
+2021-01-20 13:53:27 load net success from ../models_baseline/omniglot/css/2_css_conv4_300_64_10_1_200_50_png.pkl
+2021-01-20 13:53:35 Train 300 Accuracy: 0.8953333333333334
+2021-01-20 13:53:43 Val   300 Accuracy: 0.838
+2021-01-20 13:53:51 Test1 300 Accuracy: 0.8336666666666668
+2021-01-20 13:54:30 Test2 300 Accuracy: 0.8367555555555557
+2021-01-20 13:57:48 episode=300, Test accuracy=0.8388888888888889
+2021-01-20 13:57:48 episode=300, Test accuracy=0.8383333333333334
+2021-01-20 13:57:48 episode=300, Test accuracy=0.838
+2021-01-20 13:57:48 episode=300, Test accuracy=0.8362888888888889
+2021-01-20 13:57:48 episode=300, Test accuracy=0.842488888888889
+2021-01-20 13:57:48 episode=300, Mean Test accuracy=0.8388
+
+2021-01-20 14:11:56 load net success from ../models_baseline/omniglot/cluster/3_cluster_conv4_300_64_10_1_200_50_png.pkl
+2021-01-20 14:12:04 Train 300 Accuracy: 0.9062222222222223
+2021-01-20 14:12:11 Val   300 Accuracy: 0.851111111111111
+2021-01-20 14:12:18 Test1 300 Accuracy: 0.8521111111111112
+2021-01-20 14:12:48 Test2 300 Accuracy: 0.8570666666666665
+2021-01-20 14:15:33 episode=300, Test accuracy=0.8579777777777777
+2021-01-20 14:15:33 episode=300, Test accuracy=0.8583555555555555
+2021-01-20 14:15:33 episode=300, Test accuracy=0.8548666666666668
+2021-01-20 14:15:33 episode=300, Test accuracy=0.8580222222222221
+2021-01-20 14:15:33 episode=300, Test accuracy=0.8612444444444445
+2021-01-20 14:15:33 episode=300, Mean Test accuracy=0.8580933333333334
 """
 
 ##############################################################################################################

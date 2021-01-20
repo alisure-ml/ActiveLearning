@@ -514,7 +514,7 @@ class RunnerFSL(object):
 
 
 class Config(object):
-    gpu_id = 1
+    gpu_id = 2
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 32
@@ -522,7 +522,8 @@ class Config(object):
     #######################################################################################
     ic_ratio = 1
     ic_knn = 100
-    ic_out_dim = 2048
+    # ic_out_dim = 2048
+    ic_out_dim = 1024
     ic_val_freq = 10
 
     ic_net, ic_net_name = EncoderC4(), "ICConv4"
@@ -571,7 +572,9 @@ class Config(object):
     mn_dir = Tools.new_dir("{}/{}_mn.pkl".format(_root_path, model_name))
     ic_dir = Tools.new_dir("{}/{}_ic.pkl".format(_root_path, model_name))
     # ic_dir_checkpoint = None
-    ic_dir_checkpoint = "../omniglot/ic/2_28_ICConv4_64_2048_1_1500_500_200_ic.pkl"
+    # ic_dir_checkpoint = "../omniglot/ic/2_28_ICConv4_64_2048_1_1500_500_200_ic.pkl"
+    # ic_dir_checkpoint = "../omniglot/ic/3_28_ICConv4_64_2048_1_1600_1000_300_ic.pkl"
+    ic_dir_checkpoint = "../omniglot/ic/2_28_ICConv4_64_1024_1_1600_1000_300_ic.pkl"
 
     Tools.print(model_name)
     pass
@@ -594,6 +597,36 @@ transforms.RandomRotation(30)
 
 
 transforms.RandomRotation(30, fill=255)
+"../omniglot/ic/3_28_ICConv4_64_2048_1_1600_1000_300_ic.pkl"
+../omniglot/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/3_ICConv4_1200_256_2048_conv4_300_5_1_96_mn.pkl
+2021-01-20 10:40:58 load matching net success from ../omniglot/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/3_ICConv4_1200_256_2048_conv4_300_5_1_96_mn.pkl
+2021-01-20 10:41:10 Train 300 Accuracy: 0.9767777777777779
+2021-01-20 10:41:23 Val   300 Accuracy: 0.962777777777778
+2021-01-20 10:41:37 Test1 300 Accuracy: 0.9573333333333333
+2021-01-20 10:42:36 Test2 300 Accuracy: 0.9575555555555555
+2021-01-20 10:46:55 episode=300, Test accuracy=0.9573333333333333
+2021-01-20 10:46:55 episode=300, Test accuracy=0.9587333333333333
+2021-01-20 10:46:55 episode=300, Test accuracy=0.9565111111111111
+2021-01-20 10:46:55 episode=300, Test accuracy=0.9571999999999999
+2021-01-20 10:46:55 episode=300, Test accuracy=0.9572888888888889
+2021-01-20 10:46:55 episode=300, Mean Test accuracy=0.9574133333333332
+
+
+transforms.RandomRotation(30, fill=255)
+"../omniglot/ic/2_28_ICConv4_64_1024_1_1600_1000_300_ic.pkl"
+../omniglot/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/2_ICConv4_1200_256_1024_conv4_300_5_1_96_mn.pkl
+2021-01-20 10:45:33 load matching net success from ../omniglot/models_mn/two_ic_ufsl_2net_res_sgd_acc_duli_nete/2_ICConv4_1200_256_1024_conv4_300_5_1_96_mn.pkl
+2021-01-20 10:45:48 Train 300 Accuracy: 0.9857777777777779
+2021-01-20 10:46:02 Val   300 Accuracy: 0.9744444444444446
+2021-01-20 10:46:16 Test1 300 Accuracy: 0.9696666666666668
+2021-01-20 10:47:14 Test2 300 Accuracy: 0.970311111111111
+2021-01-20 10:50:56 episode=300, Test accuracy=0.9695777777777778
+2021-01-20 10:50:56 episode=300, Test accuracy=0.9734888888888887
+2021-01-20 10:50:56 episode=300, Test accuracy=0.9699333333333332
+2021-01-20 10:50:56 episode=300, Test accuracy=0.9736222222222224
+2021-01-20 10:50:56 episode=300, Test accuracy=0.9717333333333332
+2021-01-20 10:50:56 episode=300, Mean Test accuracy=0.9716711111111109
+
 
 """
 

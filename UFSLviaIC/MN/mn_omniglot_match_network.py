@@ -32,6 +32,13 @@ class OmniglotDataset(object):
         normalize = transforms.Normalize(mean=[0.92206], std=[0.08426])
         self.transform = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
         self.transform_test = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
+
+        # normalize = transforms.Normalize(mean=[0.92206], std=[0.08426])
+        # self.transform = transforms.Compose([transforms.RandomRotation(30, fill=255),
+        #                                      transforms.Resize(28),
+        #                                      transforms.RandomCrop(28, padding=4, fill=255),
+        #                                      transforms.ToTensor(), normalize])
+        # self.transform_test = transforms.Compose([transforms.Resize(28), transforms.ToTensor(), normalize])
         pass
 
     def __len__(self):
@@ -270,8 +277,8 @@ class Config(object):
     adjust_learning_rate = RunnerTool.adjust_learning_rate2
 
     ###############################################################################################
-    # num_way = 10
-    num_way = 60
+    num_way = 10
+    # num_way = 60
     num_shot = 1
     num_way_test = 5
     batch_size = 64
@@ -281,14 +288,16 @@ class Config(object):
         gpu_id, train_epoch, batch_size, num_way, num_way_test, num_shot, first_epoch, t_epoch)
 
     mn_dir = Tools.new_dir("../omniglot/models_mn/fsl_sgd_modify/{}.pkl".format(model_name))
+    dataset_name = "omniglot_single"
+    # dataset_name = "omniglot_rot"
     if "Linux" in platform.platform():
-        data_root = '/mnt/4T/Data/data/UFSL/omniglot_rot'
+        data_root = '/mnt/4T/Data/data/UFSL/{}'.format(dataset_name)
         if not os.path.isdir(data_root):
-            data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/omniglot_rot'
+            data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/{}'.format(dataset_name)
         if not os.path.isdir(data_root):
-            data_root = '/home/ubuntu/Dataset/Partition1/ALISURE/Data/UFSL/omniglot_rot'
+            data_root = '/home/ubuntu/Dataset/Partition1/ALISURE/Data/UFSL/{}'.format(dataset_name)
     else:
-        data_root = "F:\\data\\omniglot_rot"
+        data_root = "F:\\data\\{}".format(dataset_name)
 
     Tools.print(model_name)
     Tools.print(data_root)

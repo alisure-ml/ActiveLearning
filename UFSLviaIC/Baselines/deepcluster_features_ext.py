@@ -1,4 +1,5 @@
 import os
+import sys
 import math
 import torch
 import platform
@@ -8,6 +9,8 @@ import torch.nn as nn
 from alisuretool.Tools import Tools
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset
+sys.path.append("../Common")
+from UFSLTool import MyTransforms, MyDataset as CommonMyDataset, C4Net, Normalize, RunnerTool, FSLTestTool
 
 
 class VGG(nn.Module):
@@ -97,12 +100,16 @@ def vgg16(sobel=False, bn=True, out=1000):
 
 class MyDataset(Dataset):
 
-    def __init__(self, data_list, image_size=84):
+    def __init__(self, data_list, image_size=84, transform=None):
         self.data_list = data_list
         self.train_label = [one[1] for one in self.data_list]
 
-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        self.transform = transforms.Compose([transforms.CenterCrop(size=image_size), transforms.ToTensor(), normalize])
+        if transform is None:
+            normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            self.transform = transforms.Compose([transforms.CenterCrop(size=image_size),
+                                                 transforms.ToTensor(), normalize])
+        else:
+            self.transform = transform
         pass
 
     def __len__(self):
@@ -201,7 +208,8 @@ class ExtFeatures(object):
         with torch.no_grad():
             self.model.eval()
 
-            loader = DataLoader(MyDataset(data_list), Config.batch_size, False, num_workers=Config.num_workers)
+            loader = DataLoader(MyDataset(data_list, transform=Config.transform),
+                                Config.batch_size, False, num_workers=Config.num_workers)
             for image, label, idx in tqdm(loader):
                 image = image.cuda()
                 output = self.model(image).data.cpu().numpy()
@@ -214,7 +222,7 @@ class ExtFeatures(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     num_workers = 8
@@ -223,23 +231,11 @@ class Config(object):
     is_png = True
 
     # dataset_name = "miniimagenet"
-    dataset_name = "tieredimagenet"
+    # dataset_name = "tieredimagenet"
+    dataset_name = CommonMyDataset.dataset_name_omniglot
 
-    if dataset_name == "miniimagenet":
-        if "Linux" in platform.platform():
-            data_root = '/mnt/4T/Data/data/miniImagenet'
-            if not os.path.isdir(data_root):
-                data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
-        else:
-            data_root = "F:\\data\\miniImagenet"
-        data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
-    else:
-        if "Linux" in platform.platform():
-            data_root = '/mnt/4T/Data/data/UFSL/tiered-imagenet'
-            if not os.path.isdir(data_root):
-                data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/tiered-imagenet'
-        else:
-            data_root = "F:\\data\\UFSL\\tiered-imagenet"
+    data_root = CommonMyDataset.get_data_root(dataset_name=dataset_name, is_png=is_png)
+    _, _, transform = MyTransforms.get_transform(dataset_name=dataset_name, omniglot_size=32)
     Tools.print(data_root)
 
     features_save_path = Tools.new_dir("{}_feature".format(data_root))

@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import faiss
 import torch
@@ -10,6 +11,8 @@ import torch.utils.data as data
 from alisuretool.Tools import Tools
 from scipy.sparse import csr_matrix, find
 import torchvision.transforms as transforms
+sys.path.append("../Common")
+from UFSLTool import MyDataset
 
 
 """
@@ -85,29 +88,16 @@ class KMeans(object):
 
 
 class Config(object):
-    gpu_id = 2
+    gpu_id = 3
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     is_png = True
 
     # dataset_name = "miniimagenet"
-    dataset_name = "tieredimagenet"
+    # dataset_name = "tieredimagenet"
+    dataset_name = MyDataset.dataset_name_omniglot
 
-    if dataset_name == "miniimagenet":
-        if "Linux" in platform.platform():
-            data_root = '/mnt/4T/Data/data/miniImagenet'
-            if not os.path.isdir(data_root):
-                data_root = '/media/ubuntu/4T/ALISURE/Data/miniImagenet'
-        else:
-            data_root = "F:\\data\\miniImagenet"
-        data_root = os.path.join(data_root, "miniImageNet_png") if is_png else data_root
-    else:
-        if "Linux" in platform.platform():
-            data_root = '/mnt/4T/Data/data/UFSL/tiered-imagenet'
-            if not os.path.isdir(data_root):
-                data_root = '/media/ubuntu/4T/ALISURE/Data/UFSL/tiered-imagenet'
-        else:
-            data_root = "F:\\data\\UFSL\\tiered-imagenet"
+    data_root = MyDataset.get_data_root(dataset_name=dataset_name, is_png=is_png)
     Tools.print(data_root)
 
     features_save_path = Tools.new_dir("{}_feature".format(data_root))

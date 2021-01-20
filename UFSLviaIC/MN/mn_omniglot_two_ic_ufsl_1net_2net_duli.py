@@ -62,12 +62,14 @@ class OmniglotDataset(object):
         now_index, _, now_image_filename = now_label_image_tuple
         _now_label = self.classes[item]
 
-        r = random.randint(0, 1)
-        if r == 0:
-            now_label_k_shot_index = [now_index]
-        else:
-            now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
-            pass
+        # r = random.randint(0, 1)
+        # if r == 0:
+        #     now_label_k_shot_index = [now_index]
+        # else:
+        #     now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
+        #     pass
+
+        now_label_k_shot_index = self._get_samples_by_clustering_label(_now_label, True, num=self.num_shot)
 
         is_ok_list = [self.data_list[one][1] == now_label_image_tuple[1] for one in now_label_k_shot_index]
 
@@ -444,12 +446,34 @@ class Runner(object):
 ##############################################################################################################
 
 
+"""
+../omniglot/mn/two_ic_ufsl_1net_2net_duli/0_ICConv4MNConv4_1600_64_10_1_1000_300_2048_1_mn.pkl
+../omniglot/mn/two_ic_ufsl_1net_2net_duli/0_ICConv4MNConv4_1600_64_10_1_1000_300_2048_1_ic.pkl
+2021-01-20 18:07:44 load matching net success from ../omniglot/mn/two_ic_ufsl_1net_2net_duli/0_ICConv4MNConv4_1600_64_10_1_1000_300_2048_1_mn.pkl
+2021-01-20 18:07:44 load ic model success from ../omniglot/mn/two_ic_ufsl_1net_2net_duli/0_ICConv4MNConv4_1600_64_10_1_1000_300_2048_1_ic.pkl
+2021-01-20 18:07:44 Test 1600 .......
+2021-01-20 18:07:49 Epoch: 1600 Train 0.7793/0.9629 0.0000
+2021-01-20 18:07:49 Epoch: 1600 Val   0.8198/0.9660 0.0000
+2021-01-20 18:07:49 Epoch: 1600 Test  0.8085/0.9660 0.0000
+2021-01-20 18:07:56 Train 1600 Accuracy: 0.9814444444444447
+2021-01-20 18:08:04 Val   1600 Accuracy: 0.9630000000000001
+2021-01-20 18:08:11 Test1 1600 Accuracy: 0.9644444444444445
+2021-01-20 18:08:40 Test2 1600 Accuracy: 0.9617555555555555
+2021-01-20 18:11:07 episode=1600, Test accuracy=0.9583555555555555
+2021-01-20 18:11:07 episode=1600, Test accuracy=0.9620888888888889
+2021-01-20 18:11:07 episode=1600, Test accuracy=0.9612222222222222
+2021-01-20 18:11:07 episode=1600, Test accuracy=0.9605555555555556
+2021-01-20 18:11:07 episode=1600, Test accuracy=0.9588666666666665
+2021-01-20 18:11:07 episode=1600, Mean Test accuracy=0.9602177777777777
+
+"""
+
 
 class Config(object):
     multi_gpu = False
 
-    # gpu_id = "0,1,2,3" if multi_gpu else "0"
-    gpu_id = "1,2,3" if multi_gpu else "1"
+    gpu_id = "1,2,3" if multi_gpu else "0"
+    # gpu_id = "1,2,3" if multi_gpu else "1"
     gpu_num = len(gpu_id.split(","))
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)

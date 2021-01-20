@@ -9,7 +9,8 @@ from alisuretool.Tools import Tools
 # dataset_name = "miniimagenet"
 # dataset_name = "tieredimagenet"
 # dataset_name = "CIFARFS"
-dataset_name = "FC100"
+# dataset_name = "FC100"
+dataset_name = "omniglot"
 result_dir = "result"
 
 txt_path = "/mnt/4T/ALISURE/ActiveLearning/UFSLviaIC/models_abl/{}/mn/{}".format(dataset_name, result_dir)
@@ -74,7 +75,8 @@ for index, txt_content in enumerate(all_txt_content):
 
 
 color = ["g", "b", "m", "r", "y"]  # , "k", "c"
-linestyle = ["-.", "-"]
+# linestyle = ["-.", "-"]
+linestyle = ["-", "-."]
 for split in ["shot", "way"]:
     plt.figure(figsize=(8, 7))
 
@@ -94,13 +96,15 @@ for split in ["shot", "way"]:
         labels1.append(key[3:])
         pass
 
-    plt.legend(handles=handles1, labels=labels1, loc='best', ncol=2, fontsize=15)
+    plt.legend(handles=handles1, labels=labels1, loc='best', ncol=1, fontsize=15)
     plt.grid(linestyle='--')
-    plt.ylim(0.0, 0.9)
+    # plt.ylim(0.0, 0.9)
+    plt.ylim(0.1, 1.0)
     plt.xlabel(split, fontsize=20)
     plt.ylabel('accuracy', fontsize=20)
     plt.locator_params("y", nbins=10)
-    plt.tick_params(labelsize=18)
+    # plt.tick_params(labelsize=18)
+    plt.tick_params(labelsize=14)
     plt.subplots_adjust(top=0.97, bottom=0.10, left=0.11, right=0.99, hspace=0, wspace=0)
     # plt.subplots_adjust(top=0.96, bottom=0.06, left=0.09, right=0.98, hspace=0, wspace=0)
 
