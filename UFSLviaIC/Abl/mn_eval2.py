@@ -444,15 +444,15 @@ def miniimagenet_1net_eval(gpu_id=0, result_dir="result_1net"):
 
     ways_and_shots = [[5, 1], [5, 5]]
     param_list = [
-        {"name": "C41net", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "0_C4_1500_64_5_1_500_200_512_1_png.pkl")},
-        {"name": "C42net", "is_conv_4": True,
-         "mn": os.path.join(checkpoint_path, "0_ICConv4MNConv4_1500_64_5_1_500_200_512_1_png_mn.pkl")},
-        {"name": "ResNet121net", "is_conv_4": False,
-         "mn": os.path.join(checkpoint_path, "0123_R12S_1500_128_5_1_500_200_512_1_png.pkl")},
+        # {"name": "C41net", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "0_C4_1500_64_5_1_500_200_512_1_png.pkl")},
+        # {"name": "C42net", "is_conv_4": True,
+        #  "mn": os.path.join(checkpoint_path, "0_ICConv4MNConv4_1500_64_5_1_500_200_512_1_png_mn.pkl")},
+        # {"name": "ResNet121net", "is_conv_4": False,
+        #  "mn": os.path.join(checkpoint_path, "0123_R12S_1500_128_5_1_500_200_512_1_png.pkl")},
 
-        # {"name": "label_conv4", "is_conv_4": False,
-        #  "mn": os.path.join(checkpoint_path, "2_400_64_10_1_200_100_png.pkl")},
+        {"name": "ResNet122net", "is_conv_4": False,
+         "mn": os.path.join(checkpoint_path, "0123_ICResNet12MNResNet12_1500_64_5_1_500_200_512_1_png_mn.pkl")},
     ]
 
     for index, param in enumerate(param_list):
